@@ -43,11 +43,6 @@ const connectDB = async () => {
   try {
     await mongoose.connect(mongoUrl);
     console.log('Connected to database...');
-
-    // ✅ ADD THESE 3 LINES:
-    const Video = (await import('./models/Video.js')).default;
-    const count = await Video.countDocuments();
-    console.log('📊 Videos in database:', count);
   } catch (err) {
     console.error('Error connecting to the database:', err.message);
     process.exit(1);
