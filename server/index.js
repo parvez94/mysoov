@@ -14,7 +14,9 @@ app.use(cookieParser());
 app.use(
   cors({
     credentials: true,
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'https://mysoov-frontend.vercel.app'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 app.use(
