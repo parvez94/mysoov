@@ -31,6 +31,38 @@ import videoRouter from './routes/videoRoutes.js';
 import uploadRouter from './routes/uploadRoutes.js';
 import commentRouter from './routes/commentRoutes.js';
 
+// Health check route
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is running successfully!',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/api', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API v1 is running successfully!',
+    version: '1.0.0',
+  });
+});
+
+// Middleware to ensure database connection for API routes
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message,
+    });
+  }
+});
+
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/videos', videoRouter);
@@ -38,14 +70,29 @@ app.use('/api/v1', uploadRouter);
 app.use('/api/v1/comments', commentRouter);
 
 // Database connection
+let isConnected = false;
+
 const connectDB = async () => {
+  if (isConnected) {
+    console.log('Using existing database connection');
+    return;
+  }
+
   const mongoUrl = process.env.MONGO_URL;
+  if (!mongoUrl) {
+    console.error('MONGO_URL environment variable is not set');
+    throw new Error('MONGO_URL environment variable is not set');
+  }
+
   try {
-    await mongoose.connect(mongoUrl);
+    await mongoose.connect(mongoUrl, {
+      bufferCommands: false,
+    });
+    isConnected = true;
     console.log('Connected to database...');
   } catch (err) {
     console.error('Error connecting to the database:', err.message);
-    process.exit(1);
+    throw err;
   }
 };
 
@@ -68,9 +115,17 @@ app.use((err, req, res, next) => {
 // Server connection
 const port = process.env.PORT || 5100;
 
-app.listen(port, () => {
-  connectDB();
-  console.log(`Server is running on PORT ${port}....`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, async () => {
+    try {
+      await connectDB();
+      console.log(`Server is running on PORT ${port}....`);
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  });
+}
 
 export default app;
