@@ -48,6 +48,28 @@ app.get('/api', (req, res) => {
   });
 });
 
+// Test database connection endpoint
+app.get('/api/test-db', async (req, res) => {
+  try {
+    await connectDB();
+    const Video = (await import('./models/Video.js')).default;
+    const count = await Video.countDocuments();
+    res.json({
+      success: true,
+      message: 'Database connection successful',
+      videoCount: count,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Database test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message,
+    });
+  }
+});
+
 // Middleware to ensure database connection for API routes
 app.use('/api', async (req, res, next) => {
   try {
@@ -101,10 +123,21 @@ app.use((err, req, res, next) => {
   const status = err.status || 500;
   const message = err.message || 'Something went wrong';
 
+  // Log error details for debugging
+  console.error('Error occurred:', {
+    status,
+    message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+  });
+
   return res.status(status).json({
     success: false,
     status,
     message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
   });
 });
 

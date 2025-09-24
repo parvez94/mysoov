@@ -95,17 +95,34 @@ export const addView = async (req, res, next) => {
 
 export const randomVideos = async (req, res, next) => {
   try {
+    console.log('Random videos endpoint called');
     let pipeline = [];
 
-    const currentUser = req.user && req.user.id;
+    // Safely check if user is authenticated
+    const currentUser = req.user?.id;
+    console.log(
+      'Current user:',
+      currentUser ? 'authenticated' : 'not authenticated'
+    );
 
+    // Only exclude current user's videos if user is authenticated
     if (currentUser) {
       pipeline.push({ $match: { userId: { $ne: currentUser } } });
     }
 
+    // Only show public videos for random endpoint
+    pipeline.push({ $match: { privacy: 'Public' } });
     pipeline.push({ $sample: { size: 10 } });
 
+    console.log('Aggregation pipeline:', JSON.stringify(pipeline, null, 2));
     const videos = await Video.aggregate(pipeline);
+    console.log('Found videos:', videos.length);
+
+    // If no videos found, return empty array
+    if (videos.length === 0) {
+      console.log('No videos found, returning empty array');
+      return res.status(200).json([]);
+    }
 
     // Attach dynamic comment counts excluding orphan replies (those whose parent no longer exists)
     const ids = videos.map((v) => String(v._id));
@@ -141,8 +158,10 @@ export const randomVideos = async (req, res, next) => {
       commentsCount: countMap[String(v._id)] || 0,
     }));
 
+    console.log('Returning enriched videos:', enriched.length);
     res.status(200).json(enriched);
   } catch (err) {
+    console.error('Error in randomVideos:', err);
     next(err);
   }
 };
