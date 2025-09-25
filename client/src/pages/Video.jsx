@@ -6,7 +6,7 @@ import styled from 'styled-components';
 import { IoHeartOutline, IoHeart } from 'react-icons/io5';
 import { MdOutlineInsertComment } from 'react-icons/md';
 import { IoIosShareAlt } from 'react-icons/io';
-import { HiOutlineBookmark } from 'react-icons/hi';
+import { HiOutlineBookmark, HiBookmark } from 'react-icons/hi';
 import { PostCard, VideoSidebar, Comments } from '../components/index';
 import {
   getVideo,
@@ -16,36 +16,85 @@ import {
   unlike,
 } from '../redux/video/videoSlice';
 
-import { likeVideo, unlikeVideo } from '../redux/video/actions';
+import {
+  likeVideo,
+  unlikeVideo,
+  saveVideo,
+  unSaveVideo,
+} from '../redux/video/actions';
 import { openModal } from '../redux/modal/modalSlice';
 
 const Container = styled.div`
   padding: 20px 20px 0 20px;
   display: flex;
+
+  @media (max-width: 768px) {
+    padding: 10px 15px;
+    flex-direction: column;
+  }
 `;
-const Main = styled.div``;
+const Main = styled.div`
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
 
 const VideoWrapper = styled.div`
   flex: 1;
   width: 700px;
   height: 400px;
+  position: relative;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 9 / 16;
+    max-height: 70vh;
+  }
 `;
 const VideoPlayer = styled.video`
   width: 100%;
   height: 100%;
   border-radius: 4px;
+
+  @media (max-width: 768px) {
+    border-radius: 8px;
+    object-fit: contain;
+  }
 `;
 
 const ContentWrapper = styled.div`
   flex: 1;
   max-width: 700px;
   padding: 20px 0;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+    padding: 15px 0;
+  }
 `;
 
 const CardStats = styled.div`
   display: flex;
   margin-top: 10px;
   gap: 20px;
+
+  &.mobile-stats {
+    display: none;
+
+    @media (max-width: 768px) {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 15px;
+    }
+  }
+
+  &.desktop-stats {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
 `;
 
 const Icon = styled.div`
@@ -60,15 +109,39 @@ const Icon = styled.div`
   width: 25%;
   border-radius: 8px;
   padding: 10px 15px;
+  cursor: pointer;
 
   svg {
     width: 30px;
     height: 30px;
   }
+
+  @media (max-width: 768px) {
+    flex: 1;
+    width: auto;
+    height: auto;
+    max-width: none;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.04);
+    padding: 8px 12px;
+    margin-bottom: 0;
+    flex-direction: row;
+    gap: 5px;
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
 `;
 
 const StatsWrapper = styled.span`
   font-size: 13px;
+
+  @media (max-width: 768px) {
+    font-size: 12px;
+    font-weight: 500;
+  }
 `;
 
 const Video = () => {
@@ -151,7 +224,12 @@ const Video = () => {
     });
   const handleBookmark = () =>
     guardOr(() => {
-      /* TODO: bookmark flow */
+      if (!currentVideo?._id || !currentUser?._id) return;
+      if (currentVideo?.saved?.includes(currentUser._id)) {
+        dispatch(unSaveVideo(currentVideo._id, currentUser._id));
+      } else {
+        dispatch(saveVideo(currentVideo._id, currentUser._id));
+      }
     });
 
   return (
@@ -167,7 +245,8 @@ const Video = () => {
             user={currentUser}
             showVideo={false}
           />
-          <CardStats>
+          {/* Mobile stats after avatar section */}
+          <CardStats className='mobile-stats'>
             <Icon onClick={handleLikes}>
               {currentVideo &&
               currentUser &&
@@ -191,8 +270,53 @@ const Video = () => {
               </StatsWrapper>
             </Icon>
             <Icon onClick={handleBookmark}>
-              <HiOutlineBookmark />
-              <StatsWrapper>1K</StatsWrapper>
+              {currentVideo &&
+              currentUser &&
+              currentVideo?.saved?.includes(currentUser._id) ? (
+                <HiBookmark style={{ color: 'var(--primary-color)' }} />
+              ) : (
+                <HiOutlineBookmark />
+              )}
+              <StatsWrapper>{currentVideo?.saved?.length || 0}</StatsWrapper>
+            </Icon>
+            <Icon onClick={handleShare}>
+              <IoIosShareAlt />
+              <StatsWrapper>2K</StatsWrapper>
+            </Icon>
+          </CardStats>
+          {/* Desktop stats */}
+          <CardStats className='desktop-stats'>
+            <Icon onClick={handleLikes}>
+              {currentVideo &&
+              currentUser &&
+              currentVideo?.likes?.includes(currentUser._id) ? (
+                <IoHeart style={{ color: 'var(--primary-color)' }} />
+              ) : (
+                <IoHeartOutline />
+              )}
+              <StatsWrapper>{currentVideo?.likes?.length}</StatsWrapper>
+            </Icon>
+            <Icon>
+              <MdOutlineInsertComment />
+              <StatsWrapper>
+                {Array.isArray(commentsList)
+                  ? visibleCommentsCount
+                  : typeof currentVideo?.commentsCount === 'number'
+                  ? currentVideo.commentsCount
+                  : Array.isArray(currentVideo?.comments)
+                  ? currentVideo.comments.length
+                  : 0}
+              </StatsWrapper>
+            </Icon>
+            <Icon onClick={handleBookmark}>
+              {currentVideo &&
+              currentUser &&
+              currentVideo?.saved?.includes(currentUser._id) ? (
+                <HiBookmark style={{ color: 'var(--primary-color)' }} />
+              ) : (
+                <HiOutlineBookmark />
+              )}
+              <StatsWrapper>{currentVideo?.saved?.length || 0}</StatsWrapper>
             </Icon>
             <Icon onClick={handleShare}>
               <IoIosShareAlt />

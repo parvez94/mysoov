@@ -48,6 +48,10 @@ const Search = styled.div`
     color: var(--secondary-color);
     cursor: pointer;
   }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 const Input = styled.input`
   border: none;
@@ -79,10 +83,20 @@ const UploadButton = styled.button`
   padding: 8px 10px;
   display: flex;
   align-items: center;
+  gap: 5px;
   border: 1px solid var(--secondary-color);
   background-color: var(--secondary-color);
   border-radius: 3px;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    padding: 8px;
+    font-size: 18px;
+
+    span {
+      display: none;
+    }
+  }
 `;
 
 const UserAvatar = styled.div``;
@@ -175,7 +189,7 @@ const Navbar = () => {
             <Link to='upload' onClick={guardClick}>
               <UploadButton>
                 <AiOutlineUpload />
-                Upload
+                <span>Upload</span>
               </UploadButton>
             </Link>
 

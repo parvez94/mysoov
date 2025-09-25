@@ -8,11 +8,20 @@ import { useMinLoading } from '../utils/useMinLoading';
 const Container = styled.div`
   display: flex;
   justify-content: space-between;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const Wrapper = styled.div`
   flex: 7;
   padding: 20px 50px;
+
+  @media (max-width: 768px) {
+    flex: 1;
+    padding: 10px 10px;
+  }
 `;
 
 const EmptyMsg = styled.p`

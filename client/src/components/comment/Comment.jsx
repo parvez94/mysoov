@@ -26,8 +26,20 @@ const CommentCardHeader = styled.div`
   svg {
     color: var(--secondary-color);
   }
+
+  @media (max-width: 768px) {
+    gap: 15px;
+  }
 `;
 const CommentAvatarImg = styled.div``;
+
+const ReplySpacer = styled.div`
+  width: 60px;
+
+  @media (max-width: 768px) {
+    width: 30px;
+  }
+`;
 
 const CommentAvatar = styled.img`
   width: 40px;
@@ -410,7 +422,7 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
   return (
     <Container>
       <CommentCardHeader>
-        {depth === 1 ? <div style={{ width: 60 }} /> : null}
+        {depth === 1 ? <ReplySpacer /> : null}
         <CommentAvatarImg>
           <a
             href={`/${channel?.username}`}

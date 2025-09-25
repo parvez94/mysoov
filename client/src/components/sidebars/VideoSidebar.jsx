@@ -1,4 +1,12 @@
+import styled from 'styled-components';
+
+const Container = styled.div`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
 const VideoSidebar = () => {
-  return <div>VideoSidebar</div>
-}
-export default VideoSidebar
+  return <Container>VideoSidebar</Container>;
+};
+export default VideoSidebar;

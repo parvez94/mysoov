@@ -18,6 +18,12 @@ const Container = styled.div`
   flex-direction: column;
   flex: 2;
   border-right: 0.5px solid rgba(255, 255, 255, 0.2);
+
+  @media (max-width: 768px) {
+    padding: 20px 10px;
+    flex: 0 0 60px;
+    min-width: 60px;
+  }
 `;
 const Nav = styled.nav`
   padding-bottom: 60px;
@@ -32,11 +38,28 @@ const NavItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
+
+  @media (max-width: 768px) {
+    justify-content: center;
+    padding: 15px 5px;
+
+    span {
+      display: none;
+    }
+
+    svg {
+      font-size: 24px;
+    }
+  }
 `;
 
 const Wrapper = styled.div`
   border-top: 0.5px solid rgba(255, 255, 255, 0.2);
   padding: 20px 0;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 const Text = styled.p`
   font-family: var(--primary-fonts);
@@ -61,6 +84,10 @@ const Button = styled.button`
 const Footer = styled.div`
   margin-top: auto; /* push footer to the bottom within flex column */
   padding-top: 20px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 const FooterText = styled.p`
   font-family: var(--secondary-fonts);
@@ -88,26 +115,26 @@ const LeftSidebar = () => {
         <Link to='/'>
           <NavItem>
             <IoIosHome />
-            Home
+            <span>Home</span>
           </NavItem>
         </Link>
         <Link to='following' onClick={guardClick}>
           <NavItem>
             <RiUserFollowLine />
-            Following
+            <span>Following</span>
           </NavItem>
         </Link>
         <Link to='explore' onClick={guardClick}>
           <NavItem>
             <MdOutlineExplore />
-            Explore
+            <span>Explore</span>
           </NavItem>
         </Link>
         {currentUser && (
           <Link to='upload'>
             <NavItem>
               <AiOutlineUpload />
-              Upload
+              <span>Upload</span>
             </NavItem>
           </Link>
         )}
@@ -115,14 +142,14 @@ const LeftSidebar = () => {
           <Link to={`/${currentUser.username}`}>
             <NavItem>
               <LuUser2 />
-              Profile
+              <span>Profile</span>
             </NavItem>
           </Link>
         ) : (
           <Link to='profile' onClick={guardClick}>
             <NavItem>
               <LuUser2 />
-              Profile
+              <span>Profile</span>
             </NavItem>
           </Link>
         )}

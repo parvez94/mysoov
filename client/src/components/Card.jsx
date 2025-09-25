@@ -26,9 +26,18 @@ const Container = styled.div`
     border-bottom: none;
     padding-bottom: 0;
   }
+
+  @media (max-width: 768px) {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+  }
 `;
 const Content = styled.div`
   margin-left: 70px;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
 `;
 
 const VideoWrapper = styled.div`
@@ -44,7 +53,25 @@ const VideoWrapper = styled.div`
     position: fixed;
     top: 0;
   }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
 `;
+
+const VideoContainer = styled.div`
+  position: relative;
+  display: flex;
+  justify-content: center;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
+
 const Video = styled.video`
   width: 280px;
   aspect-ratio: 9 / 16; /* force portrait tile */
@@ -53,8 +80,28 @@ const Video = styled.video`
   object-fit: contain; /* show full video with letterboxing */
   object-position: center;
   background: #000; /* fallback letterbox color if needed */
+
+  @media (max-width: 768px) {
+    width: calc(
+      100vw - 90px
+    ); /* Account for left sidebar (60px) + padding (30px) */
+    max-width: 300px;
+    aspect-ratio: 9 / 16;
+    max-height: 60vh;
+  }
 `;
-const VideoStats = styled.div``;
+
+const VideoStats = styled.div`
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 15px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 0 10px;
+  }
+`;
 
 const Icon = styled.div`
   display: flex;
@@ -64,6 +111,8 @@ const Icon = styled.div`
   margin-bottom: 10px;
   font-family: var(--primary-fonts);
   color: var(--secondary-color);
+  cursor: pointer;
+
   svg {
     width: 50px;
     height: 50px;
@@ -71,11 +120,28 @@ const Icon = styled.div`
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.12);
   }
+
+  @media (max-width: 768px) {
+    margin-bottom: 0;
+    flex: 1;
+    max-width: 60px;
+
+    svg {
+      width: 40px;
+      height: 40px;
+      padding: 8px;
+    }
+  }
 `;
 
 const StatsWrapper = styled.span`
   font-size: 13px;
   margin-top: 5px;
+
+  @media (max-width: 768px) {
+    font-size: 11px;
+    margin-top: 3px;
+  }
 `;
 
 const Card = ({ video }) => {
@@ -130,7 +196,9 @@ const Card = ({ video }) => {
       <Content>
         <HomeText caption={caption} />
         <VideoWrapper>
-          <Video src={videoUrl.url} controls />
+          <VideoContainer>
+            <Video src={videoUrl.url} controls />
+          </VideoContainer>
           {/* <Stats variant="home" video={video} /> */}
           <VideoStats>
             <Icon onClick={handleLikes}>
@@ -158,6 +226,7 @@ const Card = ({ video }) => {
                 ) : (
                   <HiOutlineBookmark />
                 )}
+                <StatsWrapper>{video?.saved?.length || 0}</StatsWrapper>
               </Icon>
             )}
           </VideoStats>
