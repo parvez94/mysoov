@@ -56,13 +56,14 @@ export const register = async (req, res, next) => {
 
     res.header('Access-Control-Allow-Credentials', true);
 
-    res
-      .cookie('access_token', token, {
-        httpOnly: true,
-        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      })
-      .status(201)
-      .json(newUser);
+    const cookieOptions = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    };
+
+    res.cookie('access_token', token, cookieOptions).status(201).json(newUser);
   } catch (err) {
     next(err);
   }
@@ -88,13 +89,14 @@ export const login = async (req, res, next) => {
 
     res.header('Access-Control-Allow-Credentials', true);
 
-    res
-      .cookie('access_token', token, {
-        httpOnly: true,
-        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      })
-      .status(200)
-      .json(others);
+    const cookieOptions = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    };
+
+    res.cookie('access_token', token, cookieOptions).status(200).json(others);
   } catch (err) {
     next(err);
   }

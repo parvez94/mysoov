@@ -11,12 +11,44 @@ const app = express();
 app.use(express.static('public'));
 app.use(express.json());
 app.use(cookieParser());
+
+// Configure cookie settings for production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+  });
+}
 app.use(
   cors({
     credentials: true,
-    origin: ['http://localhost:5173', 'https://mysoov-frontend.vercel.app'],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'https://mysoov-frontend.vercel.app',
+        'https://mysoov-backend.vercel.app',
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // For development, allow any localhost origin
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    exposedHeaders: ['Set-Cookie'],
   })
 );
 app.use(
@@ -68,6 +100,23 @@ app.get('/api/test-db', async (req, res) => {
       error: error.message,
     });
   }
+});
+
+// Test authentication endpoint
+app.get('/api/test-auth', (req, res) => {
+  const token = req.cookies.access_token;
+  res.json({
+    success: true,
+    message: 'Auth test endpoint',
+    hasToken: !!token,
+    cookies: req.cookies,
+    headers: {
+      origin: req.headers.origin,
+      'user-agent': req.headers['user-agent'],
+      cookie: req.headers.cookie,
+    },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // Middleware to ensure database connection for API routes
