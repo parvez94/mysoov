@@ -10,6 +10,7 @@ import {
 import { openModal } from '../../redux/modal/modalSlice';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import { resolveImageUrl } from '../../utils/imageUtils';
 
 const Container = styled.div`
   margin-top: 30px;
@@ -350,14 +351,7 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
     };
   }, [showReplyEmojis]);
 
-  const baseURL = import.meta.env.VITE_API_URL;
-  const resolveImg = (src) => {
-    if (!src) return '/default-user.png';
-    return src.startsWith('http://') || src.startsWith('https://')
-      ? src
-      : `${baseURL}${src}`;
-  };
-  const imageUrl = resolveImg(
+  const imageUrl = resolveImageUrl(
     currentUser && String(currentUser._id) === String(userId)
       ? currentUser.displayImage
       : channel?.displayImage

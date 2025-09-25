@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 // import ProfileImg from "../assets/avatar/parvez.jpeg"
 import { FollowButton } from './index';
 import { openModal } from '../redux/modal/modalSlice';
+import { resolveImageUrl } from '../utils/imageUtils';
 
 const CardHeader = styled.div`
   display: flex;
@@ -52,14 +53,7 @@ const VideoCard = ({ channel, user, hideFollowButton = false }) => {
     }
   };
 
-  const baseURL = import.meta.env.VITE_API_URL;
-  const resolveImg = (src) => {
-    if (!src) return '/default-user.png';
-    return src.startsWith('http://') || src.startsWith('https://')
-      ? src
-      : `${baseURL}${src}`;
-  };
-  const imageUrl = resolveImg(
+  const imageUrl = resolveImageUrl(
     user && channel && String(user._id) === String(channel._id)
       ? user.displayImage
       : channel?.displayImage

@@ -5,7 +5,15 @@
  * @returns {string} - Resolved image URL
  */
 export const resolveImageUrl = (src, fallback = '/default-user.png') => {
-  if (!src) return fallback;
+  // If no src provided or src is null/undefined/empty, return fallback
+  if (!src || src === null || src === undefined || src.trim() === '') {
+    return fallback;
+  }
+
+  // If it's the default image path (from old database records), use local fallback instead
+  if (src === '/default-user.png' || src === 'default-user.png') {
+    return fallback;
+  }
 
   // If it's already a full URL, return as is
   if (src.startsWith('http://') || src.startsWith('https://')) {

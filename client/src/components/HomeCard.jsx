@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { FollowButton } from './index';
 import { openModal } from '../redux/modal/modalSlice';
+import { resolveImageUrl } from '../utils/imageUtils';
 
 const CardHeader = styled.div`
   display: flex;
@@ -63,14 +64,7 @@ const HomeCard = ({ id }) => {
     fetchUser();
   }, [id]);
 
-  const baseURL = import.meta.env.VITE_API_URL;
-  const resolveImg = (src) => {
-    if (!src) return '/default-user.png';
-    return src.startsWith('http://') || src.startsWith('https://')
-      ? src
-      : `${baseURL}${src}`;
-  };
-  const imageUrl = resolveImg(
+  const imageUrl = resolveImageUrl(
     currentUser && user && String(currentUser._id) === String(user._id)
       ? currentUser.displayImage
       : user?.displayImage

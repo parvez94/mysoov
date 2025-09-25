@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import { IoClose } from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
 import { FollowButton, PostCard } from '../components';
+import { resolveImageUrl } from '../utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -298,14 +299,6 @@ const PublicProfile = () => {
   const [avatarPreview, setAvatarPreview] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const baseURL = API;
-  const resolveImg = (src) => {
-    if (!src) return '/default-user.png';
-    return src.startsWith('http://') || src.startsWith('https://')
-      ? src
-      : `${baseURL}${src}`;
-  };
-
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -416,7 +409,7 @@ const PublicProfile = () => {
   }, [searchParams.get('edit'), isOwn, currentUser]);
 
   const avatarUrl = useMemo(
-    () => resolveImg(channel?.displayImage),
+    () => resolveImageUrl(channel?.displayImage),
     [channel?.displayImage]
   );
   const displayName = channel?.displayName || channel?.username || username;
