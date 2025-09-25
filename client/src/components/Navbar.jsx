@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { openModal } from '../redux/modal/modalSlice';
 import { toggleUserMenu, setUserMenu } from '../redux/user/userSlice';
+import { resolveImageUrl } from '../utils/imageUtils';
 import styled from 'styled-components';
 import { IoIosSearch } from 'react-icons/io';
 import { AiOutlineUpload } from 'react-icons/ai';
@@ -126,13 +127,7 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const { currentUser, showUserMenu } = useSelector((state) => state.user);
 
-  const baseURL = import.meta.env.VITE_API_URL;
-  const imageUrl = currentUser?.displayImage
-    ? currentUser.displayImage.startsWith('http://') ||
-      currentUser.displayImage.startsWith('https://')
-      ? currentUser.displayImage
-      : `${baseURL}${currentUser.displayImage}`
-    : `${baseURL}/default-user.png`;
+  const imageUrl = resolveImageUrl(currentUser?.displayImage);
 
   const handleOpenModal = () => {
     dispatch(openModal());

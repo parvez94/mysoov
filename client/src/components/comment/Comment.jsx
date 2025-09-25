@@ -352,7 +352,7 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
 
   const baseURL = import.meta.env.VITE_API_URL;
   const resolveImg = (src) => {
-    if (!src) return `${baseURL}/default-user.png`;
+    if (!src) return '/default-user.png';
     return src.startsWith('http://') || src.startsWith('https://')
       ? src
       : `${baseURL}${src}`;

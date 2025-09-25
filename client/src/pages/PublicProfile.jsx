@@ -300,7 +300,7 @@ const PublicProfile = () => {
 
   const baseURL = API;
   const resolveImg = (src) => {
-    if (!src) return `${baseURL}/default-user.png`;
+    if (!src) return '/default-user.png';
     return src.startsWith('http://') || src.startsWith('https://')
       ? src
       : `${baseURL}${src}`;
