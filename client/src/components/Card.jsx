@@ -69,6 +69,7 @@ const VideoContainer = styled.div`
 
   @media (max-width: 768px) {
     width: 100%;
+    justify-content: start;
   }
 `;
 
@@ -85,7 +86,7 @@ const Video = styled.video`
     width: calc(
       100vw - 90px
     ); /* Account for left sidebar (60px) + padding (30px) */
-    max-width: 275px;
+    max-width: 330px;
     aspect-ratio: 9 / 16;
   }
 `;
@@ -94,7 +95,7 @@ const VideoStats = styled.div`
   @media (max-width: 768px) {
     display: flex;
     flex-direction: row;
-    justify-content: center;
+    justify-content: start;
     gap: 15px;
     width: 100%;
     margin-top: 10px;

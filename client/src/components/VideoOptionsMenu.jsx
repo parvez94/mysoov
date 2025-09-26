@@ -14,7 +14,7 @@ const MenuButton = styled.button`
   border: none;
   color: var(--secondary-color);
   cursor: pointer;
-  padding: 8px;
+  padding: 8px 0 8px 8px;
   border-radius: 50%;
   display: flex;
   align-items: center;

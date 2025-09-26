@@ -11,7 +11,7 @@ const Container = styled.div`
 
 const Wrapper = styled.div`
   flex: 7;
-  padding: 20px 50px;
+  padding: 20px;
 `;
 
 const Explore = () => {
