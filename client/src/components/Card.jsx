@@ -86,7 +86,7 @@ const Video = styled.video`
     width: calc(
       100vw - 90px
     ); /* Account for left sidebar (60px) + padding (30px) */
-    max-width: 330px;
+    max-width: 310px;
     aspect-ratio: 9 / 16;
   }
 `;
