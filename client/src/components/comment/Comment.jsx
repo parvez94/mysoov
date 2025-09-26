@@ -14,6 +14,13 @@ import { resolveImageUrl } from '../../utils/imageUtils';
 
 const Container = styled.div`
   margin-top: 30px;
+
+  /* Reduce margin for nested replies */
+  ${(props) =>
+    props.depth > 0 &&
+    `
+    margin-top: 20px;
+  `}
 `;
 const CommentCardHeader = styled.div`
   display: flex;
@@ -113,13 +120,20 @@ const MenuItem = styled.button`
   }
 `;
 
+const EditInputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+`;
+
 const EditInput = styled.textarea`
   width: 100%;
   background-color: rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.85);
   border: none;
   font-size: 14px;
-  padding: 8px 10px;
+  padding: 8px 40px 8px 10px; /* Add right padding for emoji button */
   border-radius: 3px;
   font-family: var(--secondary-fonts);
   resize: vertical;
@@ -132,10 +146,120 @@ const EditInput = styled.textarea`
   }
 `;
 
+const EditEmojiToggle = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+`;
+
+const EditEmojiPopover = styled.div`
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+
+  /* Let emoji-mart handle its own styling and dimensions */
+  & > div {
+    border-radius: 8px !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  /* Ensure header elements are visible */
+  & [role='tablist'],
+  & [role='searchbox'],
+  & .search,
+  & nav,
+  & .nav,
+  & .category,
+  & .categories {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Ensure category tabs are visible */
+  & [role='tablist'],
+  & .nav,
+  & .categories {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Ensure search input is visible */
+  & input[type='search'],
+  & .search input {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Force header section to be visible */
+  & > div:first-child,
+  & .header {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Ensure proper emoji rendering within the picker */
+  & em-emoji {
+    font-size: 20px !important;
+    line-height: 1 !important;
+    display: inline-block !important;
+    width: auto !important;
+    height: auto !important;
+  }
+
+  /* Fix emoji button sizing */
+  & button[data-emoji] {
+    width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 6px !important;
+  }
+`;
+
 const EditActions = styled.div`
   margin-top: 8px;
   display: flex;
   gap: 8px;
+  justify-content: flex-start;
+
+  button:first-child {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--secondary-color);
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+  }
+
+  button:last-child {
+    background-color: var(--primary-color);
+    color: white;
+
+    &:hover {
+      background-color: var(--primary-color-hover, #1976d2);
+    }
+  }
 `;
 
 const CommentReply = styled.button`
@@ -154,10 +278,17 @@ const Replies = styled.div`
 
 const ReplyForm = styled.form`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-top: 8px;
+  margin-right: 16px; /* Add right margin to prevent edge touching */
   position: relative;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    margin-right: 12px;
+    gap: 6px;
+  }
 `;
 
 const ReplyInputWrapper = styled.div`
@@ -165,6 +296,7 @@ const ReplyInputWrapper = styled.div`
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0; /* Allow shrinking */
 `;
 
 const ReplyInput = styled.input`
@@ -177,12 +309,19 @@ const ReplyInput = styled.input`
   border-radius: 3px;
   font-family: var(--secondary-fonts);
   line-height: 1.5;
+  min-width: 0; /* Allow input to shrink */
+  width: 100%;
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.65);
   }
   &:focus {
     outline: none;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 13px;
+    padding: 6px 35px 6px 8px;
   }
 `;
 
@@ -286,6 +425,28 @@ const ReplyButton = styled.button`
   border: none;
   border-radius: 3px;
   cursor: pointer;
+  background-color: var(--primary-color);
+  color: white;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0; /* Prevent button from shrinking */
+  min-width: 60px; /* Ensure minimum width */
+  white-space: nowrap; /* Prevent text wrapping */
+
+  &:hover {
+    background-color: var(--primary-color-hover, #1976d2);
+  }
+
+  &:disabled {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-width: 50px;
+  }
 `;
 
 // item: comment object, repliesByParent: map[parentId] -> replies[]
@@ -297,8 +458,10 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
+  const [showEditEmojis, setShowEditEmojis] = useState(false);
   const wrapperRef = useRef(null); // wraps icon + menu
   const replyInputRef = useRef(null);
+  const editInputRef = useRef(null);
   const dispatch = useDispatch();
   const { currentVideo } = useSelector((state) => state.video);
   const { currentUser } = useSelector((state) => state.user);
@@ -363,6 +526,27 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
     };
   }, [showReplyEmojis]);
 
+  // Close edit emoji picker on outside click
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!showEditEmojis) return;
+      // Check if click is outside the emoji picker and emoji button
+      const emojiButton = e.target.closest('[data-emoji-button="edit"]');
+      const emojiPicker = e.target.closest(
+        '[role="dialog"][aria-label="Emoji picker"]'
+      );
+
+      if (!emojiButton && !emojiPicker) {
+        setShowEditEmojis(false);
+      }
+    };
+
+    document.addEventListener('click', onDocClick);
+    return () => {
+      document.removeEventListener('click', onDocClick);
+    };
+  }, [showEditEmojis]);
+
   const imageUrl = resolveImageUrl(
     currentUser && String(currentUser._id) === String(userId)
       ? currentUser.displayImage
@@ -419,8 +603,28 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
     }, 0);
   };
 
+  const insertEditEmoji = (emoji) => {
+    const textarea = editInputRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newText =
+      editText.slice(0, start) + emoji.native + editText.slice(end);
+
+    setEditText(newText);
+    setShowEditEmojis(false);
+
+    // Focus back to textarea and set cursor position
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + emoji.native.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
   return (
-    <Container>
+    <Container depth={depth}>
       <CommentCardHeader>
         {depth === 1 ? <ReplySpacer /> : null}
         <CommentAvatarImg>
@@ -453,17 +657,43 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
 
           {isEditing ? (
             <div>
-              <EditInput
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                placeholder='Edit your comment'
-              />
+              <EditInputWrapper>
+                <EditInput
+                  ref={editInputRef}
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  placeholder='Edit your comment'
+                />
+                <EditEmojiToggle
+                  type='button'
+                  aria-label='Add emoji'
+                  data-emoji-button='edit'
+                  onClick={() => setShowEditEmojis((s) => !s)}
+                >
+                  🙂
+                </EditEmojiToggle>
+
+                {showEditEmojis && (
+                  <EditEmojiPopover role='dialog' aria-label='Emoji picker'>
+                    <Picker
+                      data={data}
+                      theme='dark'
+                      previewPosition='none'
+                      searchPosition='sticky'
+                      navPosition='top'
+                      skinTonePosition='none'
+                      onEmojiSelect={insertEditEmoji}
+                    />
+                  </EditEmojiPopover>
+                )}
+              </EditInputWrapper>
               <EditActions>
                 <ReplyButton
                   type='button'
                   onClick={() => {
                     setIsEditing(false);
                     setEditText('');
+                    setShowEditEmojis(false);
                   }}
                 >
                   Cancel
@@ -473,12 +703,43 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
                   onClick={async () => {
                     if (!currentUser) return dispatch(openModal());
                     const text = editText.trim();
-                    if (!text) return;
-                    await dispatch(
-                      updateCommentById({ id: item._id, comment: text })
-                    );
-                    setIsEditing(false);
-                    setEditText('');
+                    if (!text) {
+                      console.log('No text to save');
+                      return;
+                    }
+
+                    console.log('Attempting to update comment:', {
+                      id: item._id,
+                      originalText: item.comment,
+                      newText: text,
+                    });
+
+                    try {
+                      const result = await dispatch(
+                        updateCommentById({ id: item._id, comment: text })
+                      );
+
+                      console.log('Update result:', result);
+
+                      if (result.type === 'comments/update/fulfilled') {
+                        console.log('Comment updated successfully');
+                        setIsEditing(false);
+                        setEditText('');
+                        setShowEditEmojis(false);
+                      } else if (result.type === 'comments/update/rejected') {
+                        console.error(
+                          'Failed to update comment:',
+                          result.payload
+                        );
+                        alert(
+                          'Failed to update comment: ' +
+                            (result.payload || 'Unknown error')
+                        );
+                      }
+                    } catch (error) {
+                      console.error('Error updating comment:', error);
+                      alert('Error updating comment: ' + error.message);
+                    }
                   }}
                 >
                   Save
@@ -574,6 +835,7 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
                       setMenuOpen(false);
                       setIsEditing(true);
                       setEditText(item.comment);
+                      setShowEditEmojis(false);
                     }}
                   >
                     Edit

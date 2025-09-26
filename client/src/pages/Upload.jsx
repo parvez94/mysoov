@@ -7,6 +7,10 @@ import Picker from '@emoji-mart/react';
 
 const Container = styled.div`
   padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 `;
 
 const Title = styled.h2`
@@ -24,11 +28,20 @@ const Subtitle = styled.p`
 const ContentWrapper = styled.div`
   display: flex;
   margin-top: 20px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 `;
 
 const VideoWrapper = styled.div`
   flex: 3;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    flex: 1;
+    width: 100%;
+  }
 `;
 
 const DragVideo = styled.label`
@@ -204,6 +217,7 @@ const ButtonsWrapper = styled.div`
   margin-top: 20px;
   display: flex;
   gap: 12px;
+  justify-content: flex-end;
 `;
 
 const DiscardBtn = styled.button`
@@ -247,6 +261,10 @@ const MusicWrapper = styled.div`
   border-left: 1px solid rgba(255, 255, 255, 0.12);
   margin-left: 20px;
   padding: 0 10px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 const Message = styled.p`

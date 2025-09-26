@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 // import ProfileImg from "../assets/avatar/parvez.jpeg"
-import { FollowButton } from './index';
+import { FollowButton, VideoOptionsMenu } from './index';
 import { openModal } from '../redux/modal/modalSlice';
 import { resolveImageUrl } from '../utils/imageUtils';
 
@@ -48,7 +48,14 @@ const UserName = styled.p`
   font-size: 13px;
 `;
 
-const VideoCard = ({ channel, user, hideFollowButton = false }) => {
+const VideoCard = ({
+  channel,
+  user,
+  video,
+  hideFollowButton = false,
+  onVideoUpdate,
+  onVideoDelete,
+}) => {
   const { currentUser } = useSelector((state) => state.user);
   const dispatch = useDispatch();
 
@@ -90,11 +97,17 @@ const VideoCard = ({ channel, user, hideFollowButton = false }) => {
         </UserInfo>
       </HeaderWrapper>
       {!hideFollowButton &&
-      user?._id &&
-      channel?._id &&
-      String(user._id) !== String(channel._id) ? (
-        <FollowButton user={user} channel={channel} />
-      ) : null}
+        user?._id &&
+        channel?._id &&
+        (String(user._id) !== String(channel._id) ? (
+          <FollowButton user={user} channel={channel} />
+        ) : video ? (
+          <VideoOptionsMenu
+            video={video}
+            onVideoUpdate={onVideoUpdate}
+            onVideoDelete={onVideoDelete}
+          />
+        ) : null)}
     </CardHeader>
   );
 };

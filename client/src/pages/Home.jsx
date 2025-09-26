@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { Card, HomeSidebar, Spinner } from '../components/index';
@@ -36,6 +36,7 @@ const Home = () => {
   const { isLoading, videos } = useSelector((state) => state.videos);
   const { currentUser } = useSelector((state) => state.user);
   const showLoader = useMinLoading(isLoading, 1200);
+  const [localVideos, setLocalVideos] = useState([]);
 
   useEffect(() => {
     if (currentUser) {
@@ -45,8 +46,27 @@ const Home = () => {
     }
   }, [currentUser, dispatch]);
 
+  // Sync localVideos with Redux videos
+  useEffect(() => {
+    setLocalVideos(videos);
+  }, [videos]);
+
+  const handleVideoUpdate = (updatedVideo) => {
+    setLocalVideos((prevVideos) =>
+      prevVideos.map((video) =>
+        video._id === updatedVideo._id ? updatedVideo : video
+      )
+    );
+  };
+
+  const handleVideoDelete = (videoId) => {
+    setLocalVideos((prevVideos) =>
+      prevVideos.filter((video) => video._id !== videoId)
+    );
+  };
+
   const showEmptyState =
-    Boolean(currentUser) && !isLoading && videos.length === 0;
+    Boolean(currentUser) && !isLoading && localVideos.length === 0;
 
   return (
     <Container>
@@ -56,7 +76,14 @@ const Home = () => {
         ) : showEmptyState ? (
           <EmptyMsg>You have not video post yet.</EmptyMsg>
         ) : (
-          videos.map((video) => <Card key={video._id} video={video} />)
+          localVideos.map((video) => (
+            <Card
+              key={video._id}
+              video={video}
+              onVideoUpdate={handleVideoUpdate}
+              onVideoDelete={handleVideoDelete}
+            />
+          ))
         )}
       </Wrapper>
       <HomeSidebar />

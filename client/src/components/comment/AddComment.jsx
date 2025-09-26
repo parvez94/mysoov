@@ -29,6 +29,12 @@ const Controls = styled.div`
   display: flex;
   align-items: center;
   width: 90%;
+  max-width: 800px; /* Prevent too wide on large screens */
+  margin: 0 auto; /* Center the controls */
+
+  @media (max-width: 768px) {
+    width: 95%;
+  }
 `;
 
 const InputWrapper = styled.div`
@@ -155,6 +161,25 @@ const Button = styled.button`
   margin-left: 10px;
   border-radius: 3px;
   cursor: pointer;
+  background-color: var(--primary-color);
+  color: white;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: var(--primary-color-hover, #1976d2);
+  }
+
+  &:disabled {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
 `;
 
 const AddComment = () => {

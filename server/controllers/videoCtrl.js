@@ -22,6 +22,14 @@ export const getVideo = async (req, res, next) => {
     const video =
       typeof videoDoc.toObject === 'function' ? videoDoc.toObject() : videoDoc;
 
+    // Check privacy: if video is private, only owner can view it
+    if (video.privacy === 'Private') {
+      const currentUserId = req.user?.id;
+      if (!currentUserId || String(currentUserId) !== String(video.userId)) {
+        return next(createError(403, 'This video is private'));
+      }
+    }
+
     // Attach dynamic comments count for detail page
     const commentsCount = await Comment.countDocuments({
       videoId: String(video._id),
@@ -60,11 +68,11 @@ export const deleteVideo = async (req, res, next) => {
 
     if (!video) return next(createError(404, 'Video not found'));
 
-    if (req.user.id === req.params.id) {
+    if (req.user.id === video.userId) {
       await Video.findByIdAndDelete(req.params.id);
       res.status(200).json('Video deleted');
     } else {
-      return next(createError(403, 'You can update only your video'));
+      return next(createError(403, 'You can delete only your video'));
     }
   } catch (err) {
     next(err);
@@ -188,7 +196,10 @@ export const videoFeeds = async (req, res, next) => {
       )
     );
 
-    const currentUserPosts = await Video.find({ userId: req.user.id });
+    const currentUserPosts = await Video.find({
+      userId: req.user.id,
+      privacy: 'Public',
+    });
 
     // If user has no posts and follows no one, return empty feed (do NOT fallback to explore)
     if (currentUserPosts.length === 0 && followings.length === 0) {
@@ -200,7 +211,8 @@ export const videoFeeds = async (req, res, next) => {
     if (followings.length > 0) {
       const followingsPosts = await Promise.all(
         followings.map(async (channelId) => {
-          return await Video.find({ userId: channelId });
+          // Only show public videos from followed users
+          return await Video.find({ userId: channelId, privacy: 'Public' });
         })
       );
 
@@ -208,9 +220,12 @@ export const videoFeeds = async (req, res, next) => {
     }
 
     // If there are still no posts (e.g., follows exist but those users have no posts),
-    // fall back to some random videos to keep the feed populated.
+    // fall back to some random public videos to keep the feed populated.
     if (allPosts.length === 0) {
-      allPosts = await Video.aggregate([{ $sample: { size: 20 } }]);
+      allPosts = await Video.aggregate([
+        { $match: { privacy: 'Public' } },
+        { $sample: { size: 20 } },
+      ]);
     }
 
     // Dedupe by _id across all sources (own posts, followings, random fallback)

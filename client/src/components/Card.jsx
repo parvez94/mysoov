@@ -143,7 +143,7 @@ const StatsWrapper = styled.span`
   }
 `;
 
-const Card = ({ video }) => {
+const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
   const { _id, caption, userId, videoUrl, likes, saved } = video;
   const { currentUser } = useSelector((state) => state.user);
 
@@ -191,7 +191,12 @@ const Card = ({ video }) => {
 
   return (
     <Container>
-      <HomeCard id={userId} />
+      <HomeCard
+        id={userId}
+        video={video}
+        onVideoUpdate={onVideoUpdate}
+        onVideoDelete={onVideoDelete}
+      />
       <Content>
         <HomeText caption={caption} />
         <VideoWrapper>

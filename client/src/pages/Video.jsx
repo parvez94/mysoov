@@ -232,6 +232,11 @@ const Video = () => {
       }
     });
 
+  // Check if this is the user's own video
+  const isOwnVideo =
+    currentUser?._id &&
+    String(currentUser._id) === String(currentVideo?.userId);
+
   return (
     <Container>
       <Main>
@@ -269,16 +274,18 @@ const Video = () => {
                   : 0}
               </StatsWrapper>
             </Icon>
-            <Icon onClick={handleBookmark}>
-              {currentVideo &&
-              currentUser &&
-              currentVideo?.saved?.includes(currentUser._id) ? (
-                <HiBookmark style={{ color: 'var(--primary-color)' }} />
-              ) : (
-                <HiOutlineBookmark />
-              )}
-              <StatsWrapper>{currentVideo?.saved?.length || 0}</StatsWrapper>
-            </Icon>
+            {!isOwnVideo && (
+              <Icon onClick={handleBookmark}>
+                {currentVideo &&
+                currentUser &&
+                currentVideo?.saved?.includes(currentUser._id) ? (
+                  <HiBookmark style={{ color: 'var(--primary-color)' }} />
+                ) : (
+                  <HiOutlineBookmark />
+                )}
+                <StatsWrapper>{currentVideo?.saved?.length || 0}</StatsWrapper>
+              </Icon>
+            )}
             <Icon onClick={handleShare}>
               <IoIosShareAlt />
               <StatsWrapper>2K</StatsWrapper>
@@ -308,16 +315,18 @@ const Video = () => {
                   : 0}
               </StatsWrapper>
             </Icon>
-            <Icon onClick={handleBookmark}>
-              {currentVideo &&
-              currentUser &&
-              currentVideo?.saved?.includes(currentUser._id) ? (
-                <HiBookmark style={{ color: 'var(--primary-color)' }} />
-              ) : (
-                <HiOutlineBookmark />
-              )}
-              <StatsWrapper>{currentVideo?.saved?.length || 0}</StatsWrapper>
-            </Icon>
+            {!isOwnVideo && (
+              <Icon onClick={handleBookmark}>
+                {currentVideo &&
+                currentUser &&
+                currentVideo?.saved?.includes(currentUser._id) ? (
+                  <HiBookmark style={{ color: 'var(--primary-color)' }} />
+                ) : (
+                  <HiOutlineBookmark />
+                )}
+                <StatsWrapper>{currentVideo?.saved?.length || 0}</StatsWrapper>
+              </Icon>
+            )}
             <Icon onClick={handleShare}>
               <IoIosShareAlt />
               <StatsWrapper>2K</StatsWrapper>

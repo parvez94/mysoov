@@ -17,6 +17,10 @@ const API = import.meta.env.VITE_API_URL;
 
 const Container = styled.div`
   padding: 20px 50px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
 `;
 
 const InfoWrapper = styled.div``;
@@ -26,6 +30,11 @@ const UserInfo = styled.div`
   align-items: center;
   gap: 40px;
   margin-bottom: 40px;
+
+  @media (max-width: 768px) {
+    gap: 20px;
+    margin-bottom: 24px;
+  }
 `;
 
 const UserImage = styled.img`
@@ -36,6 +45,11 @@ const UserImage = styled.img`
   object-fit: cover;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
+
+  @media (max-width: 768px) {
+    width: 80px;
+    height: 80px;
+  }
 `;
 
 const UserNames = styled.div``;
@@ -45,6 +59,10 @@ const DisplayName = styled.h3`
   color: var(--secondary-color);
   font-size: 26px;
   margin-bottom: 5px;
+
+  @media (max-width: 768px) {
+    font-size: 22px;
+  }
 `;
 
 const UserName = styled.h5`
@@ -124,6 +142,11 @@ const VideosContainer = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 `;
 
 const VideoPlayer = styled.video`
@@ -298,6 +321,21 @@ const PublicProfile = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Video management handlers
+  const handleVideoUpdate = (updatedVideo) => {
+    setVideos((prevVideos) =>
+      prevVideos.map((video) =>
+        video._id === updatedVideo._id ? updatedVideo : video
+      )
+    );
+  };
+
+  const handleVideoDelete = (videoId) => {
+    setVideos((prevVideos) =>
+      prevVideos.filter((video) => video._id !== videoId)
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -614,7 +652,9 @@ const PublicProfile = () => {
                     channel={channel || {}}
                     video={v}
                     user={currentUser}
-                    hideFollowButton={true}
+                    hideFollowButton={!isOwn}
+                    onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
+                    onVideoDelete={isOwn ? handleVideoDelete : undefined}
                   />
                 </Link>
               ))}

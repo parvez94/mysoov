@@ -10,6 +10,7 @@ export { default as HomeText } from './HomeText';
 export { default as VideoText } from './VideoText';
 export { default as Comments } from './comment/Comments';
 export { default as FollowButton } from './FollowButton';
+export { default as VideoOptionsMenu } from './VideoOptionsMenu';
 export { default as Stats } from './Stats';
 export { default as Modal } from './modal/Modal';
 export { default as UserMenu } from './modal/UserMenu';

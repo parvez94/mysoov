@@ -186,9 +186,18 @@ export const getSavedVideos = async (req, res, next) => {
 
 export const getUserVideos = async (req, res, next) => {
   try {
-    const user = req.params.id;
+    const profileUserId = req.params.id;
+    const currentUserId = req.user?.id;
 
-    const videos = await Video.find({ userId: user });
+    let query = { userId: profileUserId };
+
+    // If viewing someone else's profile, only show public videos
+    // If viewing own profile, show all videos (public and private)
+    if (String(currentUserId) !== String(profileUserId)) {
+      query.privacy = 'Public';
+    }
+
+    const videos = await Video.find(query).sort({ createdAt: -1 });
     res.status(200).json(videos);
   } catch (err) {
     next(err);

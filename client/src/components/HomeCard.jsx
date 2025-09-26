@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import styled from 'styled-components';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { FollowButton } from './index';
+import { FollowButton, VideoOptionsMenu } from './index';
 import { openModal } from '../redux/modal/modalSlice';
 import { resolveImageUrl } from '../utils/imageUtils';
 
@@ -47,7 +47,7 @@ const UserName = styled.p`
   font-size: 13px;
 `;
 
-const HomeCard = ({ id }) => {
+const HomeCard = ({ id, video, onVideoUpdate, onVideoDelete }) => {
   const [user, setUser] = useState({});
 
   const { currentUser } = useSelector((state) => state.user);
@@ -100,9 +100,17 @@ const HomeCard = ({ id }) => {
           <UserName>@{user.username}</UserName>
         </UserInfo>
       </HeaderWrapper>
-      {currentUser && user?._id && currentUser._id !== user._id && (
-        <FollowButton user={currentUser} channel={user} />
-      )}
+      {currentUser &&
+        user?._id &&
+        (currentUser._id !== user._id ? (
+          <FollowButton user={currentUser} channel={user} />
+        ) : video ? (
+          <VideoOptionsMenu
+            video={video}
+            onVideoUpdate={onVideoUpdate}
+            onVideoDelete={onVideoDelete}
+          />
+        ) : null)}
     </CardHeader>
   );
 };

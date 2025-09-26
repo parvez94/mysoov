@@ -23,6 +23,8 @@ const PostCard = ({
   user,
   showVideo = true,
   hideFollowButton = false,
+  onVideoUpdate,
+  onVideoDelete,
 }) => {
   const src = video?.videoUrl?.url;
   return (
@@ -30,7 +32,10 @@ const PostCard = ({
       <VideoCard
         channel={channel}
         user={user}
+        video={video}
         hideFollowButton={hideFollowButton}
+        onVideoUpdate={onVideoUpdate}
+        onVideoDelete={onVideoDelete}
       />
       <VideoText video={video} />
       {showVideo && src ? <Video src={src} controls playsInline /> : null}

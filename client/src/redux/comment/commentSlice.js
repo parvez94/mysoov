@@ -77,6 +77,10 @@ export const updateCommentById = createAsyncThunk(
   'comments/update',
   async ({ id, comment }, { rejectWithValue }) => {
     try {
+      console.log('Redux: Updating comment with ID:', id, 'New text:', comment);
+      console.log('Redux: API URL:', API);
+      console.log('Redux: Full URL:', `${API}/api/v1/comments/${id}`);
+
       const res = await fetch(`${API}/api/v1/comments/${id}`, {
         method: 'PATCH',
         headers: {
@@ -86,13 +90,29 @@ export const updateCommentById = createAsyncThunk(
         credentials: 'include',
         body: JSON.stringify({ comment }),
       });
+
+      console.log('Redux: Response status:', res.status, res.statusText);
+      console.log(
+        'Redux: Response headers:',
+        Object.fromEntries(res.headers.entries())
+      );
+
       if (!res.ok) {
         const err = await res.text();
+        console.error('Redux: Update failed with error:', err);
         return rejectWithValue(err || 'Failed to update comment');
       }
+
       const data = await res.json();
+      console.log('Redux: Update successful, received data:', data);
       return data;
     } catch (err) {
+      console.error('Redux: Exception during update:', err);
+      console.error('Redux: Error details:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+      });
       return rejectWithValue(err.message || 'Failed to update comment');
     }
   }
@@ -161,8 +181,31 @@ const commentSlice = createSlice({
 
     builder.addCase(updateCommentById.fulfilled, (state, action) => {
       const updated = action.payload;
+      console.log(
+        'Redux: updateCommentById.fulfilled - Updated comment:',
+        updated
+      );
       const idx = state.comments.findIndex((c) => c._id === updated._id);
-      if (idx !== -1) state.comments[idx] = updated;
+      console.log('Redux: Found comment at index:', idx);
+      if (idx !== -1) {
+        console.log(
+          'Redux: Updating comment in state from:',
+          state.comments[idx].comment,
+          'to:',
+          updated.comment
+        );
+        state.comments[idx] = updated;
+      } else {
+        console.warn('Redux: Comment not found in state for update');
+      }
+    });
+
+    builder.addCase(updateCommentById.rejected, (state, action) => {
+      console.error(
+        'Redux: updateCommentById.rejected - Error:',
+        action.payload
+      );
+      state.error = action.payload || action.error.message;
     });
   },
 });
