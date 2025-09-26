@@ -16,6 +16,12 @@ const FollowButton = styled.button`
   color: var(--secondary-color);
   border-radius: 3px;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+    font-weight: 400;
+    padding: 10px 12px;
+  }
 `;
 
 const Button = ({ user, channel, onDelta }) => {

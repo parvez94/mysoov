@@ -20,7 +20,7 @@ const Wrapper = styled.div`
 
   @media (max-width: 768px) {
     flex: 1;
-    padding: 10px 10px;
+    padding: 20px;
   }
 `;
 

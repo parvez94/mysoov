@@ -29,7 +29,7 @@ const Container = styled.div`
   display: flex;
 
   @media (max-width: 768px) {
-    padding: 10px 15px;
+    padding: 20px;
     flex-direction: column;
   }
 `;

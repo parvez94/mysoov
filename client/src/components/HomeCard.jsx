@@ -16,6 +16,10 @@ const HeaderWrapper = styled.div`
   display: flex;
   justify-content: space-between;
   gap: 20px;
+
+  @media (max-width: 768px) {
+    gap: 15px;
+  }
 `;
 const Avatar = styled.img`
   width: 56px;
@@ -25,6 +29,11 @@ const Avatar = styled.img`
   border-radius: 50%;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
+
+  @media (max-width: 768px) {
+    width: 45px;
+    height: 45px;
+  }
 `;
 const UserInfo = styled.div``;
 
