@@ -31,6 +31,13 @@ router.options('/upload', (req, res) => {
 
 router.post('/upload', verifyToken, async (req, res) => {
   try {
+    // Debug logging
+    console.log('Upload request received');
+    console.log('Headers:', req.headers);
+    console.log('Cookies:', req.cookies);
+    console.log('Files:', req.files ? Object.keys(req.files) : 'No files');
+    console.log('User from token:', req.user);
+
     if (!req.files || Object.keys(req.files).length === 0)
       return res.status(400).json({ msg: 'No files were uploaded.' });
 
