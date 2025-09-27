@@ -6,7 +6,8 @@ import { Link } from 'react-router-dom';
 // import ProfileImg from "../assets/avatar/parvez.jpeg"
 import { FollowButton, VideoOptionsMenu } from './index';
 import { openModal } from '../redux/modal/modalSlice';
-import { resolveImageUrl } from '../utils/imageUtils';
+import { useVideoCardUserLoading } from '../hooks/useUserDataLoading';
+import { VideoCardUserLoading } from './loading/UserInfoLoading';
 
 const CardHeader = styled.div`
   display: flex;
@@ -59,7 +60,12 @@ const VideoCard = ({
   const { currentUser } = useSelector((state) => state.user);
   const dispatch = useDispatch();
 
-  const channelName = channel.displayName || channel.username;
+  const {
+    isLoading: userLoading,
+    avatarUrl,
+    displayName,
+    username,
+  } = useVideoCardUserLoading(user, channel);
 
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
@@ -69,33 +75,31 @@ const VideoCard = ({
     }
   };
 
-  const imageUrl = resolveImageUrl(
-    user && channel && String(user._id) === String(channel._id)
-      ? user.displayImage
-      : channel?.displayImage
-  );
-
   return (
     <CardHeader>
-      <HeaderWrapper>
-        <Link
-          to={`/${channel?.username}`}
-          style={{ display: 'block' }}
-          onClick={guardClick}
-        >
-          <Avatar src={imageUrl} />
-        </Link>
-        <UserInfo>
+      {userLoading ? (
+        <VideoCardUserLoading />
+      ) : (
+        <HeaderWrapper>
           <Link
-            to={`/${channel?.username}`}
-            style={{ textDecoration: 'none' }}
+            to={`/${username}`}
+            style={{ display: 'block' }}
             onClick={guardClick}
           >
-            <Name>{channelName}</Name>
+            <Avatar src={avatarUrl} />
           </Link>
-          <UserName>@{channel?.username}</UserName>
-        </UserInfo>
-      </HeaderWrapper>
+          <UserInfo>
+            <Link
+              to={`/${username}`}
+              style={{ textDecoration: 'none' }}
+              onClick={guardClick}
+            >
+              <Name>{displayName}</Name>
+            </Link>
+            <UserName>@{username}</UserName>
+          </UserInfo>
+        </HeaderWrapper>
+      )}
       {!hideFollowButton &&
         user?._id &&
         channel?._id &&

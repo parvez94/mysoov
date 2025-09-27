@@ -10,7 +10,8 @@ import {
 import { openModal } from '../../redux/modal/modalSlice';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { resolveImageUrl } from '../../utils/imageUtils';
+import { useCommentUserLoading } from '../../hooks/useUserDataLoading';
+import { CommentUserLoading } from '../loading/UserInfoLoading';
 
 const Container = styled.div`
   margin-top: 30px;
@@ -451,7 +452,7 @@ const ReplyButton = styled.button`
 
 // item: comment object, repliesByParent: map[parentId] -> replies[]
 const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
-  const [channel, setChannel] = useState({});
+  const [channel, setChannel] = useState(null);
   const [showReply, setShowReply] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [showReplyEmojis, setShowReplyEmojis] = useState(false);
@@ -466,6 +467,13 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
   const { currentVideo } = useSelector((state) => state.video);
   const { currentUser } = useSelector((state) => state.user);
   const { userId } = item;
+
+  const {
+    isLoading: userLoading,
+    avatarUrl,
+    displayName,
+    username,
+  } = useCommentUserLoading(channel);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -547,12 +555,6 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
     };
   }, [showEditEmojis]);
 
-  const imageUrl = resolveImageUrl(
-    currentUser && String(currentUser._id) === String(userId)
-      ? currentUser.displayImage
-      : channel?.displayImage
-  );
-
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
     if (!currentUser) {
@@ -627,238 +629,248 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
     <Container depth={depth}>
       <CommentCardHeader>
         {depth === 1 ? <ReplySpacer /> : null}
-        <CommentAvatarImg>
-          <a
-            href={`/${channel?.username}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              guardClick(e);
-            }}
-          >
-            <CommentAvatar src={imageUrl} />
-          </a>
-        </CommentAvatarImg>
-        <CommentUserInfo>
-          <CommentUserName>
-            <a
-              href={`/${channel?.username}`}
-              style={{ textDecoration: 'none' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                guardClick(e);
-              }}
-            >
-              <DisplayNameLine>
-                {channel?.displayName || channel?.username}
-              </DisplayNameLine>
-            </a>
-            <UsernameLine>@{channel?.username}</UsernameLine>
-          </CommentUserName>
-
-          {isEditing ? (
-            <div>
-              <EditInputWrapper>
-                <EditInput
-                  ref={editInputRef}
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  placeholder='Edit your comment'
-                />
-                <EditEmojiToggle
-                  type='button'
-                  aria-label='Add emoji'
-                  data-emoji-button='edit'
-                  onClick={() => setShowEditEmojis((s) => !s)}
-                >
-                  🙂
-                </EditEmojiToggle>
-
-                {showEditEmojis && (
-                  <EditEmojiPopover role='dialog' aria-label='Emoji picker'>
-                    <Picker
-                      data={data}
-                      theme='dark'
-                      previewPosition='none'
-                      searchPosition='sticky'
-                      navPosition='top'
-                      skinTonePosition='none'
-                      onEmojiSelect={insertEditEmoji}
-                    />
-                  </EditEmojiPopover>
-                )}
-              </EditInputWrapper>
-              <EditActions>
-                <ReplyButton
-                  type='button'
-                  onClick={() => {
-                    setIsEditing(false);
-                    setEditText('');
-                    setShowEditEmojis(false);
+        {userLoading ? (
+          <CommentUserLoading depth={depth} />
+        ) : (
+          <>
+            <CommentAvatarImg>
+              <a
+                href={`/${username}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  guardClick(e);
+                }}
+              >
+                <CommentAvatar src={avatarUrl} />
+              </a>
+            </CommentAvatarImg>
+            <CommentUserInfo>
+              <CommentUserName>
+                <a
+                  href={`/${username}`}
+                  style={{ textDecoration: 'none' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    guardClick(e);
                   }}
                 >
-                  Cancel
-                </ReplyButton>
-                <ReplyButton
-                  type='button'
-                  onClick={async () => {
-                    if (!currentUser) return dispatch(openModal());
-                    const text = editText.trim();
-                    if (!text) {
-                      console.log('No text to save');
-                      return;
-                    }
+                  <DisplayNameLine>{displayName}</DisplayNameLine>
+                </a>
+                <UsernameLine>@{username}</UsernameLine>
+              </CommentUserName>
 
-                    console.log('Attempting to update comment:', {
-                      id: item._id,
-                      originalText: item.comment,
-                      newText: text,
-                    });
+              {isEditing ? (
+                <div>
+                  <EditInputWrapper>
+                    <EditInput
+                      ref={editInputRef}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      placeholder='Edit your comment'
+                    />
+                    <EditEmojiToggle
+                      type='button'
+                      aria-label='Add emoji'
+                      data-emoji-button='edit'
+                      onClick={() => setShowEditEmojis((s) => !s)}
+                    >
+                      🙂
+                    </EditEmojiToggle>
 
-                    try {
-                      const result = await dispatch(
-                        updateCommentById({ id: item._id, comment: text })
-                      );
-
-                      console.log('Update result:', result);
-
-                      if (result.type === 'comments/update/fulfilled') {
-                        console.log('Comment updated successfully');
+                    {showEditEmojis && (
+                      <EditEmojiPopover role='dialog' aria-label='Emoji picker'>
+                        <Picker
+                          data={data}
+                          theme='dark'
+                          previewPosition='none'
+                          searchPosition='sticky'
+                          navPosition='top'
+                          skinTonePosition='none'
+                          onEmojiSelect={insertEditEmoji}
+                        />
+                      </EditEmojiPopover>
+                    )}
+                  </EditInputWrapper>
+                  <EditActions>
+                    <ReplyButton
+                      type='button'
+                      onClick={() => {
                         setIsEditing(false);
                         setEditText('');
                         setShowEditEmojis(false);
-                      } else if (result.type === 'comments/update/rejected') {
-                        console.error(
-                          'Failed to update comment:',
-                          result.payload
-                        );
-                        alert(
-                          'Failed to update comment: ' +
-                            (result.payload || 'Unknown error')
-                        );
-                      }
-                    } catch (error) {
-                      console.error('Error updating comment:', error);
-                      alert('Error updating comment: ' + error.message);
-                    }
-                  }}
-                >
-                  Save
-                </ReplyButton>
-              </EditActions>
-            </div>
-          ) : (
-            <CommentText>{item.comment}</CommentText>
-          )}
+                      }}
+                    >
+                      Cancel
+                    </ReplyButton>
+                    <ReplyButton
+                      type='button'
+                      onClick={async () => {
+                        if (!currentUser) return dispatch(openModal());
+                        const text = editText.trim();
+                        if (!text) {
+                          console.log('No text to save');
+                          return;
+                        }
 
-          <CommentReply
-            onClick={() => {
-              if (!currentUser) return dispatch(openModal());
-              setShowReply((s) => !s);
-              setShowReplyEmojis(false);
-            }}
-          >
-            {showReply ? 'Cancel' : 'Reply'}
-          </CommentReply>
-          {showReply && (
-            <ReplyForm onSubmit={onSubmitReply}>
-              <ReplyInputWrapper>
-                <ReplyInput
-                  ref={replyInputRef}
-                  placeholder={
-                    currentUser ? 'Write a reply...' : 'Log in to reply'
-                  }
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onFocus={() => {
-                    if (!currentUser) dispatch(openModal());
-                  }}
-                  readOnly={!currentUser}
-                />
-                <ReplyEmojiToggle
-                  type='button'
-                  aria-label='Add emoji'
-                  data-emoji-button='reply'
-                  onClick={() => setShowReplyEmojis((s) => !s)}
-                >
-                  🙂
-                </ReplyEmojiToggle>
+                        console.log('Attempting to update comment:', {
+                          id: item._id,
+                          originalText: item.comment,
+                          newText: text,
+                        });
 
-                {showReplyEmojis && (
-                  <ReplyEmojiPopover role='dialog' aria-label='Emoji picker'>
-                    <Picker
-                      data={data}
-                      theme='dark'
-                      previewPosition='none'
-                      searchPosition='sticky'
-                      navPosition='top'
-                      skinTonePosition='none'
-                      onEmojiSelect={insertReplyEmoji}
-                    />
-                  </ReplyEmojiPopover>
-                )}
-              </ReplyInputWrapper>
-              <ReplyButton
-                type='submit'
-                onClick={(e) => {
-                  if (!currentUser) {
-                    e.preventDefault();
-                    dispatch(openModal());
-                  }
+                        try {
+                          const result = await dispatch(
+                            updateCommentById({ id: item._id, comment: text })
+                          );
+
+                          console.log('Update result:', result);
+
+                          if (result.type === 'comments/update/fulfilled') {
+                            console.log('Comment updated successfully');
+                            setIsEditing(false);
+                            setEditText('');
+                            setShowEditEmojis(false);
+                          } else if (
+                            result.type === 'comments/update/rejected'
+                          ) {
+                            console.error(
+                              'Failed to update comment:',
+                              result.payload
+                            );
+                            alert(
+                              'Failed to update comment: ' +
+                                (result.payload || 'Unknown error')
+                            );
+                          }
+                        } catch (error) {
+                          console.error('Error updating comment:', error);
+                          alert('Error updating comment: ' + error.message);
+                        }
+                      }}
+                    >
+                      Save
+                    </ReplyButton>
+                  </EditActions>
+                </div>
+              ) : (
+                <CommentText>{item.comment}</CommentText>
+              )}
+
+              <CommentReply
+                onClick={() => {
+                  if (!currentUser) return dispatch(openModal());
+                  setShowReply((s) => !s);
+                  setShowReplyEmojis(false);
                 }}
               >
-                Post
-              </ReplyButton>
-            </ReplyForm>
-          )}
-        </CommentUserInfo>
-        <CommentEdit ref={wrapperRef}>
-          <BsThreeDotsVertical
-            onClick={(e) => {
-              e.stopPropagation();
-              if (menuOpen) {
-                // If this menu is already open, close it
-                setMenuOpen(false);
-              } else {
-                // Close all other menus first, then open this one
-                window.dispatchEvent(new Event('comment-menu-close-all'));
-                setMenuOpen(true);
-              }
-            }}
-            style={{ cursor: 'pointer' }}
-          />
-          {menuOpen && (
-            <Menu>
-              {currentUser &&
-                String(currentUser._id) === String(item.userId) && (
-                  <MenuItem
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setIsEditing(true);
-                      setEditText(item.comment);
-                      setShowEditEmojis(false);
+                {showReply ? 'Cancel' : 'Reply'}
+              </CommentReply>
+              {showReply && (
+                <ReplyForm onSubmit={onSubmitReply}>
+                  <ReplyInputWrapper>
+                    <ReplyInput
+                      ref={replyInputRef}
+                      placeholder={
+                        currentUser ? 'Write a reply...' : 'Log in to reply'
+                      }
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onFocus={() => {
+                        if (!currentUser) dispatch(openModal());
+                      }}
+                      readOnly={!currentUser}
+                    />
+                    <ReplyEmojiToggle
+                      type='button'
+                      aria-label='Add emoji'
+                      data-emoji-button='reply'
+                      onClick={() => setShowReplyEmojis((s) => !s)}
+                    >
+                      🙂
+                    </ReplyEmojiToggle>
+
+                    {showReplyEmojis && (
+                      <ReplyEmojiPopover
+                        role='dialog'
+                        aria-label='Emoji picker'
+                      >
+                        <Picker
+                          data={data}
+                          theme='dark'
+                          previewPosition='none'
+                          searchPosition='sticky'
+                          navPosition='top'
+                          skinTonePosition='none'
+                          onEmojiSelect={insertReplyEmoji}
+                        />
+                      </ReplyEmojiPopover>
+                    )}
+                  </ReplyInputWrapper>
+                  <ReplyButton
+                    type='submit'
+                    onClick={(e) => {
+                      if (!currentUser) {
+                        e.preventDefault();
+                        dispatch(openModal());
+                      }
                     }}
                   >
-                    Edit
-                  </MenuItem>
-                )}
-
-              {(currentUser &&
-                String(currentUser._id) === String(item.userId)) ||
-              (currentUser &&
-                String(currentUser._id) === String(currentVideo?.userId)) ? (
-                <MenuItem
-                  onClick={async () => {
-                    if (!currentUser) return dispatch(openModal());
-                    await dispatch(deleteCommentById(item._id));
+                    Post
+                  </ReplyButton>
+                </ReplyForm>
+              )}
+            </CommentUserInfo>
+            <CommentEdit ref={wrapperRef}>
+              <BsThreeDotsVertical
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (menuOpen) {
+                    // If this menu is already open, close it
                     setMenuOpen(false);
-                  }}
-                >
-                  Delete
-                </MenuItem>
-              ) : null}
-            </Menu>
-          )}
-        </CommentEdit>
+                  } else {
+                    // Close all other menus first, then open this one
+                    window.dispatchEvent(new Event('comment-menu-close-all'));
+                    setMenuOpen(true);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+              {menuOpen && (
+                <Menu>
+                  {currentUser &&
+                    String(currentUser._id) === String(item.userId) && (
+                      <MenuItem
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setIsEditing(true);
+                          setEditText(item.comment);
+                          setShowEditEmojis(false);
+                        }}
+                      >
+                        Edit
+                      </MenuItem>
+                    )}
+
+                  {(currentUser &&
+                    String(currentUser._id) === String(item.userId)) ||
+                  (currentUser &&
+                    String(currentUser._id) ===
+                      String(currentVideo?.userId)) ? (
+                    <MenuItem
+                      onClick={async () => {
+                        if (!currentUser) return dispatch(openModal());
+                        await dispatch(deleteCommentById(item._id));
+                        setMenuOpen(false);
+                      }}
+                    >
+                      Delete
+                    </MenuItem>
+                  ) : null}
+                </Menu>
+              )}
+            </CommentEdit>
+          </>
+        )}
       </CommentCardHeader>
       {replies.length > 0 && (
         <Replies>

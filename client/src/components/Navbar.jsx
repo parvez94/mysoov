@@ -3,7 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { openModal } from '../redux/modal/modalSlice';
 import { toggleUserMenu, setUserMenu } from '../redux/user/userSlice';
-import { resolveImageUrl } from '../utils/imageUtils';
+import { useNavbarUserLoading } from '../hooks/useUserDataLoading';
+import { NavbarUserLoading } from '../components/loading/UserInfoLoading';
 import styled from 'styled-components';
 import { IoIosSearch } from 'react-icons/io';
 import { AiOutlineUpload } from 'react-icons/ai';
@@ -141,7 +142,8 @@ const Navbar = () => {
   const dispatch = useDispatch();
   const { currentUser, showUserMenu } = useSelector((state) => state.user);
 
-  const imageUrl = resolveImageUrl(currentUser?.displayImage);
+  const { isLoading: userLoading, avatarUrl } =
+    useNavbarUserLoading(currentUser);
 
   const handleOpenModal = () => {
     dispatch(openModal());
@@ -196,7 +198,11 @@ const Navbar = () => {
             {currentUser ? (
               <ClickListener>
                 <UserAvatar onClick={handleShowMenu}>
-                  <Avatar src={imageUrl} alt='User avatar' />
+                  {userLoading ? (
+                    <NavbarUserLoading />
+                  ) : (
+                    <Avatar src={avatarUrl} alt='User avatar' />
+                  )}
                 </UserAvatar>
               </ClickListener>
             ) : (

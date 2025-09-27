@@ -303,6 +303,77 @@ const PrimaryBtn = styled(ActionButton)`
   border-color: var(--secondary-color);
 `;
 
+const LoadingContainer = styled.div`
+  padding: 20px 50px;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+`;
+
+const LoadingUserInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  margin-bottom: 40px;
+
+  @media (max-width: 768px) {
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+`;
+
+const LoadingAvatar = styled.div`
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  animation: pulse 1.5s ease-in-out infinite;
+
+  @media (max-width: 768px) {
+    width: 80px;
+    height: 80px;
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      opacity: 0.6;
+    }
+  }
+`;
+
+const LoadingText = styled.div`
+  height: ${(props) => props.height || '20px'};
+  width: ${(props) => props.width || '100%'};
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-bottom: ${(props) => props.marginBottom || '8px'};
+  animation: pulse 1.5s ease-in-out infinite;
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 0.3;
+    }
+    100% {
+      opacity: 0.6;
+    }
+  }
+`;
+
+const LoadingUserNames = styled.div`
+  flex: 1;
+`;
+
 const PublicProfile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -321,6 +392,9 @@ const PublicProfile = () => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [videosLoading, setVideosLoading] = useState(true);
+  const [savedVideosLoading, setSavedVideosLoading] = useState(false);
 
   // Video management handlers
   const handleVideoUpdate = (updatedVideo) => {
@@ -341,6 +415,9 @@ const PublicProfile = () => {
     let cancelled = false;
     const load = async () => {
       try {
+        setIsLoading(true);
+        setVideosLoading(true);
+
         // No endpoint by username; fetch all then match client-side
         const res = await fetch(`${API}/api/v1/users/`, {
           method: 'GET',
@@ -351,9 +428,25 @@ const PublicProfile = () => {
           credentials: 'include',
         });
         const users = await res.json();
-        if (!Array.isArray(users)) return;
+        if (!Array.isArray(users)) {
+          if (!cancelled) {
+            setChannel(null);
+            setIsLoading(false);
+            setVideosLoading(false);
+          }
+          return;
+        }
         const u = users.find((x) => x?.username === username);
-        if (!cancelled) setChannel(u || null);
+        if (!cancelled) {
+          setChannel(u || null);
+          // Only set loading to false for channel data once we have the user
+          if (u) {
+            setIsLoading(false);
+          } else {
+            setIsLoading(false);
+            setVideosLoading(false);
+          }
+        }
 
         // If authenticated and user found, try to load their videos (protected route)
         if (u && currentUser?._id) {
@@ -368,18 +461,34 @@ const PublicProfile = () => {
             });
             if (vres.ok) {
               const vdata = await vres.json();
-              if (!cancelled) setVideos(Array.isArray(vdata) ? vdata : []);
+              if (!cancelled) {
+                setVideos(Array.isArray(vdata) ? vdata : []);
+                setVideosLoading(false);
+              }
             } else {
-              if (!cancelled) setVideos([]);
+              if (!cancelled) {
+                setVideos([]);
+                setVideosLoading(false);
+              }
             }
           } catch (e) {
-            if (!cancelled) setVideos([]);
+            if (!cancelled) {
+              setVideos([]);
+              setVideosLoading(false);
+            }
           }
         } else {
-          if (!cancelled) setVideos([]);
+          if (!cancelled) {
+            setVideos([]);
+            setVideosLoading(false);
+          }
         }
       } catch (err) {
-        // ignore
+        if (!cancelled) {
+          setChannel(null);
+          setIsLoading(false);
+          setVideosLoading(false);
+        }
       }
     };
     load();
@@ -388,6 +497,11 @@ const PublicProfile = () => {
     };
   }, [username, currentUser?._id]);
 
+  const isOwn =
+    currentUser &&
+    channel?._id &&
+    String(currentUser._id) === String(channel._id);
+
   // Load saved videos when switching to Bookmarked tab on own profile
   useEffect(() => {
     let cancelled = false;
@@ -395,6 +509,8 @@ const PublicProfile = () => {
       if (activeTab !== 'saved') return;
       if (!currentUser?._id) return;
       if (!isOwn) return; // backend also enforces
+
+      setSavedVideosLoading(true);
       try {
         const res = await fetch(
           `${API}/api/v1/users/saved/${currentUser._id}`,
@@ -414,21 +530,20 @@ const PublicProfile = () => {
           } else {
             setSavedVideos([]);
           }
+          setSavedVideosLoading(false);
         }
       } catch (_) {
-        if (!cancelled) setSavedVideos([]);
+        if (!cancelled) {
+          setSavedVideos([]);
+          setSavedVideosLoading(false);
+        }
       }
     };
     loadSaved();
     return () => {
       cancelled = true;
     };
-  }, [activeTab, currentUser?._id]);
-
-  const isOwn =
-    currentUser &&
-    channel?._id &&
-    String(currentUser._id) === String(channel._id);
+  }, [activeTab, currentUser?._id, isOwn]);
 
   // Keep edit form state in sync with current user when opening
   useEffect(() => {
@@ -535,13 +650,48 @@ const PublicProfile = () => {
     }
   };
 
-  if (!channel) {
+  // Show loading state while fetching channel data or if essential data is missing
+  if (isLoading || !channel) {
+    return (
+      <LoadingContainer>
+        <LoadingUserInfo>
+          <LoadingAvatar />
+          <LoadingUserNames>
+            <LoadingText height='32px' width='200px' marginBottom='8px' />
+            <LoadingText height='20px' width='120px' marginBottom='16px' />
+            <LoadingText height='36px' width='100px' marginBottom='0px' />
+          </LoadingUserNames>
+        </LoadingUserInfo>
+        <LoadingText height='20px' width='300px' marginBottom='12px' />
+        <LoadingText height='20px' width='250px' marginBottom='40px' />
+        <LoadingText height='40px' width='100%' marginBottom='20px' />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '20px',
+          }}
+        >
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <LoadingText height='300px' width='100%' marginBottom='8px' />
+              <LoadingText height='16px' width='80%' marginBottom='4px' />
+              <LoadingText height='16px' width='60%' marginBottom='0px' />
+            </div>
+          ))}
+        </div>
+      </LoadingContainer>
+    );
+  }
+
+  // Show user not found if channel is explicitly null after loading
+  if (!isLoading && !channel) {
     return (
       <Container>
         <InfoWrapper>
           <DisplayName>Profile</DisplayName>
           <UserName>@{username}</UserName>
-          <UserBio>Loading or user not found.</UserBio>
+          <UserBio>User not found.</UserBio>
         </InfoWrapper>
       </Container>
     );
@@ -618,8 +768,19 @@ const PublicProfile = () => {
           )}
         </Navbar>
         <VideosContainer>
-          {activeTab === 'saved' && isOwn
-            ? savedVideos.map((v) => (
+          {(activeTab === 'videos' && videosLoading) ||
+          (activeTab === 'saved' && savedVideosLoading) ? (
+            // Show loading skeleton for videos
+            [1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i}>
+                <LoadingText height='300px' width='100%' marginBottom='8px' />
+                <LoadingText height='16px' width='80%' marginBottom='4px' />
+                <LoadingText height='16px' width='60%' marginBottom='0px' />
+              </div>
+            ))
+          ) : activeTab === 'saved' && isOwn ? (
+            savedVideos.length > 0 ? (
+              savedVideos.map((v) => (
                 <PostCard
                   key={v._id}
                   channel={
@@ -638,18 +799,45 @@ const PublicProfile = () => {
                   enableVideoLink={true}
                 />
               ))
-            : videos.map((v) => (
-                <PostCard
-                  key={v._id}
-                  channel={channel || {}}
-                  video={v}
-                  user={currentUser}
-                  hideFollowButton={!isOwn}
-                  onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
-                  onVideoDelete={isOwn ? handleVideoDelete : undefined}
-                  enableVideoLink={true}
-                />
-              ))}
+            ) : (
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontFamily: 'var(--secondary-fonts)',
+                }}
+              >
+                No bookmarked videos yet
+              </div>
+            )
+          ) : videos.length > 0 ? (
+            videos.map((v) => (
+              <PostCard
+                key={v._id}
+                channel={channel || {}}
+                video={v}
+                user={currentUser}
+                hideFollowButton={!isOwn}
+                onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
+                onVideoDelete={isOwn ? handleVideoDelete : undefined}
+                enableVideoLink={true}
+              />
+            ))
+          ) : (
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: 'rgba(255, 255, 255, 0.6)',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              No videos yet
+            </div>
+          )}
         </VideosContainer>
       </VideosWrapper>
 

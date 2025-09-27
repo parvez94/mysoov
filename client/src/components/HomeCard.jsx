@@ -5,7 +5,8 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { FollowButton, VideoOptionsMenu } from './index';
 import { openModal } from '../redux/modal/modalSlice';
-import { resolveImageUrl } from '../utils/imageUtils';
+import { useVideoCardUserLoading } from '../hooks/useUserDataLoading';
+import { VideoCardUserLoading } from './loading/UserInfoLoading';
 
 const CardHeader = styled.div`
   display: flex;
@@ -48,12 +49,17 @@ const UserName = styled.p`
 `;
 
 const HomeCard = ({ id, video, onVideoUpdate, onVideoDelete }) => {
-  const [user, setUser] = useState({});
+  const [user, setUser] = useState(null);
 
   const { currentUser } = useSelector((state) => state.user);
   const dispatch = useDispatch();
 
-  const dpName = user.displayName || user.username;
+  const {
+    isLoading: userLoading,
+    avatarUrl,
+    displayName,
+    username,
+  } = useVideoCardUserLoading(null, user);
 
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
@@ -73,33 +79,31 @@ const HomeCard = ({ id, video, onVideoUpdate, onVideoDelete }) => {
     fetchUser();
   }, [id]);
 
-  const imageUrl = resolveImageUrl(
-    currentUser && user && String(currentUser._id) === String(user._id)
-      ? currentUser.displayImage
-      : user?.displayImage
-  );
-
   return (
     <CardHeader>
-      <HeaderWrapper>
-        <Link
-          to={`/${user.username}`}
-          style={{ display: 'block' }}
-          onClick={guardClick}
-        >
-          <Avatar src={imageUrl} />
-        </Link>
-        <UserInfo>
+      {userLoading ? (
+        <VideoCardUserLoading />
+      ) : (
+        <HeaderWrapper>
           <Link
-            to={`/${user.username}`}
-            style={{ textDecoration: 'none' }}
+            to={`/${username}`}
+            style={{ display: 'block' }}
             onClick={guardClick}
           >
-            <Name>{dpName}</Name>
+            <Avatar src={avatarUrl} />
           </Link>
-          <UserName>@{user.username}</UserName>
-        </UserInfo>
-      </HeaderWrapper>
+          <UserInfo>
+            <Link
+              to={`/${username}`}
+              style={{ textDecoration: 'none' }}
+              onClick={guardClick}
+            >
+              <Name>{displayName}</Name>
+            </Link>
+            <UserName>@{username}</UserName>
+          </UserInfo>
+        </HeaderWrapper>
+      )}
       {currentUser &&
         user?._id &&
         (currentUser._id !== user._id ? (
