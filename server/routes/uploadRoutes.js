@@ -14,6 +14,21 @@ cloudinary.config({
   api_secret: process.env.CLOUD_SECRET,
 });
 
+// Handle preflight requests for upload endpoint
+router.options('/upload', (req, res) => {
+  res.header(
+    'Access-Control-Allow-Origin',
+    'https://mysoov-frontend.vercel.app'
+  );
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, Cookie'
+  );
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 router.post('/upload', verifyToken, async (req, res) => {
   try {
     if (!req.files || Object.keys(req.files).length === 0)
@@ -44,6 +59,21 @@ router.post('/upload', verifyToken, async (req, res) => {
     console.error('Error uploading file:', err);
     return res.status(500).json({ msg: 'Internal server error' });
   }
+});
+
+// Handle preflight requests for image upload endpoint
+router.options('/upload/image', (req, res) => {
+  res.header(
+    'Access-Control-Allow-Origin',
+    'https://mysoov-frontend.vercel.app'
+  );
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, Cookie'
+  );
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
 });
 
 // Upload profile image
