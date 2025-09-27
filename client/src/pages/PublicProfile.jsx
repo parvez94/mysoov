@@ -620,43 +620,35 @@ const PublicProfile = () => {
         <VideosContainer>
           {activeTab === 'saved' && isOwn
             ? savedVideos.map((v) => (
-                <Link
+                <PostCard
                   key={v._id}
-                  to={`/video/${v._id}`}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <PostCard
-                    channel={
-                      v.author
-                        ? {
-                            _id: v.author._id,
-                            username: v.author.username,
-                            displayName: v.author.displayName,
-                            displayImage: v.author.displayImage,
-                          }
-                        : {}
-                    }
-                    video={v}
-                    user={currentUser}
-                    hideFollowButton={true}
-                  />
-                </Link>
+                  channel={
+                    v.author
+                      ? {
+                          _id: v.author._id,
+                          username: v.author.username,
+                          displayName: v.author.displayName,
+                          displayImage: v.author.displayImage,
+                        }
+                      : {}
+                  }
+                  video={v}
+                  user={currentUser}
+                  hideFollowButton={true}
+                  enableVideoLink={true}
+                />
               ))
             : videos.map((v) => (
-                <Link
+                <PostCard
                   key={v._id}
-                  to={`/video/${v._id}`}
-                  style={{ textDecoration: 'none' }}
-                >
-                  <PostCard
-                    channel={channel || {}}
-                    video={v}
-                    user={currentUser}
-                    hideFollowButton={!isOwn}
-                    onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
-                    onVideoDelete={isOwn ? handleVideoDelete : undefined}
-                  />
-                </Link>
+                  channel={channel || {}}
+                  video={v}
+                  user={currentUser}
+                  hideFollowButton={!isOwn}
+                  onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
+                  onVideoDelete={isOwn ? handleVideoDelete : undefined}
+                  enableVideoLink={true}
+                />
               ))}
         </VideosContainer>
       </VideosWrapper>

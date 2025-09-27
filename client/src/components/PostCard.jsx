@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import { Link } from 'react-router-dom';
 import { VideoCard, VideoText } from '../components/index';
 
 const Card = styled.div`
@@ -17,6 +18,14 @@ const Video = styled.video`
   background: #000;
 `;
 
+const ClickableContent = styled.div`
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.9;
+  }
+`;
+
 const PostCard = ({
   channel,
   video,
@@ -25,8 +34,17 @@ const PostCard = ({
   hideFollowButton = false,
   onVideoUpdate,
   onVideoDelete,
+  enableVideoLink = false,
 }) => {
   const src = video?.videoUrl?.url;
+
+  const videoContent = (
+    <>
+      <VideoText video={video} />
+      {showVideo && src ? <Video src={src} controls playsInline /> : null}
+    </>
+  );
+
   return (
     <Card>
       <VideoCard
@@ -37,8 +55,16 @@ const PostCard = ({
         onVideoUpdate={onVideoUpdate}
         onVideoDelete={onVideoDelete}
       />
-      <VideoText video={video} />
-      {showVideo && src ? <Video src={src} controls playsInline /> : null}
+      {enableVideoLink ? (
+        <Link
+          to={`/video/${video._id}`}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          <ClickableContent>{videoContent}</ClickableContent>
+        </Link>
+      ) : (
+        videoContent
+      )}
     </Card>
   );
 };
