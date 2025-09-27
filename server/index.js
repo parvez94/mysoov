@@ -84,6 +84,12 @@ if (process.env.NODE_ENV === 'production') {
 app.use(
   fileUpload({
     useTempFiles: true,
+    tempFileDir: '/tmp/',
+    createParentPath: true,
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100MB max file size
+    },
+    abortOnLimit: true,
   })
 );
 
