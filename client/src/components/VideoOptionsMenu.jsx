@@ -22,10 +22,6 @@ const MenuButton = styled.button`
   transition: background-color 0.2s;
   font-family: var(--secondary-fonts);
 
-  &:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
   svg {
     width: 20px;
     height: 20px;
