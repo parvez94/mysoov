@@ -3,10 +3,13 @@ import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { IoIosHome } from 'react-icons/io';
 import { RiUserFollowLine } from 'react-icons/ri';
-import { MdOutlineExplore } from 'react-icons/md';
+import { MdOutlineExplore, MdOutlineNotificationsNone } from 'react-icons/md';
+import { HiOutlineChatAlt2 } from 'react-icons/hi';
 import { LuUser2 } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
 import { openModal } from '../../redux/modal/modalSlice';
+import { useNotifications } from '../../hooks/useNotifications';
+import { useMessages } from '../../hooks/useMessages';
 
 const Container = styled.div`
   position: sticky;
@@ -38,6 +41,7 @@ const NavItem = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
 
   @media (max-width: 768px) {
     justify-content: center;
@@ -50,6 +54,31 @@ const NavItem = styled.div`
     svg {
       font-size: 24px;
     }
+  }
+`;
+
+const NotificationBadge = styled.div`
+  position: absolute;
+  top: 8px;
+  left: 18px;
+  background-color: #ff4444;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  min-width: 20px;
+
+  @media (max-width: 768px) {
+    top: 8px;
+    left: 28px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
   }
 `;
 
@@ -99,6 +128,12 @@ const LeftSidebar = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
 
+  // Get notification and message counts
+  const { unreadCount: notificationCount } = useNotifications();
+  const { unreadCount: messageCount } = useMessages();
+
+  console.log('LeftSidebar - messageCount:', messageCount);
+
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
     if (!currentUser) {
@@ -118,10 +153,26 @@ const LeftSidebar = () => {
             <span>Home</span>
           </NavItem>
         </Link>
-        <Link to='following' onClick={guardClick}>
+        <Link to='notifications' onClick={guardClick}>
           <NavItem>
-            <RiUserFollowLine />
-            <span>Following</span>
+            <MdOutlineNotificationsNone />
+            <span>Notifications</span>
+            {currentUser && notificationCount > 0 && (
+              <NotificationBadge>
+                {notificationCount > 99 ? '99+' : notificationCount}
+              </NotificationBadge>
+            )}
+          </NavItem>
+        </Link>
+        <Link to='messages' onClick={guardClick}>
+          <NavItem>
+            <HiOutlineChatAlt2 />
+            <span>Messages</span>
+            {currentUser && messageCount > 0 && (
+              <NotificationBadge>
+                {messageCount > 99 ? '99+' : messageCount}
+              </NotificationBadge>
+            )}
           </NavItem>
         </Link>
         <Link to='explore' onClick={guardClick}>

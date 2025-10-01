@@ -8,3 +8,5 @@ export {
   CommentUserLoading,
   GenericUserLoading,
 } from './UserInfoLoading';
+
+export { default as ThreeDotsLoader } from './ThreeDotsLoader';

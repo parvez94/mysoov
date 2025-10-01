@@ -6,7 +6,9 @@ const spin = keyframes`
   100% { transform: rotate(360deg); }
 `;
 
-const Box = styled.div`
+const Box = styled.div.withConfig({
+  shouldForwardProp: (prop) => !['pad', 'full'].includes(prop),
+})`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -17,7 +19,10 @@ const Box = styled.div`
   min-height: ${({ full }) => (full ? '50vh' : 'auto')};
 `;
 
-const Ring = styled.div`
+const Ring = styled.div.withConfig({
+  shouldForwardProp: (prop) =>
+    !['size', 'thickness', 'color', 'duration'].includes(prop),
+})`
   width: ${({ size }) => size}px;
   height: ${({ size }) => size}px;
   border: ${({ thickness }) => thickness}px solid rgba(255, 255, 255, 0.15);

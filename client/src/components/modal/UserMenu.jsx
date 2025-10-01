@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { LuUser2 } from 'react-icons/lu';
 import { MdOutlineLogout } from 'react-icons/md';
+import { IoSettingsOutline } from 'react-icons/io5';
 import { logout } from '../../redux/user/userSlice';
 
 const Container = styled.div`
@@ -43,6 +44,13 @@ const UserMenu = () => {
         <MenuItem>
           <LuUser2 />
           Profile
+        </MenuItem>
+      </Link>
+
+      <Link to='/settings'>
+        <MenuItem>
+          <IoSettingsOutline />
+          Settings
         </MenuItem>
       </Link>
 

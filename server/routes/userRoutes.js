@@ -12,6 +12,9 @@ import {
   saveVideo,
   unSaveVideo,
   getSavedVideos,
+  checkUsernameAvailability,
+  getFollowers,
+  getFollowing,
 } from '../controllers/userCtrl.js';
 
 import { verifyToken } from '../utils/verifyToken.js';
@@ -20,6 +23,9 @@ const router = express.Router();
 
 // Get users
 router.get('/', getUsers);
+
+// Check username availability
+router.get('/check-username/:username', checkUsernameAvailability);
 
 // Get user
 router.get('/:id', getUser);
@@ -51,5 +57,11 @@ router.get('/profile/:id', verifyToken, getUserVideos);
 
 // Saved videos (private)
 router.get('/saved/:id', verifyToken, getSavedVideos);
+
+// Get followers list
+router.get('/followers/:id', getFollowers);
+
+// Get following list
+router.get('/following/:id', getFollowing);
 
 export default router;

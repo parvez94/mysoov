@@ -12,6 +12,11 @@ import { IoClose } from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
 import { FollowButton, PostCard } from '../components';
 import { resolveImageUrl } from '../utils/imageUtils';
+import { useMessages } from '../hooks/useMessages';
+import { useChatContext } from '../contexts/ChatContext';
+import { useUsernameCheck } from '../hooks/useUsernameCheck';
+import UsernameAvailabilityIndicator from '../components/UsernameAvailabilityIndicator';
+import UserListModal from '../components/modal/UserListModal';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -74,6 +79,9 @@ const UserName = styled.h5`
 
 const Actions = styled.div`
   margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
 `;
 
 const ActionButton = styled.button`
@@ -90,6 +98,20 @@ const ActionButton = styled.button`
   cursor: pointer;
 `;
 
+const MessageButton = styled.button`
+  font-family: var(--secondary-fonts);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 20px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--primary-color);
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: 3px;
+  cursor: pointer;
+`;
+
 const UserStats = styled.div`
   display: flex;
   align-items: center;
@@ -102,6 +124,16 @@ const UserStats = styled.div`
 
 const Stat = styled.span`
   color: var(--secondary-color);
+`;
+
+const ClickableStat = styled.span`
+  color: var(--secondary-color);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
 `;
 
 const Dot = styled.span`
@@ -396,6 +428,32 @@ const PublicProfile = () => {
   const [videosLoading, setVideosLoading] = useState(true);
   const [savedVideosLoading, setSavedVideosLoading] = useState(false);
 
+  // Modal states
+  const [followersModalOpen, setFollowersModalOpen] = useState(false);
+  const [followingModalOpen, setFollowingModalOpen] = useState(false);
+
+  // Username availability check
+  const usernameCheck = useUsernameCheck(usernameEdit, currentUser?.username);
+
+  // Messages hook
+  const { getOrCreateConversation } = useMessages();
+
+  // Chat context
+  const { openChatWithUser } = useChatContext();
+
+  // Handle message button click
+  const handleMessage = async () => {
+    if (!currentUser || !channel) return;
+
+    // Open chat popup with the target user
+    openChatWithUser({
+      _id: channel._id,
+      username: channel.username,
+      displayName: channel.displayName,
+      displayImage: channel.displayImage,
+    });
+  };
+
   // Video management handlers
   const handleVideoUpdate = (updatedVideo) => {
     setVideos((prevVideos) =>
@@ -592,6 +650,11 @@ const PublicProfile = () => {
     e.preventDefault();
     if (!currentUser?._id) return;
 
+    // Prevent saving if username is not valid
+    if (!usernameCheck.isValid && usernameEdit !== currentUser?.username) {
+      return;
+    }
+
     setSaving(true);
     try {
       let displayImage = currentUser.displayImage || '';
@@ -720,32 +783,39 @@ const PublicProfile = () => {
                   Edit Profile
                 </ActionButton>
               ) : (
-                <FollowButton
-                  user={currentUser}
-                  channel={channel}
-                  onDelta={(d) => {
-                    setChannel((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            followers: Math.max(0, (prev.followers || 0) + d),
-                          }
-                        : prev
-                    );
-                  }}
-                />
+                <>
+                  <FollowButton
+                    user={currentUser}
+                    channel={channel}
+                    onDelta={(d) => {
+                      setChannel((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              followers: Math.max(0, (prev.followers || 0) + d),
+                            }
+                          : prev
+                      );
+                    }}
+                  />
+                  {currentUser && (
+                    <MessageButton onClick={handleMessage}>
+                      Message
+                    </MessageButton>
+                  )}
+                </>
               )}
             </Actions>
           </UserNames>
         </UserInfo>
         <UserStats>
-          <Stat>
+          <ClickableStat onClick={() => setFollowersModalOpen(true)}>
             <strong>{followersCount}</strong> Followers
-          </Stat>
+          </ClickableStat>
           <Dot>•</Dot>
-          <Stat>
+          <ClickableStat onClick={() => setFollowingModalOpen(true)}>
             <strong>{followingCount}</strong> Following
-          </Stat>
+          </ClickableStat>
         </UserStats>
         <UserBio>{channel?.bio || ''}</UserBio>
       </InfoWrapper>
@@ -895,6 +965,23 @@ const PublicProfile = () => {
                     value={usernameEdit}
                     onChange={(e) => setUsernameEdit(e.target.value)}
                     placeholder='username'
+                    style={{
+                      borderColor:
+                        usernameEdit && usernameEdit !== currentUser?.username
+                          ? usernameCheck.isAvailable
+                            ? '#4ade80'
+                            : usernameCheck.isUnavailable
+                            ? '#f87171'
+                            : 'rgba(255, 255, 255, 0.15)'
+                          : 'rgba(255, 255, 255, 0.15)',
+                    }}
+                  />
+                  <UsernameAvailabilityIndicator
+                    status={usernameCheck.status}
+                    message={usernameCheck.message}
+                    isVisible={
+                      usernameEdit && usernameEdit !== currentUser?.username
+                    }
                   />
                 </div>
 
@@ -916,7 +1003,16 @@ const PublicProfile = () => {
                   >
                     Cancel
                   </SecondaryBtn>
-                  <PrimaryBtn type='submit' disabled={saving}>
+                  <PrimaryBtn
+                    type='submit'
+                    disabled={
+                      saving ||
+                      (usernameEdit !== currentUser?.username &&
+                        (usernameCheck.isUnavailable ||
+                          usernameCheck.hasError ||
+                          !usernameCheck.isValid))
+                    }
+                  >
                     {saving ? 'Saving...' : 'Save'}
                   </PrimaryBtn>
                 </ActionsRow>
@@ -925,6 +1021,24 @@ const PublicProfile = () => {
           </ModalWrapper>,
           document.body
         )}
+
+      {/* Followers Modal */}
+      <UserListModal
+        isOpen={followersModalOpen}
+        onClose={() => setFollowersModalOpen(false)}
+        userId={channel?._id}
+        type='followers'
+        title='Followers'
+      />
+
+      {/* Following Modal */}
+      <UserListModal
+        isOpen={followingModalOpen}
+        onClose={() => setFollowingModalOpen(false)}
+        userId={channel?._id}
+        type='following'
+        title='Following'
+      />
     </Container>
   );
 };

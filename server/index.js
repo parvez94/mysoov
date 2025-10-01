@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import fileUpload from 'express-fileupload';
 import cors from 'cors';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
 dotenv.config();
 
@@ -98,6 +100,12 @@ import userRouter from './routes/userRoutes.js';
 import videoRouter from './routes/videoRoutes.js';
 import uploadRouter from './routes/uploadRoutes.js';
 import commentRouter from './routes/commentRoutes.js';
+import notificationRouter from './routes/notificationRoutes.js';
+import messageRouter from './routes/messageRoutes.js';
+import {
+  authenticateSocket,
+  handleConnection,
+} from './socket/socketHandler.js';
 
 // Health check route
 app.get('/', (req, res) => {
@@ -175,6 +183,8 @@ app.use('/api/v1/users', userRouter);
 app.use('/api/v1/videos', videoRouter);
 app.use('/api/v1', uploadRouter);
 app.use('/api/v1/comments', commentRouter);
+app.use('/api/v1/notifications', notificationRouter);
+app.use('/api/v1/messages', messageRouter);
 
 // Database connection
 let isConnected = false;
@@ -230,20 +240,74 @@ app.use((err, req, res, next) => {
 // express-fileupload with useTempFiles=true writes to disk and does not expose a streaming `data` API.
 // Use client-side onUploadProgress (Axios) or implement server-side progress via streaming middleware if needed.
 
+// Create HTTP server and Socket.IO instance
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = [
+        'http://localhost:5173',
+        'https://mysoov-frontend.vercel.app',
+        'https://mysoov-backend.vercel.app',
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // For development, allow any localhost origin
+      if (
+        process.env.NODE_ENV !== 'production' &&
+        origin.includes('localhost')
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Make io available globally for other modules
+global.io = io;
+
 // Server connection
 const port = process.env.PORT || 5100;
 
 // For local development
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(port, async () => {
+  server.listen(port, async () => {
     try {
       await connectDB();
+
+      // Set up Socket.IO authentication and connection handling after DB connection
+      io.use(authenticateSocket);
+      io.on('connection', (socket) => handleConnection(io, socket));
+
       console.log(`Server is running on PORT ${port}....`);
+      console.log('Socket.IO server is ready for connections');
     } catch (error) {
       console.error('Failed to start server:', error);
       process.exit(1);
     }
   });
+} else {
+  // For production (Vercel), ensure DB connection is established
+  connectDB()
+    .then(() => {
+      // Set up Socket.IO authentication and connection handling after DB connection
+      io.use(authenticateSocket);
+      io.on('connection', (socket) => handleConnection(io, socket));
+      console.log('Production server initialized with database connection');
+    })
+    .catch((error) => {
+      console.error('Failed to initialize production server:', error);
+    });
 }
 
 export default app;

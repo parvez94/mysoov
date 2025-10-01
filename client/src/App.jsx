@@ -8,6 +8,11 @@ import {
   Upload,
   PublicProfile,
 } from './pages/index';
+import Notifications from './pages/Notifications';
+import Messages from './pages/Messages';
+import Settings from './pages/Settings';
+import { SocketProvider } from './contexts/SocketContext';
+import { ChatProvider } from './contexts/ChatContext';
 
 const router = createBrowserRouter([
   {
@@ -21,6 +26,18 @@ const router = createBrowserRouter([
       {
         path: 'following',
         element: <Following />,
+      },
+      {
+        path: 'notifications',
+        element: <Notifications />,
+      },
+      {
+        path: 'messages',
+        element: <Messages />,
+      },
+      {
+        path: 'settings',
+        element: <Settings />,
       },
       {
         path: 'explore',
@@ -50,6 +67,12 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  return (
+    <SocketProvider>
+      <ChatProvider>
+        <RouterProvider router={router} />
+      </ChatProvider>
+    </SocketProvider>
+  );
 };
 export default App;

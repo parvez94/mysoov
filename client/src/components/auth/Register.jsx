@@ -8,6 +8,7 @@ import {
   loginFailed,
 } from '../../redux/user/userSlice';
 import { closeModal } from '../../redux/modal/modalSlice';
+import ThreeDotsLoader from '../loading/ThreeDotsLoader';
 
 const ModalTop = styled.div`
   padding: 20px 40px;
@@ -68,6 +69,15 @@ const Button = styled.button`
   border-radius: 3px;
   cursor: pointer;
   margin-top: 10px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
 `;
 
 const ModalBottom = styled.div`
@@ -75,11 +85,16 @@ const ModalBottom = styled.div`
   padding: 20px 40px;
 `;
 
-const ErrorWrapper = styled.div`
-  margin-top: 8px;
+const ErrorMessage = styled.div`
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: 3px;
+  color: #ff6b6b;
   font-family: var(--secondary-fonts);
-  color: var(--primary-color);
-  font-size: 12px;
+  font-size: 13px;
+  text-align: center;
 `;
 
 const Text = styled.p`
@@ -93,14 +108,32 @@ const Register = ({ link }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showError, setShowError] = useState(null);
-
-  const { error } = useSelector((state) => state.user);
+  const [error, setError] = useState('');
 
   const dispatch = useDispatch();
+  const { isLoading } = useSelector((state) => state.user);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Clear previous errors
+    setError('');
+
+    // Basic validation
+    if (!name || !email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (name.length < 2) {
+      setError('Name must be at least 2 characters long');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
 
     const url = `${import.meta.env.VITE_API_URL}/api/v1/auth/signup`;
 
@@ -128,12 +161,19 @@ const Register = ({ link }) => {
         dispatch(loginSuccess(data));
         dispatch(closeModal());
       } else {
-        const errorMsg = await res.json();
-        dispatch(loginFailed(errorMsg.error));
-        setShowError(true);
+        const errorData = await res.json();
+        const errorMessage =
+          errorData.message ||
+          errorData.error ||
+          'Registration failed. Please try again.';
+        setError(errorMessage);
+        dispatch(loginFailed(errorMessage));
       }
     } catch (err) {
-      dispatch(loginFailed(err));
+      const errorMessage =
+        'Network error. Please check your connection and try again.';
+      setError(errorMessage);
+      dispatch(loginFailed(errorMessage));
     }
   };
 
@@ -144,22 +184,38 @@ const Register = ({ link }) => {
         <Form>
           <InputField>
             <Label>Name</Label>
-            <Input onChange={(e) => setName(e.target.value)} />
+            <Input
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError(''); // Clear error when user starts typing
+              }}
+            />
           </InputField>
           <InputField>
             <Label>Email</Label>
-            <Input type='email' onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              type='email'
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError(''); // Clear error when user starts typing
+              }}
+            />
           </InputField>
           <InputField>
             <Label>Password</Label>
             <Input
               type='password'
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError(''); // Clear error when user starts typing
+              }}
             />
           </InputField>
-          <Button onClick={handleSubmit}>Register</Button>
+          <Button onClick={handleSubmit} disabled={isLoading}>
+            {isLoading ? <ThreeDotsLoader /> : 'Register'}
+          </Button>
+          {error && <ErrorMessage>{error}</ErrorMessage>}
         </Form>
-        <ErrorWrapper>{showError && error}</ErrorWrapper>
       </ModalTop>
       <ModalBottom>
         <Text>
