@@ -166,14 +166,31 @@ app.get('/api/test-auth', (req, res) => {
 // Middleware to ensure database connection for API routes
 app.use('/api', async (req, res, next) => {
   try {
+    // Ensure database connection is established and ready
     await connectDB();
+
+    // Double-check connection state
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database connection not ready');
+    }
+
     next();
   } catch (error) {
-    console.error('Database connection failed:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Database connection failed',
+    console.error('Database connection failed for request:', {
+      url: req.url,
+      method: req.method,
       error: error.message,
+      connectionState: mongoose.connection.readyState,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(503).json({
+      success: false,
+      message: 'Database service temporarily unavailable',
+      error:
+        process.env.NODE_ENV === 'production'
+          ? 'Connection failed'
+          : error.message,
     });
   }
 });
@@ -188,11 +205,21 @@ app.use('/api/v1/messages', messageRouter);
 
 // Database connection
 let isConnected = false;
+let connectionPromise = null;
 
-const connectDB = async () => {
-  if (isConnected) {
+const connectDB = async (retryCount = 0) => {
+  const maxRetries = 3;
+
+  // If already connected, return immediately
+  if (isConnected && mongoose.connection.readyState === 1) {
     console.log('Using existing database connection');
     return;
+  }
+
+  // If connection is in progress, wait for it
+  if (connectionPromise) {
+    console.log('Waiting for existing connection attempt...');
+    return connectionPromise;
   }
 
   const mongoUrl = process.env.MONGO_URL;
@@ -201,17 +228,102 @@ const connectDB = async () => {
     throw new Error('MONGO_URL environment variable is not set');
   }
 
-  try {
-    await mongoose.connect(mongoUrl, {
-      bufferCommands: false,
-    });
-    isConnected = true;
-    console.log('Connected to database...');
-  } catch (err) {
-    console.error('Error connecting to the database:', err.message);
-    throw err;
-  }
+  // Create connection promise
+  connectionPromise = (async () => {
+    try {
+      console.log(
+        `Establishing database connection... (attempt ${retryCount + 1}/${
+          maxRetries + 1
+        })`
+      );
+
+      // Close existing connection if any
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close();
+      }
+
+      await mongoose.connect(mongoUrl, {
+        bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 10000,
+      });
+
+      // Wait for connection to be ready
+      await new Promise((resolve, reject) => {
+        if (mongoose.connection.readyState === 1) {
+          resolve();
+        } else {
+          mongoose.connection.once('connected', resolve);
+          mongoose.connection.once('error', reject);
+          // Timeout after 10 seconds
+          setTimeout(() => reject(new Error('Connection timeout')), 10000);
+        }
+      });
+
+      isConnected = true;
+      console.log('Successfully connected to database');
+
+      // Reset connection promise after successful connection
+      connectionPromise = null;
+
+      return;
+    } catch (err) {
+      console.error(
+        `Database connection attempt ${retryCount + 1} failed:`,
+        err.message
+      );
+      isConnected = false;
+      connectionPromise = null;
+
+      // Retry logic
+      if (retryCount < maxRetries) {
+        console.log(`Retrying connection in ${(retryCount + 1) * 1000}ms...`);
+        await new Promise((resolve) =>
+          setTimeout(resolve, (retryCount + 1) * 1000)
+        );
+        return connectDB(retryCount + 1);
+      }
+
+      throw new Error(
+        `Failed to connect to database after ${maxRetries + 1} attempts: ${
+          err.message
+        }`
+      );
+    }
+  })();
+
+  return connectionPromise;
 };
+
+// Handle connection events
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose connected to MongoDB');
+  isConnected = true;
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('Mongoose connection error:', err);
+  isConnected = false;
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose disconnected from MongoDB');
+  isConnected = false;
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  try {
+    await mongoose.connection.close();
+    console.log('Mongoose connection closed through app termination');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during graceful shutdown:', err);
+    process.exit(1);
+  }
+});
 
 // Error Handler
 app.use((err, req, res, next) => {
