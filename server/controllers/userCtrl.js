@@ -170,7 +170,8 @@ export const likeVideo = async (req, res, next) => {
     });
 
     // Create notification for video owner (if not liking own video)
-    if (video.userId !== userId) {
+    // Convert both to strings for proper comparison
+    if (video.userId.toString() !== userId.toString()) {
       await createNotification(
         video.userId,
         userId,

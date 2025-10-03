@@ -20,39 +20,51 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (currentUser) {
+      // Check if Socket.IO should be disabled
+      const isSocketDisabled =
+        import.meta.env.VITE_DISABLE_SOCKET_IO === 'true';
+      const isProduction = import.meta.env.PROD;
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5100';
+      const isVercelBackend = apiUrl.includes('vercel.app');
+
+      // Skip Socket.IO connection if explicitly disabled or for Vercel production backend
+      if (isSocketDisabled || (isProduction && isVercelBackend)) {
+        setSocket(null);
+        setIsConnected(false);
+        return;
+      }
+
       // Create socket connection - using cookies for authentication
-      const newSocket = io(
-        import.meta.env.VITE_API_URL || 'http://localhost:5100',
-        {
-          withCredentials: true, // This will send cookies for authentication
-          transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
-          timeout: 20000,
-          reconnection: true,
-          reconnectionDelay: 1000,
-          reconnectionAttempts: 5,
-          maxReconnectionAttempts: 5,
-        }
-      );
+      const newSocket = io(apiUrl, {
+        withCredentials: true, // This will send cookies for authentication
+        transports: ['polling', 'websocket'], // Try polling first, then websocket
+        timeout: 20000,
+        reconnection: true,
+        reconnectionDelay: 2000,
+        reconnectionAttempts: 3,
+        maxReconnectionAttempts: 3,
+        forceNew: true,
+      });
 
       // Connection event handlers
       newSocket.on('connect', () => {
-        console.log('🔌 ===== SOCKET CONNECTION DEBUG =====');
-        console.log('🔌 Socket connected successfully, ID:', newSocket.id);
-        console.log('🔌 User ID:', currentUser._id);
-        console.log('🔌 Expected room name:', `user_${currentUser._id}`);
-        console.log('🔌 Socket transport:', newSocket.io.engine.transport.name);
-        console.log('🔌 ===== END SOCKET CONNECTION DEBUG =====');
+        console.log('✅ Socket.IO connected:', newSocket.id);
         setIsConnected(true);
       });
 
       newSocket.on('disconnect', (reason) => {
-        console.log('Socket disconnected:', reason);
         setIsConnected(false);
       });
 
       newSocket.on('connect_error', (error) => {
-        console.log('Socket connection error:', error);
+        console.error('❌ Socket.IO connection error:', error.message);
         setIsConnected(false);
+
+        // If it's a WebSocket error on production, disable further attempts
+        if (isProduction && error.message.includes('websocket')) {
+          newSocket.disconnect();
+          setSocket(null);
+        }
       });
 
       newSocket.on('reconnect', (attemptNumber) => {
@@ -60,7 +72,12 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('reconnect_error', (error) => {
-        // Handle reconnection errors silently
+        // Silent error handling
+      });
+
+      newSocket.on('reconnect_failed', () => {
+        setIsConnected(false);
+        setSocket(null);
       });
 
       // Global message handler for debugging (removed to avoid confusion)

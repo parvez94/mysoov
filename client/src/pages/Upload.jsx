@@ -403,7 +403,6 @@ const Upload = () => {
         setStatus('canceled');
         setUploadProgress(0);
       } else {
-        console.error(err);
         setStatus('error');
       }
       setUploading(false);
@@ -441,7 +440,6 @@ const Upload = () => {
       await response.json();
       window.location.href = '/';
     } catch (error) {
-      console.error('Error creating post:', error.message);
       alert('Failed to create post. Please try again.');
     }
   };

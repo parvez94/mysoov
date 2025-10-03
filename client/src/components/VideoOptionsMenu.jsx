@@ -240,7 +240,6 @@ const VideoOptionsMenu = ({ video, onVideoUpdate, onVideoDelete }) => {
         });
         onVideoDelete?.(video._id);
       } catch (error) {
-        console.error('Error deleting video:', error);
         alert('Failed to delete video. Please try again.');
       }
     }
@@ -262,7 +261,6 @@ const VideoOptionsMenu = ({ video, onVideoUpdate, onVideoDelete }) => {
       onVideoUpdate?.(response.data);
       setIsEditModalOpen(false);
     } catch (error) {
-      console.error('Error updating video:', error);
       alert('Failed to update video. Please try again.');
     } finally {
       setIsLoading(false);

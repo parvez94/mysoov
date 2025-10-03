@@ -1,5 +1,6 @@
 import Notification from '../models/Notification.js';
 import { createError } from '../utils/error.js';
+import { sendNotificationSSE } from '../routes/sseRoutes.js';
 
 // Create a new notification
 export const createNotification = async (
@@ -11,24 +12,12 @@ export const createNotification = async (
   relatedComment = null
 ) => {
   try {
-    console.log('🔔 Creating notification with params:', {
-      recipientId: recipientId.toString(),
-      senderId: senderId.toString(),
-      type,
-      message,
-    });
-
     // Convert to strings for comparison
     const recipientIdStr = recipientId.toString();
     const senderIdStr = senderId.toString();
 
     // Don't create notification if sender and recipient are the same
     if (recipientIdStr === senderIdStr) {
-      console.log(
-        '🔔 Skipping notification - sender and recipient are the same'
-      );
-      console.log('🔔 Sender ID:', senderIdStr);
-      console.log('🔔 Recipient ID:', recipientIdStr);
       return null;
     }
 
@@ -41,64 +30,33 @@ export const createNotification = async (
       relatedComment,
     });
 
-    console.log('🔔 Saving notification to database...');
     await notification.save();
-    console.log(
-      '🔔 Notification saved successfully with ID:',
-      notification._id
-    );
 
     // Populate sender information
     await notification.populate('sender', 'username displayName displayImage');
 
-    // Emit real-time notification if socket.io is available
+    // Send real-time notification via Socket.IO (if available)
     if (global.io) {
       const roomName = `user_${recipientIdStr}`;
-      console.log('🔔 ===== SOCKET EMISSION DEBUG =====');
-      console.log('🔔 Emitting notification to user room:', roomName);
-      console.log('🔔 Recipient ID:', recipientIdStr);
-      console.log('🔔 Notification type:', notification.type);
-      console.log('🔔 Notification message:', notification.message);
-
-      // Get all rooms to see what's available
-      const rooms = global.io.sockets.adapter.rooms;
-      console.log('🔔 Available rooms:', Array.from(rooms.keys()));
-
-      // Check if the target room exists
-      const targetRoom = rooms.get(roomName);
-      console.log('🔔 Target room exists:', !!targetRoom);
-      if (targetRoom) {
-        console.log('🔔 Target room size:', targetRoom.size);
-        console.log('🔔 Target room sockets:', Array.from(targetRoom));
-      }
-
-      // Get connected sockets count
-      console.log(
-        '🔔 Total connected sockets:',
-        global.io.sockets.sockets.size
-      );
-
-      // Emit the notification
-      const emitResult = global.io
-        .to(roomName)
-        .emit('newNotification', notification);
-      console.log('🔔 Notification emitted successfully, result:', emitResult);
-      console.log('🔔 ===== END SOCKET EMISSION DEBUG =====');
+      console.log(`🔔 Emitting newNotification to room: ${roomName}`, {
+        notificationId: notification._id,
+        type: notification.type,
+        message: notification.message,
+      });
+      global.io.to(roomName).emit('newNotification', notification);
     } else {
-      console.log('🔔 Socket.io not available for real-time notification');
+      console.log('⚠️ global.io is not available');
     }
 
-    console.log('🔔 Returning notification object:', {
-      id: notification._id,
-      type: notification.type,
-      message: notification.message,
-      recipient: notification.recipient,
-      sender: notification.sender,
-    });
+    // Send real-time notification via SSE (fallback for production)
+    try {
+      sendNotificationSSE(recipientIdStr, notification);
+    } catch (error) {
+      // Silent error handling
+    }
 
     return notification;
   } catch (error) {
-    console.error('Error creating notification:', error);
     return null;
   }
 };

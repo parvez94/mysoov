@@ -708,42 +708,27 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
                         if (!currentUser) return dispatch(openModal());
                         const text = editText.trim();
                         if (!text) {
-                          console.log('No text to save');
                           return;
                         }
-
-                        console.log('Attempting to update comment:', {
-                          id: item._id,
-                          originalText: item.comment,
-                          newText: text,
-                        });
 
                         try {
                           const result = await dispatch(
                             updateCommentById({ id: item._id, comment: text })
                           );
 
-                          console.log('Update result:', result);
-
                           if (result.type === 'comments/update/fulfilled') {
-                            console.log('Comment updated successfully');
                             setIsEditing(false);
                             setEditText('');
                             setShowEditEmojis(false);
                           } else if (
                             result.type === 'comments/update/rejected'
                           ) {
-                            console.error(
-                              'Failed to update comment:',
-                              result.payload
-                            );
                             alert(
                               'Failed to update comment: ' +
                                 (result.payload || 'Unknown error')
                             );
                           }
                         } catch (error) {
-                          console.error('Error updating comment:', error);
                           alert('Error updating comment: ' + error.message);
                         }
                       }}

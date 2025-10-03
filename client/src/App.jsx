@@ -9,10 +9,14 @@ import {
   PublicProfile,
 } from './pages/index';
 import Notifications from './pages/Notifications';
-import Messages from './pages/Messages';
 import Settings from './pages/Settings';
+import Dashboard from './pages/dashboard/Dashboard';
+import DashboardUsers from './pages/dashboard/DashboardUsers';
+import DashboardPosts from './pages/dashboard/DashboardPosts';
+import DashboardSettings from './pages/dashboard/DashboardSettings';
+import RefreshUser from './pages/RefreshUser';
 import { SocketProvider } from './contexts/SocketContext';
-import { ChatProvider } from './contexts/ChatContext';
+import PollingModeIndicator from './components/PollingModeIndicator';
 
 const router = createBrowserRouter([
   {
@@ -32,12 +36,28 @@ const router = createBrowserRouter([
         element: <Notifications />,
       },
       {
-        path: 'messages',
-        element: <Messages />,
-      },
-      {
         path: 'settings',
         element: <Settings />,
+      },
+      {
+        path: 'dashboard',
+        element: <Dashboard />,
+      },
+      {
+        path: 'dashboard/users',
+        element: <DashboardUsers />,
+      },
+      {
+        path: 'dashboard/posts',
+        element: <DashboardPosts />,
+      },
+      {
+        path: 'dashboard/settings',
+        element: <DashboardSettings />,
+      },
+      {
+        path: 'refresh-user',
+        element: <RefreshUser />,
       },
       {
         path: 'explore',
@@ -69,9 +89,8 @@ const router = createBrowserRouter([
 const App = () => {
   return (
     <SocketProvider>
-      <ChatProvider>
-        <RouterProvider router={router} />
-      </ChatProvider>
+      <RouterProvider router={router} />
+      <PollingModeIndicator />
     </SocketProvider>
   );
 };

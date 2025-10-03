@@ -12,8 +12,6 @@ import { IoClose } from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
 import { FollowButton, PostCard } from '../components';
 import { resolveImageUrl } from '../utils/imageUtils';
-import { useMessages } from '../hooks/useMessages';
-import { useChatContext } from '../contexts/ChatContext';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import UsernameAvailabilityIndicator from '../components/UsernameAvailabilityIndicator';
 import UserListModal from '../components/modal/UserListModal';
@@ -94,20 +92,6 @@ const ActionButton = styled.button`
   border: 1px solid var(--secondary-color);
   background-color: transparent;
   color: var(--secondary-color);
-  border-radius: 3px;
-  cursor: pointer;
-`;
-
-const MessageButton = styled.button`
-  font-family: var(--secondary-fonts);
-  font-size: 14px;
-  font-weight: 500;
-  padding: 10px 20px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--primary-color);
-  background-color: var(--primary-color);
-  color: #fff;
   border-radius: 3px;
   cursor: pointer;
 `;
@@ -435,25 +419,6 @@ const PublicProfile = () => {
   // Username availability check
   const usernameCheck = useUsernameCheck(usernameEdit, currentUser?.username);
 
-  // Messages hook
-  const { getOrCreateConversation } = useMessages();
-
-  // Chat context
-  const { openChatWithUser } = useChatContext();
-
-  // Handle message button click
-  const handleMessage = async () => {
-    if (!currentUser || !channel) return;
-
-    // Open chat popup with the target user
-    openChatWithUser({
-      _id: channel._id,
-      username: channel.username,
-      displayName: channel.displayName,
-      displayImage: channel.displayImage,
-    });
-  };
-
   // Video management handlers
   const handleVideoUpdate = (updatedVideo) => {
     setVideos((prevVideos) =>
@@ -707,7 +672,7 @@ const PublicProfile = () => {
       setAvatarPreview('');
       setAvatarFile(null);
     } catch (err) {
-      console.error(err);
+      // Silent error handling
     } finally {
       setSaving(false);
     }
@@ -798,11 +763,6 @@ const PublicProfile = () => {
                       );
                     }}
                   />
-                  {currentUser && (
-                    <MessageButton onClick={handleMessage}>
-                      Message
-                    </MessageButton>
-                  )}
                 </>
               )}
             </Actions>

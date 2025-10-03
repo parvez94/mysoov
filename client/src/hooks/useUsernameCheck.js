@@ -70,7 +70,6 @@ export const useUsernameCheck = (username, originalUsername = '') => {
         setStatus('error');
         setMessage('Error checking username availability');
         setIsValid(false);
-        console.error('Username check error:', error);
       }
     },
     [originalUsername, currentUser?._id]

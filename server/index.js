@@ -101,7 +101,8 @@ import videoRouter from './routes/videoRoutes.js';
 import uploadRouter from './routes/uploadRoutes.js';
 import commentRouter from './routes/commentRoutes.js';
 import notificationRouter from './routes/notificationRoutes.js';
-import messageRouter from './routes/messageRoutes.js';
+import sseRouter from './routes/sseRoutes.js';
+import adminRouter from './routes/adminRoutes.js';
 import {
   authenticateSocket,
   handleConnection,
@@ -137,7 +138,6 @@ app.get('/api/test-db', async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Database test failed:', error);
     res.status(500).json({
       success: false,
       message: 'Database connection failed',
@@ -176,14 +176,6 @@ app.use('/api', async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Database connection failed for request:', {
-      url: req.url,
-      method: req.method,
-      error: error.message,
-      connectionState: mongoose.connection.readyState,
-      timestamp: new Date().toISOString(),
-    });
-
     res.status(503).json({
       success: false,
       message: 'Database service temporarily unavailable',
@@ -201,7 +193,8 @@ app.use('/api/v1/videos', videoRouter);
 app.use('/api/v1', uploadRouter);
 app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/notifications', notificationRouter);
-app.use('/api/v1/messages', messageRouter);
+app.use('/api/v1/sse', sseRouter);
+app.use('/api/admin', adminRouter);
 
 // Database connection
 let isConnected = false;
@@ -212,31 +205,22 @@ const connectDB = async (retryCount = 0) => {
 
   // If already connected, return immediately
   if (isConnected && mongoose.connection.readyState === 1) {
-    console.log('Using existing database connection');
     return;
   }
 
   // If connection is in progress, wait for it
   if (connectionPromise) {
-    console.log('Waiting for existing connection attempt...');
     return connectionPromise;
   }
 
   const mongoUrl = process.env.MONGO_URL;
   if (!mongoUrl) {
-    console.error('MONGO_URL environment variable is not set');
     throw new Error('MONGO_URL environment variable is not set');
   }
 
   // Create connection promise
   connectionPromise = (async () => {
     try {
-      console.log(
-        `Establishing database connection... (attempt ${retryCount + 1}/${
-          maxRetries + 1
-        })`
-      );
-
       // Close existing connection if any
       if (mongoose.connection.readyState !== 0) {
         await mongoose.connection.close();
@@ -263,23 +247,17 @@ const connectDB = async (retryCount = 0) => {
       });
 
       isConnected = true;
-      console.log('Successfully connected to database');
 
       // Reset connection promise after successful connection
       connectionPromise = null;
 
       return;
     } catch (err) {
-      console.error(
-        `Database connection attempt ${retryCount + 1} failed:`,
-        err.message
-      );
       isConnected = false;
       connectionPromise = null;
 
       // Retry logic
       if (retryCount < maxRetries) {
-        console.log(`Retrying connection in ${(retryCount + 1) * 1000}ms...`);
         await new Promise((resolve) =>
           setTimeout(resolve, (retryCount + 1) * 1000)
         );
@@ -299,17 +277,14 @@ const connectDB = async (retryCount = 0) => {
 
 // Handle connection events
 mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to MongoDB');
   isConnected = true;
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('Mongoose connection error:', err);
   isConnected = false;
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('Mongoose disconnected from MongoDB');
   isConnected = false;
 });
 
@@ -317,10 +292,8 @@ mongoose.connection.on('disconnected', () => {
 process.on('SIGINT', async () => {
   try {
     await mongoose.connection.close();
-    console.log('Mongoose connection closed through app termination');
     process.exit(0);
   } catch (err) {
-    console.error('Error during graceful shutdown:', err);
     process.exit(1);
   }
 });
@@ -329,16 +302,6 @@ process.on('SIGINT', async () => {
 app.use((err, req, res, next) => {
   const status = err.status || 500;
   const message = err.message || 'Something went wrong';
-
-  // Log error details for debugging
-  console.error('Error occurred:', {
-    status,
-    message,
-    stack: err.stack,
-    url: req.url,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-  });
 
   return res.status(status).json({
     success: false,
@@ -400,11 +363,7 @@ if (process.env.NODE_ENV !== 'production') {
       // Set up Socket.IO authentication and connection handling after DB connection
       io.use(authenticateSocket);
       io.on('connection', (socket) => handleConnection(io, socket));
-
-      console.log(`Server is running on PORT ${port}....`);
-      console.log('Socket.IO server is ready for connections');
     } catch (error) {
-      console.error('Failed to start server:', error);
       process.exit(1);
     }
   });
@@ -415,10 +374,9 @@ if (process.env.NODE_ENV !== 'production') {
       // Set up Socket.IO authentication and connection handling after DB connection
       io.use(authenticateSocket);
       io.on('connection', (socket) => handleConnection(io, socket));
-      console.log('Production server initialized with database connection');
     })
     .catch((error) => {
-      console.error('Failed to initialize production server:', error);
+      // Silent error handling for production
     });
 }
 

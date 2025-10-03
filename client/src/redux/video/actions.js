@@ -28,7 +28,6 @@ export const likeVideo = (videoId, userId) => async (dispatch, getState) => {
     // Revert on failure
     dispatch(unlikeInFeed({ videoId, userId }));
     if (isDetailOpenForThisVideo) dispatch(unlike(userId));
-    console.log(error);
   }
 };
 
@@ -57,7 +56,6 @@ export const unlikeVideo = (videoId, userId) => async (dispatch, getState) => {
     // Revert on failure
     dispatch(likeInFeed({ videoId, userId }));
     if (isDetailOpenForThisVideo) dispatch(like(userId));
-    console.log(error);
   }
 };
 
@@ -84,7 +82,6 @@ export const saveVideo = (videoId, userId) => async (dispatch, getState) => {
     dispatch({ type: 'videos/unSaveInFeed', payload: { videoId, userId } });
     if (isDetailOpenForThisVideo)
       dispatch({ type: 'video/unSave', payload: userId });
-    console.log(err);
   }
 };
 
@@ -110,6 +107,5 @@ export const unSaveVideo = (videoId, userId) => async (dispatch, getState) => {
     dispatch({ type: 'videos/saveInFeed', payload: { videoId, userId } });
     if (isDetailOpenForThisVideo)
       dispatch({ type: 'video/save', payload: userId });
-    console.log(err);
   }
 };

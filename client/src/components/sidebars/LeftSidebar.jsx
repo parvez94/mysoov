@@ -3,13 +3,20 @@ import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { IoIosHome } from 'react-icons/io';
 import { RiUserFollowLine } from 'react-icons/ri';
-import { MdOutlineExplore, MdOutlineNotificationsNone } from 'react-icons/md';
-import { HiOutlineChatAlt2 } from 'react-icons/hi';
+import {
+  MdOutlineExplore,
+  MdOutlineNotificationsNone,
+  MdDashboard,
+  MdExpandMore,
+  MdExpandLess,
+} from 'react-icons/md';
 import { LuUser2 } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
+import { HiUsers } from 'react-icons/hi';
+import { MdVideoLibrary, MdSettings } from 'react-icons/md';
 import { openModal } from '../../redux/modal/modalSlice';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useMessages } from '../../hooks/useMessages';
+import { useState } from 'react';
 
 const Container = styled.div`
   position: sticky;
@@ -124,15 +131,36 @@ const FooterText = styled.p`
   font-size: 14px;
 `;
 
+const DashboardMenu = styled.div`
+  cursor: pointer;
+`;
+
+const SubMenu = styled.div`
+  margin-left: 35px;
+  margin-top: 5px;
+  display: ${(props) => (props.$isOpen ? 'block' : 'none')};
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+`;
+
+const SubMenuItem = styled(NavItem)`
+  font-size: 16px;
+  padding: 10px 5px;
+
+  @media (max-width: 768px) {
+    font-size: 14px;
+  }
+`;
+
 const LeftSidebar = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
-  // Get notification and message counts
+  // Get notification count
   const { unreadCount: notificationCount } = useNotifications();
-  const { unreadCount: messageCount } = useMessages();
-
-  console.log('LeftSidebar - messageCount:', messageCount);
 
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
@@ -143,6 +171,13 @@ const LeftSidebar = () => {
   };
 
   const handleOpenModal = () => dispatch(openModal());
+
+  // Check if user is admin (role === 1)
+  const isAdmin = currentUser?.role === 1;
+
+  const toggleDashboard = () => {
+    setIsDashboardOpen(!isDashboardOpen);
+  };
 
   return (
     <Container>
@@ -160,17 +195,6 @@ const LeftSidebar = () => {
             {currentUser && notificationCount > 0 && (
               <NotificationBadge>
                 {notificationCount > 99 ? '99+' : notificationCount}
-              </NotificationBadge>
-            )}
-          </NavItem>
-        </Link>
-        <Link to='messages' onClick={guardClick}>
-          <NavItem>
-            <HiOutlineChatAlt2 />
-            <span>Messages</span>
-            {currentUser && messageCount > 0 && (
-              <NotificationBadge>
-                {messageCount > 99 ? '99+' : messageCount}
               </NotificationBadge>
             )}
           </NavItem>
@@ -203,6 +227,43 @@ const LeftSidebar = () => {
               <span>Profile</span>
             </NavItem>
           </Link>
+        )}
+
+        {/* Admin Dashboard Menu */}
+        {isAdmin && (
+          <DashboardMenu>
+            <NavItem onClick={toggleDashboard}>
+              <MdDashboard />
+              <span>Dashboard</span>
+              {isDashboardOpen ? <MdExpandLess /> : <MdExpandMore />}
+            </NavItem>
+            <SubMenu $isOpen={isDashboardOpen}>
+              <Link to='/dashboard'>
+                <SubMenuItem>
+                  <MdDashboard />
+                  <span>Overview</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/users'>
+                <SubMenuItem>
+                  <HiUsers />
+                  <span>Users</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/posts'>
+                <SubMenuItem>
+                  <MdVideoLibrary />
+                  <span>Posts</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/settings'>
+                <SubMenuItem>
+                  <MdSettings />
+                  <span>Settings</span>
+                </SubMenuItem>
+              </Link>
+            </SubMenu>
+          </DashboardMenu>
         )}
       </Nav>
       {!currentUser && (

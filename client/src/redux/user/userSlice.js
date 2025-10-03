@@ -46,6 +46,9 @@ const userSlice = createSlice({
     setUserMenu: (state, action) => {
       state.showUserMenu = Boolean(action.payload);
     },
+    updateUser: (state, action) => {
+      state.currentUser = { ...state.currentUser, ...action.payload };
+    },
   },
 });
 
@@ -57,6 +60,7 @@ export const {
   following,
   toggleUserMenu,
   setUserMenu,
+  updateUser,
 } = userSlice.actions;
 
 export default userSlice.reducer;

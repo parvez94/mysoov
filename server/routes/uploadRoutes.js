@@ -31,13 +31,6 @@ router.options('/upload', (req, res) => {
 
 router.post('/upload', verifyToken, async (req, res) => {
   try {
-    // Debug logging
-    console.log('Upload request received');
-    console.log('Headers:', req.headers);
-    console.log('Cookies:', req.cookies);
-    console.log('Files:', req.files ? Object.keys(req.files) : 'No files');
-    console.log('User from token:', req.user);
-
     if (!req.files || Object.keys(req.files).length === 0)
       return res.status(400).json({ msg: 'No files were uploaded.' });
 
@@ -62,8 +55,6 @@ router.post('/upload', verifyToken, async (req, res) => {
     // Send response with Cloudinary public_id and URL
     res.json({ public_id: result.public_id, url: result.secure_url });
   } catch (err) {
-    // Handle errors
-    console.error('Error uploading file:', err);
     return res.status(500).json({ msg: 'Internal server error' });
   }
 });
@@ -108,7 +99,6 @@ router.post('/upload/image', verifyToken, async (req, res) => {
 
     return res.json({ public_id: result.public_id, url: result.secure_url });
   } catch (err) {
-    console.error('Error uploading image:', err);
     return res.status(500).json({ msg: 'Internal server error' });
   }
 });
@@ -116,10 +106,7 @@ router.post('/upload/image', verifyToken, async (req, res) => {
 const removeTmp = (path) => {
   if (!path) return;
   fs.unlink(path, (err) => {
-    if (err) {
-      // Do not throw here; unlink errors should not break the request lifecycle
-      console.error('Failed to remove temp file:', err.message);
-    }
+    // Silent error handling - unlink errors should not break the request lifecycle
   });
 };
 

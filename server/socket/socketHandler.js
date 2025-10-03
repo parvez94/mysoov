@@ -41,18 +41,12 @@ export const authenticateSocket = async (socket, next) => {
     socket.user = user;
     next();
   } catch (error) {
-    console.log('🔌 Socket authentication error:', error.message);
-    console.log('🔌 Token:', cookieObj?.access_token ? 'Present' : 'Missing');
     next(new Error(`Authentication error: ${error.message}`));
   }
 };
 
 // Handle socket connections
 export const handleConnection = (io, socket) => {
-  console.log(
-    `User ${socket.userId} (${socket.user.username}) connected with socket ${socket.id}`
-  );
-
   // Add user to active users
   activeUsers.set(socket.userId, {
     socketId: socket.id,
@@ -63,55 +57,14 @@ export const handleConnection = (io, socket) => {
   // Join user to their personal room for notifications
   const roomName = `user_${socket.userId}`;
   socket.join(roomName);
-  console.log(`🔌 User ${socket.userId} joined personal room: ${roomName}`);
   console.log(
-    '🔌 User ID type:',
-    typeof socket.userId,
-    'Value:',
-    socket.userId
+    `✅ User ${socket.user.username} (${socket.userId}) joined room: ${roomName}`
   );
 
   // Emit online status to all users
   socket.broadcast.emit('userOnline', {
     userId: socket.userId,
     username: socket.user.username,
-  });
-
-  // Handle joining conversation rooms
-  socket.on('joinConversation', (conversationId) => {
-    const roomName = `conversation_${conversationId}`;
-    socket.join(roomName);
-    console.log(`User ${socket.userId} joined room: ${roomName}`);
-  });
-
-  // Handle leaving conversation rooms
-  socket.on('leaveConversation', (conversationId) => {
-    socket.leave(`conversation_${conversationId}`);
-  });
-
-  // Handle typing indicators
-  socket.on('typing', ({ conversationId, userId }) => {
-    socket.to(`conversation_${conversationId}`).emit('userTyping', {
-      conversationId,
-      userId: socket.userId,
-      username: socket.user.username,
-    });
-  });
-
-  socket.on('stopTyping', ({ conversationId, userId }) => {
-    socket.to(`conversation_${conversationId}`).emit('userStoppedTyping', {
-      conversationId,
-      userId: socket.userId,
-      username: socket.user.username,
-    });
-  });
-
-  // Handle message read status
-  socket.on('markMessageRead', ({ messageId, conversationId }) => {
-    socket.to(`conversation_${conversationId}`).emit('messageRead', {
-      messageId,
-      readBy: socket.userId,
-    });
   });
 
   // Handle disconnection

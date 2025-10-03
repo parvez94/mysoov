@@ -23,8 +23,8 @@ const LoadingBase = styled.div`
 
 // Avatar loading skeleton
 export const LoadingAvatar = styled(LoadingBase)`
-  width: ${(props) => props.size || '40px'};
-  height: ${(props) => props.size || '40px'};
+  width: ${(props) => props.$size || '40px'};
+  height: ${(props) => props.$size || '40px'};
   border-radius: 50%;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
@@ -32,8 +32,8 @@ export const LoadingAvatar = styled(LoadingBase)`
 
 // Text loading skeleton
 export const LoadingText = styled(LoadingBase)`
-  height: ${(props) => props.height || '16px'};
-  width: ${(props) => props.width || '100px'};
+  height: ${(props) => props.$height || '16px'};
+  width: ${(props) => props.$width || '100px'};
   border-radius: 3px;
 `;
 
@@ -41,10 +41,10 @@ export const LoadingText = styled(LoadingBase)`
 export const LoadingUserInfo = styled.div`
   display: flex;
   align-items: center;
-  gap: ${(props) => props.gap || '15px'};
+  gap: ${(props) => props.$gap || '15px'};
 
   @media (max-width: 768px) {
-    gap: ${(props) => props.mobileGap || '10px'};
+    gap: ${(props) => props.$mobileGap || '10px'};
   }
 `;
 
@@ -57,27 +57,27 @@ export const LoadingUserNames = styled.div`
 `;
 
 // Navbar specific loading
-export const NavbarUserLoading = () => <LoadingAvatar size='40px' />;
+export const NavbarUserLoading = () => <LoadingAvatar $size='40px' />;
 
 // VideoCard specific loading
 export const VideoCardUserLoading = () => (
-  <LoadingUserInfo gap='20px' mobileGap='15px'>
-    <LoadingAvatar size='56px' />
+  <LoadingUserInfo $gap='20px' $mobileGap='15px'>
+    <LoadingAvatar $size='56px' />
     <LoadingUserNames>
-      <LoadingText width='120px' height='18px' />
-      <LoadingText width='80px' height='14px' />
+      <LoadingText $width='120px' $height='18px' />
+      <LoadingText $width='80px' $height='14px' />
     </LoadingUserNames>
   </LoadingUserInfo>
 );
 
 // Comment specific loading
 export const CommentUserLoading = ({ depth = 0 }) => (
-  <LoadingUserInfo gap='25px' mobileGap='15px'>
+  <LoadingUserInfo $gap='25px' $mobileGap='15px'>
     {depth === 1 && <div style={{ width: '60px' }} />}
-    <LoadingAvatar size='40px' />
+    <LoadingAvatar $size='40px' />
     <LoadingUserNames>
-      <LoadingText width='100px' height='15px' />
-      <LoadingText width='70px' height='13px' />
+      <LoadingText $width='100px' $height='15px' />
+      <LoadingText $width='70px' $height='13px' />
     </LoadingUserNames>
   </LoadingUserInfo>
 );
@@ -90,11 +90,11 @@ export const GenericUserLoading = ({
   gap = '15px',
   mobileGap = '10px',
 }) => (
-  <LoadingUserInfo gap={gap} mobileGap={mobileGap}>
-    <LoadingAvatar size={avatarSize} />
+  <LoadingUserInfo $gap={gap} $mobileGap={mobileGap}>
+    <LoadingAvatar $size={avatarSize} />
     <LoadingUserNames>
-      <LoadingText width={displayNameWidth} height='16px' />
-      <LoadingText width={usernameWidth} height='14px' />
+      <LoadingText $width={displayNameWidth} $height='16px' />
+      <LoadingText $width={usernameWidth} $height='14px' />
     </LoadingUserNames>
   </LoadingUserInfo>
 );

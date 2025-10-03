@@ -7,6 +7,8 @@ import {
   setSoundVolume,
   playNotificationSound,
   playMessageSound,
+  isSoundReady,
+  soundManager,
 } from '../../utils/soundUtils';
 
 const Container = styled.div`
@@ -133,14 +135,64 @@ const TestButton = styled.button`
   }
 `;
 
+const InfoMessage = styled.div`
+  background-color: ${(props) =>
+    props.ready ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)'};
+  border: 1px solid
+    ${(props) =>
+      props.ready ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.3)'};
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 16px;
+  font-family: var(--primary-fonts);
+  font-size: 13px;
+  color: ${(props) => (props.ready ? '#4caf50' : '#ff9800')};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+`;
+
+const EnableButton = styled.button`
+  background: var(--primary-color);
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: var(--secondary-fonts);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background: var(--secondary-color);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const SoundSettings = () => {
   const [soundEnabled, setSoundEnabledState] = useState(getSoundEnabled());
   const [volume, setVolumeState] = useState(getSoundVolume());
+  const [audioReady, setAudioReady] = useState(isSoundReady());
 
   useEffect(() => {
     // Sync with stored preferences on mount
     setSoundEnabledState(getSoundEnabled());
     setVolumeState(getSoundVolume());
+    setAudioReady(isSoundReady());
+
+    // Check audio ready status periodically
+    const interval = setInterval(() => {
+      setAudioReady(isSoundReady());
+    }, 500);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleToggleSound = () => {
@@ -157,10 +209,25 @@ const SoundSettings = () => {
 
   const testNotificationSound = () => {
     playNotificationSound();
+    // Recheck audio ready status after playing
+    setTimeout(() => setAudioReady(isSoundReady()), 100);
   };
 
   const testMessageSound = () => {
     playMessageSound();
+    // Recheck audio ready status after playing
+    setTimeout(() => setAudioReady(isSoundReady()), 100);
+  };
+
+  const handleEnableAudio = async () => {
+    // Manually initialize audio context
+    await soundManager.initializeAudioContextNow();
+    setAudioReady(isSoundReady());
+
+    // Play a test sound to confirm it works
+    if (isSoundReady()) {
+      playNotificationSound();
+    }
   };
 
   return (
@@ -201,6 +268,31 @@ const SoundSettings = () => {
           Test
         </TestButton>
       </SettingRow>
+
+      {soundEnabled && (
+        <InfoMessage ready={audioReady}>
+          {audioReady ? (
+            <>
+              <span>✅</span>
+              <span>Audio is ready! Sounds will play for notifications.</span>
+            </>
+          ) : (
+            <>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span>⚠️</span>
+                <span>
+                  Audio not enabled. Click the button to enable sounds →
+                </span>
+              </div>
+              <EnableButton onClick={handleEnableAudio}>
+                Enable Audio
+              </EnableButton>
+            </>
+          )}
+        </InfoMessage>
+      )}
     </Container>
   );
 };

@@ -4,7 +4,6 @@ import { selectModal } from '../redux/modal/modalSlice';
 import styled from 'styled-components';
 import { Outlet, useLocation } from 'react-router-dom';
 import { LeftSidebar, Navbar, Modal } from '../components/index';
-import ChatBox from '../components/chat/ChatBox';
 import { SocketProvider } from '../contexts/SocketContext';
 
 const Container = styled.div``;
@@ -37,7 +36,6 @@ const Layout = () => {
             <Outlet />
           </Wrapper>
         </Main>
-        {currentUser && <ChatBox />}
       </Container>
     </SocketProvider>
   );

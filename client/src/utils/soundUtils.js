@@ -38,37 +38,59 @@ class SoundManager {
 
   initializeAudioContext() {
     // Initialize audio context on first user interaction
-    const initAudio = () => {
+    const initAudio = async (event) => {
       if (!this.audioContext) {
         try {
+          console.log(
+            '🔊 Creating AudioContext from user interaction:',
+            event?.type
+          );
           this.audioContext = new (window.AudioContext ||
             window.webkitAudioContext)();
 
+          console.log(
+            '🔊 AudioContext state after creation:',
+            this.audioContext.state
+          );
+
           // Resume audio context if it's suspended (required by some browsers)
           if (this.audioContext.state === 'suspended') {
-            this.audioContext.resume().then(() => {
-              this.isAudioContextReady = true;
-              console.log('Audio context resumed and ready');
-            });
+            console.log('🔊 Attempting to resume suspended AudioContext...');
+            await this.audioContext.resume();
+            this.isAudioContextReady = true;
+            console.log('🔊 AudioContext resumed and ready');
           } else {
             this.isAudioContextReady = true;
-            console.log('Audio context initialized and ready');
+            console.log('🔊 AudioContext created and ready');
           }
         } catch (error) {
-          console.warn('Failed to initialize audio context:', error);
+          console.error('🔊 Error creating AudioContext:', error);
+        }
+      } else if (this.audioContext.state === 'suspended') {
+        try {
+          console.log('🔊 Resuming existing suspended AudioContext...');
+          await this.audioContext.resume();
+          this.isAudioContextReady = true;
+          console.log('🔊 AudioContext resumed successfully');
+        } catch (error) {
+          console.error('🔊 Error resuming AudioContext:', error);
         }
       }
-
-      // Remove event listeners after first initialization
-      document.removeEventListener('click', initAudio);
-      document.removeEventListener('keydown', initAudio);
-      document.removeEventListener('touchstart', initAudio);
     };
 
     // Add event listeners for user interaction
-    document.addEventListener('click', initAudio);
-    document.addEventListener('keydown', initAudio);
-    document.addEventListener('touchstart', initAudio);
+    // Chrome is very strict - we need to listen to multiple events without capture
+    const events = [
+      'click',
+      'mousedown',
+      'keydown',
+      'touchstart',
+      'pointerdown',
+    ];
+
+    events.forEach((eventType) => {
+      document.addEventListener(eventType, initAudio, { once: true });
+    });
   }
 
   preloadSounds() {
@@ -80,18 +102,20 @@ class SoundManager {
   createNotificationSound() {
     // Create a pleasant notification sound
     this.sounds.notification = () => {
-      if (!this.isEnabled || !this.isAudioContextReady || !this.audioContext) {
-        console.log('Notification sound skipped:', {
-          enabled: this.isEnabled,
-          contextReady: this.isAudioContextReady,
-          hasContext: !!this.audioContext,
-        });
+      if (!this.isEnabled) {
+        console.log('🔊 Sound is disabled');
+        return;
+      }
+
+      if (!this.isAudioContextReady || !this.audioContext) {
+        console.log('🔊 Audio context not ready');
         return;
       }
 
       try {
         // Resume context if suspended
         if (this.audioContext.state === 'suspended') {
+          console.log('🔊 Resuming suspended audio context');
           this.audioContext.resume();
         }
 
@@ -120,10 +144,8 @@ class SoundManager {
 
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + 0.3);
-
-        console.log('Notification sound played successfully');
       } catch (error) {
-        console.warn('Error playing notification sound:', error);
+        console.error('🔊 Error creating notification sound:', error);
       }
     };
   }
@@ -132,11 +154,6 @@ class SoundManager {
     // Create a different sound for messages
     this.sounds.message = () => {
       if (!this.isEnabled || !this.isAudioContextReady || !this.audioContext) {
-        console.log('Message sound skipped:', {
-          enabled: this.isEnabled,
-          contextReady: this.isAudioContextReady,
-          hasContext: !!this.audioContext,
-        });
         return;
       }
 
@@ -168,21 +185,33 @@ class SoundManager {
 
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + 0.2);
-
-        console.log('Message sound played successfully');
       } catch (error) {
-        console.warn('Error playing message sound:', error);
+        // Silent error handling
       }
     };
   }
 
-  playNotificationSound() {
+  async playNotificationSound() {
     try {
+      console.log('🔊 Attempting to play notification sound', {
+        isEnabled: this.isEnabled,
+        isAudioContextReady: this.isAudioContextReady,
+        audioContextState: this.audioContext?.state,
+        hasSound: !!this.sounds.notification,
+      });
+
+      // Try to initialize audio context if not ready
+      if (!this.isAudioContextReady) {
+        console.log('🔊 Audio context not ready, initializing now...');
+        await this.initializeAudioContextNow();
+      }
+
       if (this.sounds.notification) {
         this.sounds.notification();
+        console.log('🔊 Notification sound played successfully');
       }
     } catch (error) {
-      console.warn('Could not play notification sound:', error);
+      console.error('🔊 Error playing notification sound:', error);
     }
   }
 
@@ -192,7 +221,7 @@ class SoundManager {
         this.sounds.message();
       }
     } catch (error) {
-      console.warn('Could not play message sound:', error);
+      // Silent error handling
     }
   }
 
@@ -206,24 +235,32 @@ class SoundManager {
     }
   }
 
-  initializeAudioContextNow() {
+  async initializeAudioContextNow() {
     if (!this.audioContext) {
       try {
+        console.log('🔊 Creating AudioContext now');
         this.audioContext = new (window.AudioContext ||
           window.webkitAudioContext)();
 
         // Resume audio context if it's suspended
         if (this.audioContext.state === 'suspended') {
-          this.audioContext.resume().then(() => {
-            this.isAudioContextReady = true;
-            console.log('Audio context resumed and ready (manual init)');
-          });
+          await this.audioContext.resume();
+          this.isAudioContextReady = true;
+          console.log('🔊 AudioContext resumed and ready (async)');
         } else {
           this.isAudioContextReady = true;
-          console.log('Audio context initialized and ready (manual init)');
+          console.log('🔊 AudioContext created and ready (async)');
         }
       } catch (error) {
-        console.warn('Failed to initialize audio context manually:', error);
+        console.error('🔊 Error creating AudioContext:', error);
+      }
+    } else if (this.audioContext.state === 'suspended') {
+      try {
+        await this.audioContext.resume();
+        this.isAudioContextReady = true;
+        console.log('🔊 Existing AudioContext resumed');
+      } catch (error) {
+        console.error('🔊 Error resuming AudioContext:', error);
       }
     }
   }
@@ -240,6 +277,10 @@ class SoundManager {
   getVolume() {
     return this.volume;
   }
+
+  isReady() {
+    return this.isAudioContextReady;
+  }
 }
 
 // Create a global instance
@@ -252,3 +293,4 @@ export const setSoundEnabled = (enabled) => soundManager.setEnabled(enabled);
 export const setSoundVolume = (volume) => soundManager.setVolume(volume);
 export const getSoundEnabled = () => soundManager.getEnabled();
 export const getSoundVolume = () => soundManager.getVolume();
+export const isSoundReady = () => soundManager.isReady();
