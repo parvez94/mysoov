@@ -103,6 +103,7 @@ import commentRouter from './routes/commentRoutes.js';
 import notificationRouter from './routes/notificationRoutes.js';
 import sseRouter from './routes/sseRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
+import publicRouter from './routes/publicRoutes.js';
 import {
   authenticateSocket,
   handleConnection,
@@ -128,7 +129,15 @@ app.get('/api', (req, res) => {
 // Test database connection endpoint
 app.get('/api/test-db', async (req, res) => {
   try {
-    await connectDB();
+    // Just check connection status, don't try to reconnect
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database not connected',
+        readyState: mongoose.connection.readyState,
+      });
+    }
+
     const Video = (await import('./models/Video.js')).default;
     const count = await Video.countDocuments();
     res.json({
@@ -163,28 +172,20 @@ app.get('/api/test-auth', (req, res) => {
   });
 });
 
-// Middleware to ensure database connection for API routes
-app.use('/api', async (req, res, next) => {
-  try {
-    // Ensure database connection is established and ready
-    await connectDB();
-
-    // Double-check connection state
-    if (mongoose.connection.readyState !== 1) {
-      throw new Error('Database connection not ready');
-    }
-
-    next();
-  } catch (error) {
-    res.status(503).json({
+// Middleware to check database connection for API routes
+app.use('/api', (req, res, next) => {
+  // Just check if connection is ready, don't try to reconnect on every request
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
       success: false,
       message: 'Database service temporarily unavailable',
       error:
         process.env.NODE_ENV === 'production'
           ? 'Connection failed'
-          : error.message,
+          : 'Database not connected',
     });
   }
+  next();
 });
 
 app.use('/api/v1/auth', authRouter);
@@ -195,14 +196,13 @@ app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/notifications', notificationRouter);
 app.use('/api/v1/sse', sseRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/public', publicRouter);
 
 // Database connection
 let isConnected = false;
 let connectionPromise = null;
 
-const connectDB = async (retryCount = 0) => {
-  const maxRetries = 3;
-
+const connectDB = async () => {
   // If already connected, return immediately
   if (isConnected && mongoose.connection.readyState === 1) {
     return;
@@ -221,11 +221,6 @@ const connectDB = async (retryCount = 0) => {
   // Create connection promise
   connectionPromise = (async () => {
     try {
-      // Close existing connection if any
-      if (mongoose.connection.readyState !== 0) {
-        await mongoose.connection.close();
-      }
-
       await mongoose.connect(mongoUrl, {
         bufferCommands: false,
         maxPoolSize: 10,
@@ -234,21 +229,7 @@ const connectDB = async (retryCount = 0) => {
         connectTimeoutMS: 10000,
       });
 
-      // Wait for connection to be ready
-      await new Promise((resolve, reject) => {
-        if (mongoose.connection.readyState === 1) {
-          resolve();
-        } else {
-          mongoose.connection.once('connected', resolve);
-          mongoose.connection.once('error', reject);
-          // Timeout after 10 seconds
-          setTimeout(() => reject(new Error('Connection timeout')), 10000);
-        }
-      });
-
       isConnected = true;
-
-      // Reset connection promise after successful connection
       connectionPromise = null;
 
       return;
@@ -256,19 +237,7 @@ const connectDB = async (retryCount = 0) => {
       isConnected = false;
       connectionPromise = null;
 
-      // Retry logic
-      if (retryCount < maxRetries) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, (retryCount + 1) * 1000)
-        );
-        return connectDB(retryCount + 1);
-      }
-
-      throw new Error(
-        `Failed to connect to database after ${maxRetries + 1} attempts: ${
-          err.message
-        }`
-      );
+      throw new Error(`Failed to connect to database: ${err.message}`);
     }
   })();
 
@@ -356,17 +325,26 @@ const port = process.env.PORT || 5100;
 
 // For local development
 if (process.env.NODE_ENV !== 'production') {
-  server.listen(port, async () => {
+  const startServer = async () => {
     try {
+      // Connect to database BEFORE starting the server
       await connectDB();
 
       // Set up Socket.IO authentication and connection handling after DB connection
       io.use(authenticateSocket);
       io.on('connection', (socket) => handleConnection(io, socket));
+
+      // Start listening only after DB is connected
+      server.listen(port, () => {
+        console.log(`Server running on http://localhost:${port}`);
+      });
     } catch (error) {
+      console.error('Failed to start server:', error.message);
       process.exit(1);
     }
-  });
+  };
+
+  startServer();
 } else {
   // For production (Vercel), ensure DB connection is established
   connectDB()
@@ -376,7 +354,7 @@ if (process.env.NODE_ENV !== 'production') {
       io.on('connection', (socket) => handleConnection(io, socket));
     })
     .catch((error) => {
-      // Silent error handling for production
+      console.error('Production server initialization failed:', error.message);
     });
 }
 

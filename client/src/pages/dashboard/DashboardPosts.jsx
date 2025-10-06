@@ -214,7 +214,7 @@ const DashboardPosts = () => {
   const [error, setError] = useState(null);
 
   // Redirect if not admin
-  if (!currentUser || currentUser.role !== 1) {
+  if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to='/' replace />;
   }
 

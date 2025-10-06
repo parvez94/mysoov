@@ -52,11 +52,19 @@ const Home = () => {
   }, [videos]);
 
   const handleVideoUpdate = (updatedVideo) => {
-    setLocalVideos((prevVideos) =>
-      prevVideos.map((video) =>
-        video._id === updatedVideo._id ? updatedVideo : video
-      )
-    );
+    // If video becomes private, remove it from the feed
+    if (updatedVideo.privacy === 'Private') {
+      setLocalVideos((prevVideos) =>
+        prevVideos.filter((video) => video._id !== updatedVideo._id)
+      );
+    } else {
+      // Otherwise, update the video in the list
+      setLocalVideos((prevVideos) =>
+        prevVideos.map((video) =>
+          video._id === updatedVideo._id ? updatedVideo : video
+        )
+      );
+    }
   };
 
   const handleVideoDelete = (videoId) => {

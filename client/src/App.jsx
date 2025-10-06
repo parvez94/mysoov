@@ -10,6 +10,7 @@ import {
 } from './pages/index';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
+import Payment from './pages/Payment';
 import Dashboard from './pages/dashboard/Dashboard';
 import DashboardUsers from './pages/dashboard/DashboardUsers';
 import DashboardPosts from './pages/dashboard/DashboardPosts';
@@ -38,6 +39,10 @@ const router = createBrowserRouter([
       {
         path: 'settings',
         element: <Settings />,
+      },
+      {
+        path: 'payment',
+        element: <Payment />,
       },
       {
         path: 'dashboard',

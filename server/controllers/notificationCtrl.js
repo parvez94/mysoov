@@ -38,14 +38,7 @@ export const createNotification = async (
     // Send real-time notification via Socket.IO (if available)
     if (global.io) {
       const roomName = `user_${recipientIdStr}`;
-      console.log(`🔔 Emitting newNotification to room: ${roomName}`, {
-        notificationId: notification._id,
-        type: notification.type,
-        message: notification.message,
-      });
       global.io.to(roomName).emit('newNotification', notification);
-    } else {
-      console.log('⚠️ global.io is not available');
     }
 
     // Send real-time notification via SSE (fallback for production)

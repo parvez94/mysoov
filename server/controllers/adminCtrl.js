@@ -1,6 +1,12 @@
 import User from '../models/User.js';
 import Video from '../models/Video.js';
 import { createError } from '../utils/error.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Get all users
 export const getAllUsers = async (req, res, next) => {
@@ -147,7 +153,7 @@ export const deleteVideo = async (req, res, next) => {
 // Get all admins
 export const getAllAdmins = async (req, res, next) => {
   try {
-    const admins = await User.find({ role: 1 })
+    const admins = await User.find({ role: 'admin' })
       .select('-password')
       .sort({ createdAt: -1 });
 
@@ -199,7 +205,7 @@ export const promoteToAdmin = async (req, res, next) => {
 
     const user = await User.findByIdAndUpdate(
       userId,
-      { role: 1 },
+      { role: 'admin' },
       { new: true }
     ).select('-password');
 
@@ -229,7 +235,7 @@ export const demoteFromAdmin = async (req, res, next) => {
 
     const user = await User.findByIdAndUpdate(
       userId,
-      { role: 0 },
+      { role: 'user' },
       { new: true }
     ).select('-password');
 
@@ -241,6 +247,122 @@ export const demoteFromAdmin = async (req, res, next) => {
       success: true,
       message: 'Admin demoted to regular user successfully',
       user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get pricing plans
+export const getPricingPlans = async (req, res, next) => {
+  try {
+    const configPath = path.join(__dirname, '../config/pricingPlans.js');
+
+    // Read the file content
+    const fileContent = fs.readFileSync(configPath, 'utf8');
+
+    // Extract the pricing plans object using regex
+    const match = fileContent.match(
+      /export const pricingPlans = ({[\s\S]*?});/
+    );
+
+    if (!match) {
+      return next(createError(500, 'Failed to parse pricing plans'));
+    }
+
+    // Import the actual module to get the data
+    const { pricingPlans, pricingConfig } = await import(
+      '../config/pricingPlans.js'
+    );
+
+    res.status(200).json({
+      success: true,
+      pricingPlans,
+      pricingConfig: pricingConfig || {},
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update pricing plans
+export const updatePricingPlans = async (req, res, next) => {
+  try {
+    const { pricingPlans, pricingConfig } = req.body;
+
+    if (!pricingPlans) {
+      return next(createError(400, 'Pricing plans data is required'));
+    }
+
+    // Validate pricing plans structure
+    const requiredPlans = ['free', 'basic', 'pro', 'premium'];
+    for (const planKey of requiredPlans) {
+      if (!pricingPlans[planKey]) {
+        return next(createError(400, `Missing required plan: ${planKey}`));
+      }
+
+      const plan = pricingPlans[planKey];
+      if (
+        typeof plan.name !== 'string' ||
+        typeof plan.price !== 'number' ||
+        typeof plan.maxUploadSize !== 'number' ||
+        !Array.isArray(plan.features)
+      ) {
+        return next(createError(400, `Invalid plan structure for: ${planKey}`));
+      }
+    }
+
+    // Default pricing config if not provided
+    const defaultConfig = {
+      recommendedPlan: 'pro',
+      footerText: 'All plans include a 7-day free trial. Cancel anytime.',
+      paymentEnabled: false,
+      supportEmail: 'support@mysoov.com',
+      comingSoonMessage: '🚀 Payment Integration Coming Soon!',
+      comingSoonDescription:
+        "We're currently setting up secure payment processing. In the meantime, please contact our support team to upgrade your account manually.",
+      upgradeInstructions:
+        "Include your username and desired plan in your message, and we'll upgrade your account within 24 hours.",
+    };
+
+    const config = pricingConfig || defaultConfig;
+
+    // Generate the new file content
+    const fileContent = `export const pricingPlans = ${JSON.stringify(
+      pricingPlans,
+      null,
+      2
+    )};
+
+// Additional pricing configuration
+export const pricingConfig = ${JSON.stringify(config, null, 2)};
+
+export const getMaxUploadSize = (user) => {
+  // Admin gets unlimited (500MB as practical limit)
+  if (user.role === 'admin') {
+    return 500;
+  }
+
+  // Paid users get their plan's limit
+  if (user.subscription?.isPaid && user.subscription?.plan) {
+    return pricingPlans[user.subscription.plan]?.maxUploadSize || 5;
+  }
+
+  // Free users get 5MB
+  return pricingPlans.free?.maxUploadSize || 5;
+};
+`;
+
+    const configPath = path.join(__dirname, '../config/pricingPlans.js');
+
+    // Write the updated content to the file
+    fs.writeFileSync(configPath, fileContent, 'utf8');
+
+    res.status(200).json({
+      success: true,
+      message: 'Pricing plans updated successfully',
+      pricingPlans,
+      pricingConfig: config,
     });
   } catch (error) {
     next(error);

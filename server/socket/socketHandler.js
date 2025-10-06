@@ -57,9 +57,6 @@ export const handleConnection = (io, socket) => {
   // Join user to their personal room for notifications
   const roomName = `user_${socket.userId}`;
   socket.join(roomName);
-  console.log(
-    `✅ User ${socket.user.username} (${socket.userId}) joined room: ${roomName}`
-  );
 
   // Emit online status to all users
   socket.broadcast.emit('userOnline', {

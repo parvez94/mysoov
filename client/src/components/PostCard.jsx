@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { VideoCard, VideoText } from '../components/index';
+import { MdLock } from 'react-icons/md';
 
 const Card = styled.div`
   background-color: rgba(255, 255, 255, 0.04);
@@ -8,14 +9,49 @@ const Card = styled.div`
   border-radius: 8px;
 `;
 
+const VideoWrapper = styled.div`
+  position: relative;
+  width: 100%;
+`;
+
 const Video = styled.video`
   width: 100%;
   aspect-ratio: 9 / 16;
+  max-height: 300px;
   height: auto;
   border-radius: 8px;
   object-fit: contain;
   object-position: center;
   background: #000;
+`;
+
+const Image = styled.img`
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 300px;
+  height: auto;
+  border-radius: 8px;
+  object-fit: contain;
+  object-position: center;
+  background: #000;
+`;
+
+const PrivacyBadge = styled.div`
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9ca3af;
+  font-family: var(--secondary-fonts);
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 1;
 `;
 
 const ClickableContent = styled.div`
@@ -37,11 +73,27 @@ const PostCard = ({
   enableVideoLink = false,
 }) => {
   const src = video?.videoUrl?.url;
+  const isPrivate = video?.privacy === 'Private';
+  const mediaType = video?.mediaType || 'video';
 
   const videoContent = (
     <>
       <VideoText video={video} />
-      {showVideo && src ? <Video src={src} controls playsInline /> : null}
+      {showVideo && src ? (
+        <VideoWrapper>
+          {isPrivate && (
+            <PrivacyBadge>
+              <MdLock size={16} />
+              Private
+            </PrivacyBadge>
+          )}
+          {mediaType === 'image' ? (
+            <Image src={src} alt={video?.caption || 'Post image'} />
+          ) : (
+            <Video src={src} controls playsInline />
+          )}
+        </VideoWrapper>
+      ) : null}
     </>
   );
 

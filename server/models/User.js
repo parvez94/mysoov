@@ -38,8 +38,32 @@ const userSchema = new mongoose.Schema(
       type: [String],
     },
     role: {
-      type: Number,
-      default: 0,
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
+    subscription: {
+      isPaid: {
+        type: Boolean,
+        default: false,
+      },
+      plan: {
+        type: String,
+        enum: ['free', 'basic', 'pro', 'premium'],
+        default: 'free',
+      },
+      maxUploadSize: {
+        type: Number,
+        default: 5, // in MB
+      },
+      expiresAt: {
+        type: Date,
+        default: null,
+      },
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

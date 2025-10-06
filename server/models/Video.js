@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose from 'mongoose';
 
 const videoSchema = new mongoose.Schema(
   {
@@ -12,10 +12,15 @@ const videoSchema = new mongoose.Schema(
     videoUrl: {
       type: Object,
     },
+    mediaType: {
+      type: String,
+      enum: ['video', 'image'],
+      default: 'video',
+    },
     privacy: {
       type: String,
-      enum: ["Public", "Private"],
-      default: "Public",
+      enum: ['Public', 'Private'],
+      default: 'Public',
     },
     views: {
       type: Number,
@@ -39,6 +44,6 @@ const videoSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
-)
+);
 
-export default mongoose.model("Video", videoSchema)
+export default mongoose.model('Video', videoSchema);

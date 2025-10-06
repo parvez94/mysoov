@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 // import ProfileImg from "../assets/avatar/parvez.jpeg"
-import { FollowButton, VideoOptionsMenu } from './index';
+import { FollowButton, VideoOptionsMenu, VerifiedBadge } from './index';
 import { openModal } from '../redux/modal/modalSlice';
 import { useVideoCardUserLoading } from '../hooks/useUserDataLoading';
 import { VideoCardUserLoading } from './loading/UserInfoLoading';
@@ -42,6 +42,9 @@ const UserInfo = styled.div``;
 const Name = styled.h4`
   font-family: var(--primary-fonts);
   color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `;
 const UserName = styled.p`
   font-family: var(--secondary-fonts);
@@ -94,7 +97,10 @@ const VideoCard = ({
               style={{ textDecoration: 'none' }}
               onClick={guardClick}
             >
-              <Name>{displayName}</Name>
+              <Name>
+                {displayName}
+                <VerifiedBadge user={channel} size={18} />
+              </Name>
             </Link>
             <UserName>@{username}</UserName>
           </UserInfo>

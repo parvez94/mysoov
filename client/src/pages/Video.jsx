@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
 import { IoHeartOutline, IoHeart } from 'react-icons/io5';
 import { MdOutlineInsertComment } from 'react-icons/md';
 import { IoIosShareAlt } from 'react-icons/io';
 import { HiOutlineBookmark, HiBookmark } from 'react-icons/hi';
+import { MdLock } from 'react-icons/md';
 import { PostCard, VideoSidebar, Comments } from '../components/index';
 import {
   getVideo,
@@ -34,32 +35,46 @@ const Container = styled.div`
   }
 `;
 const Main = styled.div`
+  flex: 1;
+  width: 100%;
+
   @media (max-width: 768px) {
     width: 100%;
   }
 `;
 
 const VideoWrapper = styled.div`
-  flex: 1;
-  width: 700px;
+  width: 100%;
+  max-width: 700px;
   height: 400px;
   position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
 
   @media (max-width: 768px) {
     width: 100%;
-    height: auto;
-    aspect-ratio: 9 / 16;
-    max-height: 70vh;
+    max-width: 100%;
   }
 `;
 const VideoPlayer = styled.video`
   width: 100%;
   height: 100%;
   border-radius: 4px;
+  object-fit: contain;
 
   @media (max-width: 768px) {
     border-radius: 8px;
-    object-fit: contain;
+  }
+`;
+
+const ImagePlayer = styled.img`
+  width: 100%;
+  border-radius: 4px;
+  object-fit: contain;
+
+  @media (max-width: 768px) {
+    border-radius: 8px;
   }
 `;
 
@@ -144,10 +159,66 @@ const StatsWrapper = styled.span`
   }
 `;
 
+const ErrorContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  min-height: 400px;
+`;
+
+const ErrorIcon = styled.div`
+  font-size: 64px;
+  color: var(--primary-color);
+  margin-bottom: 20px;
+  opacity: 0.8;
+`;
+
+const ErrorTitle = styled.h2`
+  font-size: 24px;
+  color: var(--text-color);
+  margin-bottom: 12px;
+  font-weight: 600;
+`;
+
+const ErrorMessage = styled.p`
+  font-size: 16px;
+  color: var(--secondary-color);
+  margin-bottom: 24px;
+  max-width: 500px;
+  line-height: 1.5;
+`;
+
+const ErrorButton = styled.button`
+  padding: 12px 32px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const Video = () => {
   const { currentUser } = useSelector((state) => state.user);
-  const { currentVideo } = useSelector((state) => state.video);
+  const { currentVideo, error, isLoading } = useSelector(
+    (state) => state.video
+  );
   const { comments: commentsList } = useSelector((state) => state.comments);
+  const navigate = useNavigate();
 
   // Compute visible comments count (reachable from roots) to avoid orphaned replies inflating counts
   const visibleCommentsCount = useMemo(() => {
@@ -182,7 +253,8 @@ const Video = () => {
         dispatch(getVideo());
 
         const videoRes = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/v1/videos/find/${path}`
+          `${import.meta.env.VITE_API_URL}/api/v1/videos/find/${path}`,
+          { withCredentials: true }
         );
 
         const { userId } = videoRes.data;
@@ -194,7 +266,16 @@ const Video = () => {
 
         dispatch(getVideoSuccess(videoRes.data));
       } catch (err) {
-        dispatch(getVideoFailed(err));
+        // Extract only serializable error data for Redux
+        const errorPayload = {
+          message:
+            err.response?.data?.message ||
+            err.message ||
+            'Failed to load video',
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+        };
+        dispatch(getVideoFailed(errorPayload));
       }
     };
     fetchData();
@@ -237,11 +318,71 @@ const Video = () => {
     currentUser?._id &&
     String(currentUser._id) === String(currentVideo?.userId);
 
+  // Handle error states
+  if (error) {
+    const is403 = error.status === 403;
+    const is404 = error.status === 404;
+
+    return (
+      <Container>
+        <ErrorContainer>
+          <ErrorIcon>{is403 ? <MdLock /> : '🎥'}</ErrorIcon>
+          <ErrorTitle>
+            {is403
+              ? 'Private Post'
+              : is404
+              ? 'Post Not Found'
+              : 'Error Loading Post'}
+          </ErrorTitle>
+          <ErrorMessage>
+            {is403
+              ? "This post is private and you don't have permission to view it. Only the post owner can access private posts."
+              : is404
+              ? "The post you're looking for doesn't exist or has been removed."
+              : error.message ||
+                'Something went wrong while loading the post. Please try again later.'}
+          </ErrorMessage>
+          <ErrorButton onClick={() => navigate('/')}>Go to Home</ErrorButton>
+        </ErrorContainer>
+      </Container>
+    );
+  }
+
+  // Show loading or empty state
+  if (isLoading || !currentVideo) {
+    return (
+      <Container>
+        <Main>
+          <VideoWrapper>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'var(--secondary-color)',
+              }}
+            >
+              Loading...
+            </div>
+          </VideoWrapper>
+        </Main>
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <Main>
         <VideoWrapper>
-          <VideoPlayer src={currentVideo?.videoUrl.url} controls />
+          {currentVideo?.mediaType === 'image' ? (
+            <ImagePlayer
+              src={currentVideo?.videoUrl.url}
+              alt={currentVideo?.caption || 'Post image'}
+            />
+          ) : (
+            <VideoPlayer src={currentVideo?.videoUrl.url} controls />
+          )}
         </VideoWrapper>
         <ContentWrapper>
           <PostCard

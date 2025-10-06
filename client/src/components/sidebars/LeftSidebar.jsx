@@ -7,16 +7,12 @@ import {
   MdOutlineExplore,
   MdOutlineNotificationsNone,
   MdDashboard,
-  MdExpandMore,
-  MdExpandLess,
 } from 'react-icons/md';
 import { LuUser2 } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
-import { HiUsers } from 'react-icons/hi';
-import { MdVideoLibrary, MdSettings } from 'react-icons/md';
+
 import { openModal } from '../../redux/modal/modalSlice';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useState } from 'react';
 
 const Container = styled.div`
   position: sticky;
@@ -131,33 +127,9 @@ const FooterText = styled.p`
   font-size: 14px;
 `;
 
-const DashboardMenu = styled.div`
-  cursor: pointer;
-`;
-
-const SubMenu = styled.div`
-  margin-left: 35px;
-  margin-top: 5px;
-  display: ${(props) => (props.$isOpen ? 'block' : 'none')};
-
-  @media (max-width: 768px) {
-    margin-left: 0;
-  }
-`;
-
-const SubMenuItem = styled(NavItem)`
-  font-size: 16px;
-  padding: 10px 5px;
-
-  @media (max-width: 768px) {
-    font-size: 14px;
-  }
-`;
-
 const LeftSidebar = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
   // Get notification count
   const { unreadCount: notificationCount } = useNotifications();
@@ -172,12 +144,8 @@ const LeftSidebar = () => {
 
   const handleOpenModal = () => dispatch(openModal());
 
-  // Check if user is admin (role === 1)
-  const isAdmin = currentUser?.role === 1;
-
-  const toggleDashboard = () => {
-    setIsDashboardOpen(!isDashboardOpen);
-  };
+  // Check if user is admin (role === 'admin')
+  const isAdmin = currentUser?.role === 'admin';
 
   return (
     <Container>
@@ -231,39 +199,12 @@ const LeftSidebar = () => {
 
         {/* Admin Dashboard Menu */}
         {isAdmin && (
-          <DashboardMenu>
-            <NavItem onClick={toggleDashboard}>
+          <Link to='/dashboard'>
+            <NavItem>
               <MdDashboard />
               <span>Dashboard</span>
-              {isDashboardOpen ? <MdExpandLess /> : <MdExpandMore />}
             </NavItem>
-            <SubMenu $isOpen={isDashboardOpen}>
-              <Link to='/dashboard'>
-                <SubMenuItem>
-                  <MdDashboard />
-                  <span>Overview</span>
-                </SubMenuItem>
-              </Link>
-              <Link to='/dashboard/users'>
-                <SubMenuItem>
-                  <HiUsers />
-                  <span>Users</span>
-                </SubMenuItem>
-              </Link>
-              <Link to='/dashboard/posts'>
-                <SubMenuItem>
-                  <MdVideoLibrary />
-                  <span>Posts</span>
-                </SubMenuItem>
-              </Link>
-              <Link to='/dashboard/settings'>
-                <SubMenuItem>
-                  <MdSettings />
-                  <span>Settings</span>
-                </SubMenuItem>
-              </Link>
-            </SubMenu>
-          </DashboardMenu>
+          </Link>
         )}
       </Nav>
       {!currentUser && (

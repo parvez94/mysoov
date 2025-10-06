@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { MdPeople, MdVideoLibrary, MdNotifications } from 'react-icons/md';
+import { MdPeople, MdVideoLibrary, MdSettings } from 'react-icons/md';
 
 const Container = styled.div`
   padding: 40px;
@@ -34,7 +34,7 @@ const StatsGrid = styled.div`
   margin-bottom: 40px;
 `;
 
-const StatCard = styled.div`
+const StatCard = styled(Link)`
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -43,11 +43,14 @@ const StatCard = styled.div`
   align-items: center;
   gap: 20px;
   transition: all 0.3s ease;
+  text-decoration: none;
+  cursor: pointer;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 `;
 
@@ -107,7 +110,7 @@ const Dashboard = () => {
   const { currentUser } = useSelector((state) => state.user);
 
   // Redirect if not admin
-  if (!currentUser || currentUser.role !== 1) {
+  if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to='/' replace />;
   }
 
@@ -119,7 +122,7 @@ const Dashboard = () => {
       </Subtitle>
 
       <StatsGrid>
-        <StatCard>
+        <StatCard to='/dashboard/users'>
           <IconWrapper $color='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'>
             <MdPeople />
           </IconWrapper>
@@ -129,7 +132,7 @@ const Dashboard = () => {
           </StatInfo>
         </StatCard>
 
-        <StatCard>
+        <StatCard to='/dashboard/posts'>
           <IconWrapper $color='linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'>
             <MdVideoLibrary />
           </IconWrapper>
@@ -139,13 +142,13 @@ const Dashboard = () => {
           </StatInfo>
         </StatCard>
 
-        <StatCard>
+        <StatCard to='/dashboard/settings'>
           <IconWrapper $color='linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'>
-            <MdNotifications />
+            <MdSettings />
           </IconWrapper>
           <StatInfo>
-            <StatLabel>Notifications Sent</StatLabel>
-            <StatValue>-</StatValue>
+            <StatLabel>Admin Settings</StatLabel>
+            <StatValue>→</StatValue>
           </StatInfo>
         </StatCard>
       </StatsGrid>
@@ -153,9 +156,11 @@ const Dashboard = () => {
       <Section>
         <SectionTitle>Quick Actions</SectionTitle>
         <InfoText>
-          Use the sidebar menu to navigate to different sections:
-          <br />• <strong>Users</strong> - Manage all registered users
-          <br />• <strong>Posts</strong> - View and manage all video posts
+          Click on the cards above to navigate to different sections:
+          <br />• <strong>Total Users</strong> - Manage all registered users
+          <br />• <strong>Total Videos</strong> - View and manage all video
+          posts
+          <br />• <strong>Admin Settings</strong> - Configure admin permissions
         </InfoText>
       </Section>
 

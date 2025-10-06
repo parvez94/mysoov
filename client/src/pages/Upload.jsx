@@ -4,6 +4,7 @@ import axios from 'axios';
 import { ProgressBar } from '../components';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import PricingModal from '../components/modal/PricingModal';
 
 const Container = styled.div`
   padding: 20px;
@@ -294,6 +295,13 @@ const VideoPreview = styled.video`
   background: #000;
 `;
 
+const ImagePreview = styled.img`
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  background: #000;
+`;
+
 const RemoveButton = styled.button`
   position: absolute;
   top: 10px;
@@ -320,6 +328,11 @@ const Upload = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [status, setStatus] = useState('idle'); // 'idle' | 'uploading' | 'success' | 'error' | 'indeterminate' | 'canceled'
+  const [mediaType, setMediaType] = useState('video'); // 'video' | 'image'
+
+  // Pricing modal state
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [pricingError, setPricingError] = useState(null);
 
   // Emoji picker state
   const [showEmojis, setShowEmojis] = useState(false);
@@ -344,6 +357,7 @@ const Upload = () => {
     setUploading(false);
     setUploadProgress(0);
     setStatus('idle');
+    setMediaType('video');
   };
 
   // Remove current uploaded video and allow choosing another
@@ -361,13 +375,20 @@ const Upload = () => {
       const file = e.target.files?.[0];
       if (!file) return;
 
+      // Detect media type from file
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+
+      if (!isImage && !isVideo) {
+        return alert('Please select a valid image or video file');
+      }
+
+      const detectedMediaType = isImage ? 'image' : 'video';
+      setMediaType(detectedMediaType);
       setFileName(file.name);
 
-      if (file.size > 60 * 1024 * 1024)
-        return alert('Size too large! (Max 60MB)');
-
       const formData = new FormData();
-      formData.append('video', file);
+      formData.append(detectedMediaType, file);
 
       setUploading(true);
       setUploadProgress(0);
@@ -402,8 +423,21 @@ const Upload = () => {
       if (err?.code === 'ERR_CANCELED') {
         setStatus('canceled');
         setUploadProgress(0);
+      } else if (
+        err?.response?.status === 403 &&
+        err?.response?.data?.exceedsLimit
+      ) {
+        // File size exceeds user's plan limit - show pricing modal
+        setPricingError({
+          fileSize: err.response.data.fileSize,
+          maxSize: err.response.data.maxSize,
+          currentPlan: err.response.data.currentPlan,
+        });
+        setShowPricingModal(true);
+        setStatus('error');
       } else {
         setStatus('error');
+        alert(err?.response?.data?.msg || 'Upload failed. Please try again.');
       }
       setUploading(false);
       controllerRef.current = null;
@@ -416,7 +450,7 @@ const Upload = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!videoFile) return alert('Please upload a video first.');
+    if (!videoFile) return alert('Please upload a media file first.');
 
     const addUrl = `${import.meta.env.VITE_API_URL}/api/v1/videos`;
 
@@ -424,6 +458,7 @@ const Upload = () => {
       const requestBody = {
         caption: caption,
         videoUrl: videoFile,
+        mediaType: mediaType,
         privacy: privacy || 'Public',
       };
 
@@ -718,8 +753,10 @@ const Upload = () => {
 
   const labelMap = {
     idle: '',
-    uploading: fileName ? `Uploading ${fileName}` : 'Uploading video',
-    indeterminate: fileName ? `Uploading ${fileName}` : 'Uploading video',
+    uploading: fileName ? `Uploading ${fileName}` : `Uploading ${mediaType}`,
+    indeterminate: fileName
+      ? `Uploading ${fileName}`
+      : `Uploading ${mediaType}`,
     success: 'Upload complete',
     error: 'Upload failed',
     canceled: 'Upload canceled',
@@ -729,8 +766,8 @@ const Upload = () => {
 
   return (
     <Container>
-      <Title>Upload Video</Title>
-      <Subtitle>Post a video to your account</Subtitle>
+      <Title>Upload Media</Title>
+      <Subtitle>Post a video or image to your account</Subtitle>
       <ContentWrapper>
         <VideoWrapper>
           {showProgress && (
@@ -744,23 +781,27 @@ const Upload = () => {
 
           {videoFile?.url ? (
             <PreviewBox>
-              <VideoPreview src={videoFile.url} controls playsInline />
+              {mediaType === 'video' ? (
+                <VideoPreview src={videoFile.url} controls playsInline />
+              ) : (
+                <ImagePreview src={videoFile.url} alt='Preview' />
+              )}
               <RemoveButton
                 onClick={removeUploadedVideo}
-                aria-label='Remove video'
+                aria-label='Remove media'
               >
                 ×
               </RemoveButton>
             </PreviewBox>
           ) : (
-            <DragVideo htmlFor='video-input'>
+            <DragVideo htmlFor='media-input'>
               <Helper>
-                {fileName || 'Click to select a video file (MP4, WebM, MOV)'}
+                {fileName || 'Click to select a video or image file'}
               </Helper>
               <DragInput
-                id='video-input'
+                id='media-input'
                 type='file'
-                accept='video/*'
+                accept='video/*,image/*'
                 onChange={handleUpload}
               />
             </DragVideo>
@@ -798,7 +839,7 @@ const Upload = () => {
           </CaptionWrapper>
 
           <OptionWrapper>
-            <Label>Who can watch this video</Label>
+            <Label>Who can see this post</Label>
             <Select
               value={privacy}
               onChange={(e) => setPrivacy(e.target.value)}
@@ -824,6 +865,16 @@ const Upload = () => {
         </VideoWrapper>
         <MusicWrapper>Music</MusicWrapper>
       </ContentWrapper>
+
+      {/* Pricing Modal */}
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={() => {
+          setShowPricingModal(false);
+          setPricingError(null);
+        }}
+        errorInfo={pricingError}
+      />
     </Container>
   );
 };

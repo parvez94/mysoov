@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
-import { Spinner } from '../../components/index';
+import { Spinner, VerifiedBadge } from '../../components/index';
 
 const Container = styled.div`
   padding: 40px;
@@ -157,6 +157,9 @@ const UserName = styled.p`
   color: var(--primary-color);
   font-size: 14px;
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `;
 
 const UserEmail = styled.p`
@@ -228,7 +231,7 @@ const DashboardUsers = () => {
   const [error, setError] = useState(null);
 
   // Redirect if not admin
-  if (!currentUser || currentUser.role !== 1) {
+  if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to='/' replace />;
   }
 
@@ -332,12 +335,15 @@ const DashboardUsers = () => {
                 )}
               </div>
               <UserInfo>
-                <UserName>{user.displayName || user.username}</UserName>
+                <UserName>
+                  {user.displayName || user.username}
+                  <VerifiedBadge user={user} size={14} />
+                </UserName>
                 <UserEmail>@{user.username}</UserEmail>
               </UserInfo>
               <div>
-                <Badge $type={user.role === 1 ? 'admin' : 'user'}>
-                  {user.role === 1 ? 'Admin' : 'User'}
+                <Badge $type={user.role === 'admin' ? 'admin' : 'user'}>
+                  {user.role === 'admin' ? 'Admin' : 'User'}
                 </Badge>
               </div>
               <Text>{user.videos?.length || 0}</Text>

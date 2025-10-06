@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { IoClose } from 'react-icons/io5';
 import { useSelector } from 'react-redux';
-import { FollowButton } from '../index';
+import { FollowButton, VerifiedBadge } from '../index';
 import { resolveImageUrl } from '../../utils/imageUtils';
 
 const API = import.meta.env.VITE_API_URL;
@@ -104,6 +104,9 @@ const DisplayName = styled.div`
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 `;
 
 const Username = styled.div`
@@ -207,7 +210,10 @@ const UserListModal = ({ isOpen, onClose, userId, type, title }) => {
                   alt={user.displayName || user.username}
                 />
                 <UserInfo>
-                  <DisplayName>{user.displayName || user.username}</DisplayName>
+                  <DisplayName>
+                    {user.displayName || user.username}
+                    <VerifiedBadge user={user} size={14} />
+                  </DisplayName>
                   <Username>@{user.username}</Username>
                 </UserInfo>
                 {currentUser && currentUser._id !== user._id && (

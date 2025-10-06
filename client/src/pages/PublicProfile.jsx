@@ -10,7 +10,7 @@ import styled from 'styled-components';
 import { createPortal } from 'react-dom';
 import { IoClose } from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
-import { FollowButton, PostCard } from '../components';
+import { FollowButton, PostCard, VerifiedBadge } from '../components';
 import { resolveImageUrl } from '../utils/imageUtils';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import UsernameAvailabilityIndicator from '../components/UsernameAvailabilityIndicator';
@@ -62,6 +62,9 @@ const DisplayName = styled.h3`
   color: var(--secondary-color);
   font-size: 26px;
   margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 
   @media (max-width: 768px) {
     font-size: 22px;
@@ -163,16 +166,6 @@ const VideosContainer = styled.div`
     grid-template-columns: 1fr;
     gap: 16px;
   }
-`;
-
-const VideoPlayer = styled.video`
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  height: auto;
-  border-radius: 8px;
-  object-fit: contain;
-  object-position: center;
-  background: #000;
 `;
 
 // Saved list UI (author header + video)
@@ -731,7 +724,10 @@ const PublicProfile = () => {
         <UserInfo>
           <UserImage src={avatarUrl} />
           <UserNames>
-            <DisplayName>{displayName}</DisplayName>
+            <DisplayName>
+              {displayName}
+              <VerifiedBadge user={channel} size={22} />
+            </DisplayName>
             <UserName>@{channel?.username}</UserName>
             <Actions>
               {isOwn ? (

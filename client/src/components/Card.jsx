@@ -74,20 +74,34 @@ const VideoContainer = styled.div`
 `;
 
 const Video = styled.video`
-  width: 280px;
-  aspect-ratio: 9 / 16; /* force portrait tile */
+  max-width: 500px;
+  max-height: 600px;
+  width: auto;
   height: auto;
   border-radius: 10px;
-  object-fit: contain; /* show full video with letterboxing */
+  object-fit: contain;
   object-position: center;
-  background: #000; /* fallback letterbox color if needed */
+  background: #000;
 
   @media (max-width: 768px) {
-    width: calc(
-      100vw - 90px
-    ); /* Account for left sidebar (60px) + padding (30px) */
-    max-width: 310px;
-    aspect-ratio: 9 / 16;
+    max-width: calc(100vw - 90px);
+    max-height: 70vh;
+  }
+`;
+
+const Image = styled.img`
+  max-width: 500px;
+  max-height: 600px;
+  width: auto;
+  height: auto;
+  border-radius: 10px;
+  object-fit: contain;
+  object-position: center;
+  background: #000;
+
+  @media (max-width: 768px) {
+    max-width: calc(100vw - 90px);
+    max-height: 70vh;
   }
 `;
 
@@ -145,7 +159,7 @@ const StatsWrapper = styled.span`
 `;
 
 const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
-  const { _id, caption, userId, videoUrl, likes, saved } = video;
+  const { _id, caption, userId, videoUrl, likes, saved, mediaType } = video;
   const { currentUser } = useSelector((state) => state.user);
 
   const dispatch = useDispatch();
@@ -202,7 +216,11 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
         <HomeText caption={caption} />
         <VideoWrapper>
           <VideoContainer>
-            <Video src={videoUrl.url} controls />
+            {mediaType === 'image' ? (
+              <Image src={videoUrl.url} alt={caption || 'Post image'} />
+            ) : (
+              <Video src={videoUrl.url} controls />
+            )}
           </VideoContainer>
           {/* <Stats variant="home" video={video} /> */}
           <VideoStats>

@@ -3,6 +3,8 @@ import express from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
 import { verifyToken } from '../utils/verifyToken.js';
+import User from '../models/User.js';
+import { getMaxUploadSize } from '../config/pricingPlans.js';
 
 dotenv.config();
 
@@ -34,19 +36,39 @@ router.post('/upload', verifyToken, async (req, res) => {
     if (!req.files || Object.keys(req.files).length === 0)
       return res.status(400).json({ msg: 'No files were uploaded.' });
 
-    const file = req.files.video;
+    const file = req.files.video || req.files.image;
 
-    if (!file) return res.status(400).json({ msg: 'Missing video file' });
+    if (!file) return res.status(400).json({ msg: 'Missing media file' });
 
-    if (file.size > 60 * 1024 * 1024) {
+    // Get user's upload limit based on subscription
+    const user = await User.findById(req.user.id);
+    if (!user) {
       removeTmp(file.tempFilePath);
-      return res.status(400).json({ msg: 'Size too large' });
+      return res.status(404).json({ msg: 'User not found' });
     }
+
+    const userMaxUploadSize = getMaxUploadSize(user);
+    const maxSizeBytes = userMaxUploadSize * 1024 * 1024; // Convert MB to bytes
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+    if (file.size > maxSizeBytes) {
+      removeTmp(file.tempFilePath);
+      return res.status(403).json({
+        msg: `File size (${fileSizeMB}MB) exceeds your plan limit of ${userMaxUploadSize}MB`,
+        exceedsLimit: true,
+        fileSize: fileSizeMB,
+        maxSize: userMaxUploadSize,
+        currentPlan: user.subscription?.plan || 'free',
+      });
+    }
+
+    // Determine if it's a video or image
+    const isVideo = req.files.video ? true : false;
 
     // Upload file to Cloudinary
     const result = await cloudinary.uploader.upload(file.tempFilePath, {
-      folder: 'videos',
-      resource_type: 'video',
+      folder: isVideo ? 'videos' : 'images',
+      resource_type: isVideo ? 'video' : 'image',
     });
 
     // Clean up temporary file

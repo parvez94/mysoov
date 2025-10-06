@@ -12,6 +12,7 @@ import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { useCommentUserLoading } from '../../hooks/useUserDataLoading';
 import { CommentUserLoading } from '../loading/UserInfoLoading';
+import VerifiedBadge from '../VerifiedBadge';
 
 const Container = styled.div`
   margin-top: 30px;
@@ -65,7 +66,9 @@ const CommentUserInfo = styled.div`
 const CommentUserName = styled.div``;
 
 const DisplayNameLine = styled.span`
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-family: var(--primary-fonts);
   color: #fff;
   font-size: 15px; /* slightly larger than username */
@@ -654,7 +657,10 @@ const Comment = ({ item, repliesByParent = {}, depth = 0 }) => {
                     guardClick(e);
                   }}
                 >
-                  <DisplayNameLine>{displayName}</DisplayNameLine>
+                  <DisplayNameLine>
+                    {displayName}
+                    <VerifiedBadge user={channel} size={14} />
+                  </DisplayNameLine>
                 </a>
                 <UsernameLine>@{username}</UsernameLine>
               </CommentUserName>

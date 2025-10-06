@@ -52,7 +52,10 @@ export const register = async (req, res, next) => {
 
     await newUser.save();
 
-    const token = jwt.sign({ id: newUser._id }, process.env.SECRET_KEY);
+    const token = jwt.sign(
+      { id: newUser._id, role: newUser.role },
+      process.env.SECRET_KEY
+    );
 
     res.header('Access-Control-Allow-Credentials', true);
 
@@ -83,7 +86,10 @@ export const login = async (req, res, next) => {
     const isCorrect = await bcrypt.compare(password, user.password);
     if (!isCorrect) return next(createError(400, 'Invalid credentials.'));
 
-    const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.SECRET_KEY
+    );
 
     const { password: _pwd, ...others } = user._doc;
 

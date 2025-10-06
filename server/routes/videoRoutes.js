@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyToken } from '../utils/verifyToken.js';
+import { verifyToken, optionalAuth } from '../utils/verifyToken.js';
 import {
   getVideo,
   addVideo,
@@ -49,7 +49,7 @@ router.options('/:id', (req, res) => {
 router.put('/:id', verifyToken, updateVideo);
 router.delete('/:id', verifyToken, deleteVideo);
 
-router.get('/find/:id', getVideo);
+router.get('/find/:id', optionalAuth, getVideo);
 router.get('/random', randomVideos);
 router.get('/feeds', verifyToken, videoFeeds);
 
