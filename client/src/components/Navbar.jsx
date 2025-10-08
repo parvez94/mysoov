@@ -35,6 +35,12 @@ const Logo = styled.h2`
   align-items: center;
 `;
 
+const LogoImage = styled.img`
+  height: 40px;
+  max-width: 200px;
+  object-fit: contain;
+`;
+
 const Search = styled.div`
   width: 500px;
   display: flex;
@@ -138,6 +144,11 @@ const MenuBar = styled.div`
 
 const Navbar = () => {
   const [mounted, setMounted] = useState(false);
+  const [branding, setBranding] = useState({
+    logo: null,
+    favicon: null,
+    siteName: 'Mysoov.TV',
+  });
 
   const dispatch = useDispatch();
   const { currentUser, showUserMenu } = useSelector((state) => state.user);
@@ -171,10 +182,48 @@ const Navbar = () => {
   useEffect(() => {
     setMounted(true);
 
+    // Load branding from localStorage
+    const loadBranding = () => {
+      try {
+        const savedBranding = localStorage.getItem('siteBranding');
+        if (savedBranding) {
+          const parsed = JSON.parse(savedBranding);
+          setBranding(parsed);
+
+          // Update favicon if available
+          if (parsed.favicon) {
+            const link =
+              document.querySelector("link[rel*='icon']") ||
+              document.createElement('link');
+            link.type = 'image/x-icon';
+            link.rel = 'shortcut icon';
+            link.href = parsed.favicon;
+            document.getElementsByTagName('head')[0].appendChild(link);
+          }
+
+          // Update page title if site name is available
+          if (parsed.siteName) {
+            document.title = parsed.siteName;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load branding:', err);
+      }
+    };
+
+    loadBranding();
+
+    // Listen for branding updates
+    const handleBrandingUpdate = () => {
+      loadBranding();
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('brandingUpdated', handleBrandingUpdate);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('brandingUpdated', handleBrandingUpdate);
     };
   }, [dispatch]);
 
@@ -182,7 +231,16 @@ const Navbar = () => {
     <>
       <Container>
         <ContentWrapper>
-          <Logo>Mysoov.TV</Logo>
+          <Logo>
+            {branding.logo ? (
+              <LogoImage
+                src={branding.logo}
+                alt={branding.siteName || 'Logo'}
+              />
+            ) : (
+              branding.siteName || 'Mysoov.TV'
+            )}
+          </Logo>
           <Search>
             <Input placeholder='Search...' />
             <IoIosSearch />

@@ -46,7 +46,7 @@ const Main = styled.div`
 const VideoWrapper = styled.div`
   width: 100%;
   max-width: 700px;
-  height: 400px;
+  height: ${(props) => (props.$isImage ? 'auto' : '400px')};
   position: relative;
   display: flex;
   justify-content: center;
@@ -62,6 +62,17 @@ const VideoPlayer = styled.video`
   height: 100%;
   border-radius: 4px;
   object-fit: contain;
+
+  @media (max-width: 768px) {
+    border-radius: 8px;
+  }
+`;
+
+const YouTubePlayer = styled.iframe`
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  border: none;
 
   @media (max-width: 768px) {
     border-radius: 8px;
@@ -371,14 +382,44 @@ const Video = () => {
     );
   }
 
+  // Check if video is from YouTube
+  const isYouTubeVideo =
+    currentVideo?.videoUrl?.provider === 'youtube' ||
+    currentVideo?.storageProvider === 'youtube' ||
+    currentVideo?.videoUrl?.url?.includes('youtube.com/embed');
+
+  // Add parameters to YouTube URL to remove overlays
+  const getCleanYouTubeUrl = (url) => {
+    if (!url || !url.includes('youtube.com')) return url;
+
+    const urlObj = new URL(url);
+    // Remove YouTube branding and overlays
+    urlObj.searchParams.set('modestbranding', '1'); // Minimal YouTube branding
+    urlObj.searchParams.set('rel', '0'); // Don't show related videos
+    urlObj.searchParams.set('showinfo', '0'); // Don't show video info
+    urlObj.searchParams.set('iv_load_policy', '3'); // Don't show annotations
+    urlObj.searchParams.set('controls', '1'); // Show player controls
+    urlObj.searchParams.set('disablekb', '0'); // Enable keyboard controls
+    urlObj.searchParams.set('fs', '1'); // Allow fullscreen
+
+    return urlObj.toString();
+  };
+
   return (
     <Container>
       <Main>
-        <VideoWrapper>
+        <VideoWrapper $isImage={currentVideo?.mediaType === 'image'}>
           {currentVideo?.mediaType === 'image' ? (
             <ImagePlayer
               src={currentVideo?.videoUrl.url}
               alt={currentVideo?.caption || 'Post image'}
+            />
+          ) : isYouTubeVideo ? (
+            <YouTubePlayer
+              src={getCleanYouTubeUrl(currentVideo?.videoUrl.url)}
+              title={currentVideo?.caption || 'Video'}
+              allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+              allowFullScreen
             />
           ) : (
             <VideoPlayer src={currentVideo?.videoUrl.url} controls />

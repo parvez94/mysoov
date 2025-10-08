@@ -1,9 +1,11 @@
 import User from '../models/User.js';
 import Video from '../models/Video.js';
+import Settings from '../models/Settings.js';
 import { createError } from '../utils/error.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { isYouTubeConfigured } from '../utils/youtubeUploader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -363,6 +365,97 @@ export const getMaxUploadSize = (user) => {
       message: 'Pricing plans updated successfully',
       pricingPlans,
       pricingConfig: config,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get storage settings
+export const getStorageSettings = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne();
+
+    // Create default settings if none exist
+    if (!settings) {
+      settings = await Settings.create({
+        storageProvider: 'cloudinary',
+        cloudinaryConfig: { enabled: true },
+        youtubeConfig: { enabled: false, defaultPrivacy: 'unlisted' },
+      });
+    }
+
+    // Check if YouTube is properly configured in environment
+    const youtubeConfigured = isYouTubeConfigured();
+
+    res.status(200).json({
+      success: true,
+      storageProvider: settings.storageProvider,
+      cloudinaryConfig: settings.cloudinaryConfig,
+      youtubeConfig: {
+        ...settings.youtubeConfig,
+        isConfigured: youtubeConfigured,
+      },
+      youtubeConfigured: youtubeConfigured, // Add this for frontend compatibility
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update storage settings
+export const updateStorageSettings = async (req, res, next) => {
+  try {
+    const { storageProvider, youtubeConfig, cloudinaryConfig } = req.body;
+
+    // Validate storage provider
+    if (
+      storageProvider &&
+      !['cloudinary', 'youtube'].includes(storageProvider)
+    ) {
+      return next(createError(400, 'Invalid storage provider'));
+    }
+
+    // If YouTube is selected, check if it's configured
+    if (storageProvider === 'youtube' && !isYouTubeConfigured()) {
+      return next(
+        createError(
+          400,
+          'YouTube is not configured. Please set up YouTube API credentials first.'
+        )
+      );
+    }
+
+    let settings = await Settings.findOne();
+
+    if (!settings) {
+      settings = await Settings.create({
+        storageProvider: storageProvider || 'cloudinary',
+        cloudinaryConfig: cloudinaryConfig || { enabled: true },
+        youtubeConfig: youtubeConfig || {
+          enabled: false,
+          defaultPrivacy: 'unlisted',
+        },
+      });
+    } else {
+      if (storageProvider) settings.storageProvider = storageProvider;
+      if (cloudinaryConfig) settings.cloudinaryConfig = cloudinaryConfig;
+      if (youtubeConfig)
+        settings.youtubeConfig = {
+          ...settings.youtubeConfig,
+          ...youtubeConfig,
+        };
+      await settings.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Storage settings updated successfully',
+      settings: {
+        storageProvider: settings.storageProvider,
+        cloudinaryConfig: settings.cloudinaryConfig,
+        youtubeConfig: settings.youtubeConfig,
+      },
     });
   } catch (error) {
     next(error);

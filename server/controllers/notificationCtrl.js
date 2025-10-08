@@ -1,6 +1,5 @@
 import Notification from '../models/Notification.js';
 import { createError } from '../utils/error.js';
-import { sendNotificationSSE } from '../routes/sseRoutes.js';
 
 // Create a new notification
 export const createNotification = async (
@@ -35,17 +34,10 @@ export const createNotification = async (
     // Populate sender information
     await notification.populate('sender', 'username displayName displayImage');
 
-    // Send real-time notification via Socket.IO (if available)
+    // Send real-time notification via Socket.IO
     if (global.io) {
       const roomName = `user_${recipientIdStr}`;
       global.io.to(roomName).emit('newNotification', notification);
-    }
-
-    // Send real-time notification via SSE (fallback for production)
-    try {
-      sendNotificationSSE(recipientIdStr, notification);
-    } catch (error) {
-      // Silent error handling
     }
 
     return notification;

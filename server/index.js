@@ -101,7 +101,6 @@ import videoRouter from './routes/videoRoutes.js';
 import uploadRouter from './routes/uploadRoutes.js';
 import commentRouter from './routes/commentRoutes.js';
 import notificationRouter from './routes/notificationRoutes.js';
-import sseRouter from './routes/sseRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import publicRouter from './routes/publicRoutes.js';
 import {
@@ -194,8 +193,8 @@ app.use('/api/v1/videos', videoRouter);
 app.use('/api/v1', uploadRouter);
 app.use('/api/v1/comments', commentRouter);
 app.use('/api/v1/notifications', notificationRouter);
-app.use('/api/v1/sse', sseRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/v1/admin', adminRouter); // Fixed: Added v1 prefix
+app.use('/api/admin', adminRouter); // Keep backward compatibility
 app.use('/api/public', publicRouter);
 
 // Database connection

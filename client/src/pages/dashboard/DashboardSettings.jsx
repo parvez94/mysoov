@@ -4,6 +4,17 @@ import { Navigate } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
 import { MdPersonAdd, MdDelete, MdClose, MdSave } from 'react-icons/md';
+import ThreeDotsLoader from '../../components/loading/ThreeDotsLoader';
+
+const ButtonLoader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  & > div > div {
+    background-color: white !important;
+  }
+`;
 
 const Container = styled.div`
   padding: 20px;
@@ -443,6 +454,7 @@ const SaveButton = styled.button`
   gap: 8px;
   transition: all 0.2s;
   font-family: var(--secondary-fonts);
+  min-height: 42px;
 
   &:hover {
     background: #45a049;
@@ -461,6 +473,226 @@ const FreeUploadBox = styled.div`
   border-radius: 8px;
   padding: 20px;
   max-width: 400px;
+`;
+
+const BrandingGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+`;
+
+const BrandingCard = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+`;
+
+const BrandingTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--secondary-color);
+  margin-bottom: 16px;
+  font-family: var(--primary-fonts);
+`;
+
+const ImagePreview = styled.div`
+  width: 100%;
+  min-height: 120px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  overflow: hidden;
+  position: relative;
+`;
+
+const PreviewImage = styled.img`
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+`;
+
+const PreviewText = styled.p`
+  color: #999;
+  font-size: 14px;
+  text-align: center;
+  font-family: var(--secondary-fonts);
+`;
+
+const FileInputLabel = styled.label`
+  display: inline-block;
+  padding: 10px 20px;
+  background: #667eea;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  font-family: var(--secondary-fonts);
+  margin-bottom: 12px;
+
+  &:hover {
+    background: #5568d3;
+  }
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
+const RemoveImageButton = styled.button`
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  font-family: var(--secondary-fonts);
+  margin-top: 8px;
+
+  &:hover {
+    background: #d32f2f;
+  }
+`;
+
+const UploadingText = styled.p`
+  color: #667eea;
+  font-size: 14px;
+  margin-top: 8px;
+  font-family: var(--secondary-fonts);
+`;
+
+const StorageProviderBox = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 600px;
+`;
+
+const RadioGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+`;
+
+const RadioOption = styled.label`
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid
+    ${(props) => (props.$selected ? '#667eea' : 'rgba(255, 255, 255, 0.1)')};
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${(props) =>
+      props.$selected ? '#667eea' : 'rgba(255, 255, 255, 0.2)'};
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  ${(props) =>
+    props.$disabled &&
+    `
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+    }
+  `}
+`;
+
+const RadioInput = styled.input`
+  margin-top: 4px;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+`;
+
+const RadioContent = styled.div`
+  flex: 1;
+`;
+
+const RadioTitle = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--secondary-color);
+  margin-bottom: 4px;
+  font-family: var(--primary-fonts);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const RadioDescription = styled.p`
+  font-size: 14px;
+  color: #999;
+  line-height: 1.5;
+  font-family: var(--secondary-fonts);
+`;
+
+const StatusBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${(props) =>
+    props.$configured ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.2)'};
+  color: ${(props) => (props.$configured ? '#4caf50' : '#ff9800')};
+`;
+
+const SetupInstructions = styled.div`
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 8px;
+`;
+
+const InstructionsTitle = styled.h4`
+  font-size: 16px;
+  font-weight: 600;
+  color: #ff9800;
+  margin-bottom: 12px;
+  font-family: var(--primary-fonts);
+`;
+
+const InstructionsList = styled.ol`
+  margin: 0;
+  padding-left: 20px;
+  color: #999;
+  font-size: 14px;
+  line-height: 1.8;
+  font-family: var(--secondary-fonts);
+
+  li {
+    margin-bottom: 8px;
+  }
+
+  code {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #667eea;
+  }
 `;
 
 const DashboardSettings = () => {
@@ -534,6 +766,24 @@ const DashboardSettings = () => {
     },
   });
   const [savingPricing, setSavingPricing] = useState(false);
+  const [savingFreeUpload, setSavingFreeUpload] = useState(false);
+
+  // Branding state
+  const [branding, setBranding] = useState({
+    logo: null,
+    favicon: null,
+    siteName: 'Mysoov.TV',
+  });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [savingBranding, setSavingBranding] = useState(false);
+
+  // Storage Settings state
+  const [storageSettings, setStorageSettings] = useState({
+    storageProvider: 'cloudinary',
+    youtubeConfigured: false,
+  });
+  const [savingStorage, setSavingStorage] = useState(false);
 
   // Redirect if not admin (role 'admin' = admin)
   if (!currentUser || currentUser.role !== 'admin') {
@@ -543,6 +793,8 @@ const DashboardSettings = () => {
   useEffect(() => {
     fetchAdmins();
     fetchPricingPlans();
+    fetchBranding();
+    fetchStorageSettings();
   }, []);
 
   useEffect(() => {
@@ -699,6 +951,199 @@ const DashboardSettings = () => {
     setShowRemoveModal(true);
   };
 
+  // Branding functions
+  const fetchBranding = () => {
+    try {
+      const savedBranding = localStorage.getItem('siteBranding');
+      if (savedBranding) {
+        const parsed = JSON.parse(savedBranding);
+        setBranding(parsed);
+      }
+    } catch (err) {
+      console.error('Failed to fetch branding:', err);
+    }
+  };
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file for logo');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+        formData,
+        {
+          withCredentials: true,
+        }
+      );
+
+      setBranding((prev) => ({
+        ...prev,
+        logo: response.data.url,
+      }));
+
+      setSuccess('Logo uploaded successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload logo');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleFaviconUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select a valid image file for favicon');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      setUploadingFavicon(true);
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+        formData,
+        {
+          withCredentials: true,
+        }
+      );
+
+      setBranding((prev) => ({
+        ...prev,
+        favicon: response.data.url,
+      }));
+
+      setSuccess('Favicon uploaded successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload favicon');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setUploadingFavicon(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setBranding((prev) => ({
+      ...prev,
+      logo: null,
+    }));
+  };
+
+  const handleRemoveFavicon = () => {
+    setBranding((prev) => ({
+      ...prev,
+      favicon: null,
+    }));
+  };
+
+  const handleSaveBranding = async () => {
+    try {
+      setSavingBranding(true);
+
+      // Save to localStorage
+      localStorage.setItem('siteBranding', JSON.stringify(branding));
+
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new Event('brandingUpdated'));
+
+      // Update favicon dynamically
+      if (branding.favicon) {
+        const link =
+          document.querySelector("link[rel*='icon']") ||
+          document.createElement('link');
+        link.type = 'image/x-icon';
+        link.rel = 'shortcut icon';
+        link.href = branding.favicon;
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+
+      setSuccess('Branding saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to save branding');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingBranding(false);
+    }
+  };
+
+  // Storage Settings functions
+  const fetchStorageSettings = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/v1/admin/storage-settings`,
+        {
+          withCredentials: true,
+        }
+      );
+      setStorageSettings({
+        storageProvider: response.data.storageProvider || 'cloudinary',
+        youtubeConfigured: response.data.youtubeConfigured || false,
+      });
+    } catch (err) {
+      console.error('Failed to fetch storage settings:', err);
+    }
+  };
+
+  const handleStorageProviderChange = (provider) => {
+    // If YouTube is selected but not configured, show error
+    if (provider === 'youtube' && !storageSettings.youtubeConfigured) {
+      setError(
+        'YouTube is not configured. Please set up YouTube API credentials first.'
+      );
+      setTimeout(() => setError(''), 5000);
+      return;
+    }
+    setStorageSettings((prev) => ({
+      ...prev,
+      storageProvider: provider,
+    }));
+  };
+
+  const handleSaveStorageSettings = async () => {
+    try {
+      setSavingStorage(true);
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/v1/admin/storage-settings`,
+        {
+          storageProvider: storageSettings.storageProvider,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+
+      setSuccess('Storage settings saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || 'Failed to save storage settings'
+      );
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingStorage(false);
+    }
+  };
+
   const handlePricingChange = (planId, field, value) => {
     console.log('DashboardSettings - handlePricingChange:', {
       planId,
@@ -727,6 +1172,72 @@ const DashboardSettings = () => {
       console.log('DashboardSettings - Updated pricingPlans state:', updated);
       return updated;
     });
+  };
+
+  const handleSaveFreeUpload = async () => {
+    try {
+      setSavingFreeUpload(true);
+
+      // Get existing pricing plans from localStorage or use current state
+      const savedPlans = localStorage.getItem('pricingPlans');
+      let existingPlans = pricingPlans;
+
+      if (savedPlans) {
+        try {
+          const parsed = JSON.parse(savedPlans);
+          const { free, ...paidPlans } = parsed;
+          existingPlans = paidPlans;
+        } catch (err) {
+          console.error('Failed to parse existing plans:', err);
+        }
+      }
+
+      // Combine free upload size with existing paid plans
+      const allPlans = {
+        free: {
+          name: 'Free',
+          price: 0,
+          maxUploadSize: freeUploadSize,
+          description: 'Perfect for getting started',
+          features: [
+            `${freeUploadSize}MB upload limit`,
+            'Basic features',
+            'Community support',
+          ],
+        },
+        ...existingPlans,
+      };
+
+      // Save to server
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/admin/pricing-plans`,
+        { pricingPlans: allPlans, pricingConfig },
+        {
+          withCredentials: true,
+        }
+      );
+
+      // Also save to localStorage for immediate client-side access
+      localStorage.setItem('pricingPlans', JSON.stringify(allPlans));
+
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(
+        new CustomEvent('pricingUpdated', {
+          detail: { pricingPlans: allPlans, pricingConfig },
+        })
+      );
+
+      setSuccess('Free upload size updated successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      console.error('Error saving free upload size:', err);
+      setError(
+        err.response?.data?.message || 'Failed to save free upload size'
+      );
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingFreeUpload(false);
+    }
   };
 
   const handleSavePricing = async () => {
@@ -973,12 +1484,293 @@ const DashboardSettings = () => {
               color: '#999',
               fontSize: '13px',
               marginTop: '8px',
+              marginBottom: '16px',
               fontFamily: 'var(--secondary-fonts)',
             }}
           >
             This applies to all users who don't have an active subscription.
           </p>
+          <SaveButton
+            onClick={handleSaveFreeUpload}
+            disabled={savingFreeUpload}
+          >
+            {savingFreeUpload ? (
+              <ButtonLoader>
+                <ThreeDotsLoader />
+              </ButtonLoader>
+            ) : (
+              <>
+                <MdSave size={18} />
+                Save Free Upload Size
+              </>
+            )}
+          </SaveButton>
         </FreeUploadBox>
+      </Section>
+
+      <Section>
+        <SectionTitle>Site Branding</SectionTitle>
+        <p
+          style={{
+            color: '#999',
+            marginBottom: '24px',
+            fontFamily: 'var(--secondary-fonts)',
+          }}
+        >
+          Customize your site's logo, favicon, and name. Changes will be
+          reflected across the entire application.
+        </p>
+
+        <BrandingGrid>
+          <BrandingCard>
+            <BrandingTitle>Logo</BrandingTitle>
+            <ImagePreview>
+              {branding.logo ? (
+                <PreviewImage src={branding.logo} alt='Site logo' />
+              ) : (
+                <PreviewText>No logo uploaded</PreviewText>
+              )}
+            </ImagePreview>
+            <FileInputLabel htmlFor='logo-upload'>
+              {uploadingLogo ? 'Uploading...' : 'Choose Logo'}
+            </FileInputLabel>
+            <HiddenFileInput
+              id='logo-upload'
+              type='file'
+              accept='image/*'
+              onChange={handleLogoUpload}
+              disabled={uploadingLogo}
+            />
+            {uploadingLogo && <UploadingText>Uploading logo...</UploadingText>}
+            {branding.logo && (
+              <RemoveImageButton onClick={handleRemoveLogo}>
+                Remove Logo
+              </RemoveImageButton>
+            )}
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '12px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              Recommended: PNG or SVG format, transparent background
+            </p>
+          </BrandingCard>
+
+          <BrandingCard>
+            <BrandingTitle>Favicon</BrandingTitle>
+            <ImagePreview>
+              {branding.favicon ? (
+                <PreviewImage src={branding.favicon} alt='Site favicon' />
+              ) : (
+                <PreviewText>No favicon uploaded</PreviewText>
+              )}
+            </ImagePreview>
+            <FileInputLabel htmlFor='favicon-upload'>
+              {uploadingFavicon ? 'Uploading...' : 'Choose Favicon'}
+            </FileInputLabel>
+            <HiddenFileInput
+              id='favicon-upload'
+              type='file'
+              accept='image/*'
+              onChange={handleFaviconUpload}
+              disabled={uploadingFavicon}
+            />
+            {uploadingFavicon && (
+              <UploadingText>Uploading favicon...</UploadingText>
+            )}
+            {branding.favicon && (
+              <RemoveImageButton onClick={handleRemoveFavicon}>
+                Remove Favicon
+              </RemoveImageButton>
+            )}
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '12px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              Recommended: 32x32 or 64x64 pixels, ICO or PNG format
+            </p>
+          </BrandingCard>
+
+          <BrandingCard>
+            <BrandingTitle>Site Name</BrandingTitle>
+            <FormGroup>
+              <Label>Site Name</Label>
+              <Input
+                type='text'
+                value={branding.siteName}
+                onChange={(e) =>
+                  setBranding((prev) => ({
+                    ...prev,
+                    siteName: e.target.value,
+                  }))
+                }
+                placeholder='Enter site name'
+              />
+            </FormGroup>
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '12px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              This will be displayed in the navigation bar
+            </p>
+          </BrandingCard>
+        </BrandingGrid>
+
+        <SaveButton
+          onClick={handleSaveBranding}
+          disabled={savingBranding}
+          style={{ marginTop: '20px' }}
+        >
+          {savingBranding ? (
+            <ButtonLoader>
+              <ThreeDotsLoader />
+            </ButtonLoader>
+          ) : (
+            <>
+              <MdSave size={18} />
+              Save Branding Settings
+            </>
+          )}
+        </SaveButton>
+      </Section>
+
+      <Section>
+        <SectionTitle>Video Storage Provider</SectionTitle>
+        <p
+          style={{
+            color: '#999',
+            marginBottom: '24px',
+            fontFamily: 'var(--secondary-fonts)',
+          }}
+        >
+          Choose where to store uploaded videos. Images will always use
+          Cloudinary for optimal performance.
+        </p>
+
+        <StorageProviderBox>
+          <RadioGroup>
+            <RadioOption
+              $selected={storageSettings.storageProvider === 'cloudinary'}
+              onClick={() => handleStorageProviderChange('cloudinary')}
+            >
+              <RadioInput
+                type='radio'
+                name='storageProvider'
+                value='cloudinary'
+                checked={storageSettings.storageProvider === 'cloudinary'}
+                onChange={() => handleStorageProviderChange('cloudinary')}
+              />
+              <RadioContent>
+                <RadioTitle>
+                  Cloudinary
+                  <StatusBadge $configured={true}>Always Available</StatusBadge>
+                </RadioTitle>
+                <RadioDescription>
+                  Store videos on Cloudinary. Reliable CDN delivery with
+                  automatic optimization and transformations. Best for smaller
+                  video libraries.
+                </RadioDescription>
+              </RadioContent>
+            </RadioOption>
+
+            <RadioOption
+              $selected={storageSettings.storageProvider === 'youtube'}
+              $disabled={!storageSettings.youtubeConfigured}
+              onClick={() => handleStorageProviderChange('youtube')}
+            >
+              <RadioInput
+                type='radio'
+                name='storageProvider'
+                value='youtube'
+                checked={storageSettings.storageProvider === 'youtube'}
+                onChange={() => handleStorageProviderChange('youtube')}
+                disabled={!storageSettings.youtubeConfigured}
+              />
+              <RadioContent>
+                <RadioTitle>
+                  YouTube
+                  <StatusBadge $configured={storageSettings.youtubeConfigured}>
+                    {storageSettings.youtubeConfigured
+                      ? 'Configured'
+                      : 'Not Configured'}
+                  </StatusBadge>
+                </RadioTitle>
+                <RadioDescription>
+                  Store videos on YouTube as unlisted videos. Unlimited storage
+                  with YouTube's infrastructure. Videos are embedded on your
+                  site but hosted on YouTube. Ideal for large video libraries.
+                </RadioDescription>
+              </RadioContent>
+            </RadioOption>
+          </RadioGroup>
+
+          {!storageSettings.youtubeConfigured && (
+            <SetupInstructions>
+              <InstructionsTitle>
+                📝 YouTube Setup Instructions
+              </InstructionsTitle>
+              <InstructionsList>
+                <li>
+                  Create a Google Cloud Project and enable the YouTube Data API
+                  v3
+                </li>
+                <li>
+                  Create OAuth 2.0 credentials and add them to your{' '}
+                  <code>.env</code> file:
+                  <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                    <li>
+                      <code>YOUTUBE_CLIENT_ID</code>
+                    </li>
+                    <li>
+                      <code>YOUTUBE_CLIENT_SECRET</code>
+                    </li>
+                    <li>
+                      <code>YOUTUBE_REDIRECT_URI</code>
+                    </li>
+                  </ul>
+                </li>
+                <li>
+                  Run the setup script:{' '}
+                  <code>node server/scripts/setupYouTube.js</code>
+                </li>
+                <li>
+                  Follow the authorization flow and add the{' '}
+                  <code>YOUTUBE_REFRESH_TOKEN</code> to your <code>.env</code>{' '}
+                  file
+                </li>
+                <li>Restart your server to apply the changes</li>
+              </InstructionsList>
+            </SetupInstructions>
+          )}
+
+          <SaveButton
+            onClick={handleSaveStorageSettings}
+            disabled={savingStorage}
+            style={{ marginTop: '20px' }}
+          >
+            {savingStorage ? (
+              <ButtonLoader>
+                <ThreeDotsLoader />
+              </ButtonLoader>
+            ) : (
+              <>
+                <MdSave size={18} />
+                Save Storage Settings
+              </>
+            )}
+          </SaveButton>
+        </StorageProviderBox>
       </Section>
 
       <Section>
@@ -1180,8 +1972,16 @@ const DashboardSettings = () => {
         </PricingGrid>
 
         <SaveButton onClick={handleSavePricing} disabled={savingPricing}>
-          <MdSave size={18} />
-          {savingPricing ? 'Saving...' : 'Save Pricing Configuration'}
+          {savingPricing ? (
+            <ButtonLoader>
+              <ThreeDotsLoader />
+            </ButtonLoader>
+          ) : (
+            <>
+              <MdSave size={18} />
+              Save Pricing Configuration
+            </>
+          )}
         </SaveButton>
       </Section>
 

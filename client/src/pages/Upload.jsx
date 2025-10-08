@@ -460,6 +460,7 @@ const Upload = () => {
         videoUrl: videoFile,
         mediaType: mediaType,
         privacy: privacy || 'Public',
+        storageProvider: videoFile?.provider || 'cloudinary', // Include storage provider
       };
 
       const response = await fetch(addUrl, {

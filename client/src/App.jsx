@@ -17,7 +17,6 @@ import DashboardPosts from './pages/dashboard/DashboardPosts';
 import DashboardSettings from './pages/dashboard/DashboardSettings';
 import RefreshUser from './pages/RefreshUser';
 import { SocketProvider } from './contexts/SocketContext';
-import PollingModeIndicator from './components/PollingModeIndicator';
 
 const router = createBrowserRouter([
   {
@@ -95,7 +94,6 @@ const App = () => {
   return (
     <SocketProvider>
       <RouterProvider router={router} />
-      <PollingModeIndicator />
     </SocketProvider>
   );
 };

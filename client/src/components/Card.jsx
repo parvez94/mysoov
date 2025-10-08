@@ -105,6 +105,14 @@ const Image = styled.img`
   }
 `;
 
+const YouTubeEmbed = styled.iframe`
+  width: 500px;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  border: none;
+  background: #000;
+`;
+
 const VideoStats = styled.div`
   @media (max-width: 768px) {
     display: flex;
@@ -159,10 +167,54 @@ const StatsWrapper = styled.span`
 `;
 
 const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
-  const { _id, caption, userId, videoUrl, likes, saved, mediaType } = video;
+  const {
+    _id,
+    caption,
+    userId,
+    videoUrl,
+    likes,
+    saved,
+    mediaType,
+    storageProvider,
+  } = video;
   const { currentUser } = useSelector((state) => state.user);
 
   const dispatch = useDispatch();
+
+  // Check if video is from YouTube
+  const isYouTubeVideo =
+    videoUrl?.provider === 'youtube' ||
+    storageProvider === 'youtube' ||
+    videoUrl?.url?.includes('youtube.com/embed');
+
+  // Add parameters to YouTube URL to remove overlays
+  const getCleanYouTubeUrl = (url) => {
+    if (!url || !url.includes('youtube.com')) return url;
+
+    const urlObj = new URL(url);
+    // Remove YouTube branding and overlays
+    urlObj.searchParams.set('modestbranding', '1'); // Minimal YouTube branding
+    urlObj.searchParams.set('rel', '0'); // Don't show related videos
+    urlObj.searchParams.set('showinfo', '0'); // Don't show video info
+    urlObj.searchParams.set('iv_load_policy', '3'); // Don't show annotations
+    urlObj.searchParams.set('controls', '1'); // Show player controls
+    urlObj.searchParams.set('disablekb', '0'); // Enable keyboard controls
+    urlObj.searchParams.set('fs', '1'); // Allow fullscreen
+
+    return urlObj.toString();
+  };
+
+  // Debug logging for YouTube videos in feed
+  if (videoUrl?.url?.includes('youtube.com')) {
+    console.log('Feed Card - YouTube Video Debug:', {
+      videoId: _id,
+      url: videoUrl?.url,
+      'videoUrl.provider': videoUrl?.provider,
+      storageProvider,
+      isYouTubeVideo,
+      willRenderAs: isYouTubeVideo ? 'IFRAME' : 'VIDEO TAG',
+    });
+  }
 
   const guardOr = (fn) => {
     if (!currentUser) {
@@ -218,6 +270,13 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
           <VideoContainer>
             {mediaType === 'image' ? (
               <Image src={videoUrl.url} alt={caption || 'Post image'} />
+            ) : isYouTubeVideo ? (
+              <YouTubeEmbed
+                src={getCleanYouTubeUrl(videoUrl.url)}
+                title={caption || 'Video'}
+                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                allowFullScreen
+              />
             ) : (
               <Video src={videoUrl.url} controls />
             )}

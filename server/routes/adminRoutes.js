@@ -12,6 +12,8 @@ import {
   demoteFromAdmin,
   getPricingPlans,
   updatePricingPlans,
+  getStorageSettings,
+  updateStorageSettings,
 } from '../controllers/adminCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
@@ -43,5 +45,9 @@ router.put('/users/:userId/demote', demoteFromAdmin);
 // Pricing plans management
 router.get('/pricing-plans', getPricingPlans);
 router.put('/pricing-plans', updatePricingPlans);
+
+// Storage settings management
+router.get('/storage-settings', getStorageSettings);
+router.put('/storage-settings', updateStorageSettings);
 
 export default router;

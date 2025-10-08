@@ -20,29 +20,17 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (currentUser) {
-      // Check if Socket.IO should be disabled
-      const isSocketDisabled =
-        import.meta.env.VITE_DISABLE_SOCKET_IO === 'true';
-      const isProduction = import.meta.env.PROD;
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5100';
-      const isVercelBackend = apiUrl.includes('vercel.app');
-
-      // Skip Socket.IO connection if explicitly disabled or for Vercel production backend
-      if (isSocketDisabled || (isProduction && isVercelBackend)) {
-        setSocket(null);
-        setIsConnected(false);
-        return;
-      }
 
       // Create socket connection - using cookies for authentication
       const newSocket = io(apiUrl, {
         withCredentials: true, // This will send cookies for authentication
-        transports: ['polling', 'websocket'], // Try polling first, then websocket
+        transports: ['websocket'], // Use websocket only
         timeout: 20000,
         reconnection: true,
         reconnectionDelay: 2000,
-        reconnectionAttempts: 3,
-        maxReconnectionAttempts: 3,
+        reconnectionAttempts: 5,
+        maxReconnectionAttempts: 5,
         forceNew: true,
       });
 

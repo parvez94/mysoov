@@ -2,10 +2,10 @@ export const pricingPlans = {
   "free": {
     "name": "Free",
     "price": 0,
-    "maxUploadSize": 5,
+    "maxUploadSize": 8,
     "description": "Perfect for getting started",
     "features": [
-      "5MB upload limit",
+      "8MB upload limit",
       "Basic features",
       "Community support"
     ]
@@ -54,7 +54,7 @@ export const pricingPlans = {
 // Additional pricing configuration
 export const pricingConfig = {
   "recommendedPlan": "pro",
-  "footerText": "All plans include a 15-day free trial. Cancel anytime.",
+  "footerText": "All plans include a 7-day free trial. Cancel anytime.",
   "paymentEnabled": false,
   "supportEmail": "support@mysoov.com",
   "comingSoonMessage": "🚀 Payment Integration Coming Soon!",
