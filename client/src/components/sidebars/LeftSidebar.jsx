@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { IoIosHome } from 'react-icons/io';
 import { RiUserFollowLine } from 'react-icons/ri';
 import {
@@ -10,6 +11,7 @@ import {
 } from 'react-icons/md';
 import { LuUser2 } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
+import { HiOutlineNewspaper } from 'react-icons/hi2';
 
 import { openModal } from '../../redux/modal/modalSlice';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -37,8 +39,8 @@ const Nav = styled.nav`
 const NavItem = styled.div`
   font-family: var(--secondary-fonts);
   font-weight: 600;
-  font-size: 20px;
-  padding: 15px 5px;
+  font-size: 18px;
+  padding: 12px 5px;
   color: var(--secondary-color);
   text-decoration: none;
   display: flex;
@@ -130,9 +132,18 @@ const FooterText = styled.p`
 const LeftSidebar = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
+  const location = useLocation();
 
   // Get notification count
-  const { unreadCount: notificationCount } = useNotifications();
+  const { unreadCount: notificationCount, fetchUnreadCount } =
+    useNotifications();
+
+  // Refresh notification count when navigating between pages
+  useEffect(() => {
+    if (currentUser) {
+      fetchUnreadCount();
+    }
+  }, [location.pathname, currentUser, fetchUnreadCount]);
 
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
@@ -196,6 +207,14 @@ const LeftSidebar = () => {
             </NavItem>
           </Link>
         )}
+
+        {/* Blog Menu */}
+        <Link to='/blog'>
+          <NavItem>
+            <HiOutlineNewspaper />
+            <span>Blog</span>
+          </NavItem>
+        </Link>
 
         {/* Admin Dashboard Menu */}
         {isAdmin && (

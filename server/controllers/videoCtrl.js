@@ -166,7 +166,8 @@ export const randomVideos = async (req, res, next) => {
 
 export const trend = async (req, res, next) => {
   try {
-    const videos = await Video.find().sort({ views: -1 });
+    // Only show public videos in trending
+    const videos = await Video.find({ privacy: 'Public' }).sort({ views: -1 });
     res.status(200).json(videos);
   } catch (err) {
     next(err);
@@ -283,8 +284,10 @@ export const search = async (req, res, next) => {
   const query = req.query.q;
 
   try {
+    // Only show public videos in search results
     const videos = await Video.find({
       caption: { $regex: query, $options: 'i' },
+      privacy: 'Public',
     }).limit(20);
     res.status(200).json(videos);
   } catch (err) {

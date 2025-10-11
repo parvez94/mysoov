@@ -4,7 +4,6 @@ import { selectModal } from '../redux/modal/modalSlice';
 import styled from 'styled-components';
 import { Outlet, useLocation } from 'react-router-dom';
 import { LeftSidebar, Navbar, Modal } from '../components/index';
-import { SocketProvider } from '../contexts/SocketContext';
 
 const Container = styled.div``;
 
@@ -26,18 +25,16 @@ const Layout = () => {
   }, [location.pathname]);
 
   return (
-    <SocketProvider>
-      <Container>
-        {isOpen && <Modal />}
-        <Navbar />
-        <Main>
-          <LeftSidebar />
-          <Wrapper>
-            <Outlet />
-          </Wrapper>
-        </Main>
-      </Container>
-    </SocketProvider>
+    <Container>
+      {isOpen && <Modal />}
+      <Navbar />
+      <Main>
+        <LeftSidebar />
+        <Wrapper>
+          <Outlet />
+        </Wrapper>
+      </Main>
+    </Container>
   );
 };
 export default Layout;

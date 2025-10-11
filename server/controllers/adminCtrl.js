@@ -1,6 +1,8 @@
 import User from '../models/User.js';
 import Video from '../models/Video.js';
+import Article from '../models/Article.js';
 import Settings from '../models/Settings.js';
+import Notification from '../models/Notification.js';
 import { createError } from '../utils/error.js';
 import fs from 'fs';
 import path from 'path';
@@ -30,14 +32,37 @@ export const getAllUsers = async (req, res, next) => {
 // Get all videos
 export const getAllVideos = async (req, res, next) => {
   try {
-    const videos = await Video.find()
-      .populate('userId', 'username displayName displayImage')
-      .sort({ createdAt: -1 });
+    const videos = await Video.find().sort({ createdAt: -1 });
+
+    // Manually populate user data since userId is stored as String, not ObjectId
+    const videosWithUserData = await Promise.all(
+      videos.map(async (video) => {
+        const videoObj = video.toObject();
+        try {
+          const user = await User.findById(videoObj.userId).select(
+            'username displayName displayImage'
+          );
+          videoObj.userId = user || {
+            username: 'Unknown',
+            displayName: 'Unknown User',
+            displayImage: null,
+          };
+        } catch (err) {
+          // If user not found, set default values
+          videoObj.userId = {
+            username: 'Unknown',
+            displayName: 'Unknown User',
+            displayImage: null,
+          };
+        }
+        return videoObj;
+      })
+    );
 
     res.status(200).json({
       success: true,
-      videos,
-      total: videos.length,
+      videos: videosWithUserData,
+      total: videosWithUserData.length,
     });
   } catch (error) {
     next(error);
@@ -49,6 +74,7 @@ export const getDashboardStats = async (req, res, next) => {
   try {
     const totalUsers = await User.countDocuments();
     const totalVideos = await Video.countDocuments();
+    const totalArticles = await Article.countDocuments();
     const totalViews = await Video.aggregate([
       {
         $group: {
@@ -63,6 +89,7 @@ export const getDashboardStats = async (req, res, next) => {
       stats: {
         totalUsers,
         totalVideos,
+        totalArticles,
         totalViews: totalViews[0]?.totalViews || 0,
       },
     });
@@ -146,6 +173,221 @@ export const deleteVideo = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Video deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Toggle video privacy (pause/unpause)
+export const toggleVideoPrivacy = async (req, res, next) => {
+  try {
+    const { videoId } = req.params;
+    const { reason } = req.body; // Optional reason from admin
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      return next(createError(404, 'Video not found'));
+    }
+
+    const wasPaused = video.privacy === 'Private';
+
+    // Toggle between Public and Private
+    video.privacy = video.privacy === 'Public' ? 'Private' : 'Public';
+    await video.save();
+
+    // Send notification to content owner if paused
+    if (video.privacy === 'Private' && !wasPaused) {
+      const contentType = video.type === 'image' ? 'post' : 'video';
+      let notificationMessage = `Action required: Your ${contentType} has been paused. Please review the content guidelines.`;
+
+      if (reason) {
+        notificationMessage += ` Reason: ${reason}`;
+      }
+
+      const notification = await Notification.create({
+        recipient: video.userId,
+        sender: req.user.id,
+        type: 'content_paused',
+        message: notificationMessage,
+        relatedVideo: videoId,
+        adminReason: reason || null,
+      });
+
+      // Populate sender info
+      await notification.populate(
+        'sender',
+        'username displayName displayImage'
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Video ${
+        video.privacy === 'Private' ? 'paused' : 'unpaused'
+      } successfully`,
+      video,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Transfer video to another user
+export const transferVideo = async (req, res, next) => {
+  try {
+    const { videoId } = req.params;
+    const { targetUserId } = req.body;
+
+    if (!targetUserId) {
+      return next(createError(400, 'Target user ID is required'));
+    }
+
+    // Check if target user exists
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      return next(createError(404, 'Target user not found'));
+    }
+
+    // Find and update the video
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return next(createError(404, 'Video not found'));
+    }
+
+    // Update the video's userId
+    video.userId = targetUserId;
+    await video.save();
+
+    // Get updated video with user data
+    const updatedVideo = video.toObject();
+    updatedVideo.userId = {
+      _id: targetUser._id,
+      username: targetUser.username,
+      displayName: targetUser.displayName,
+      displayImage: targetUser.displayImage,
+    };
+
+    res.status(200).json({
+      success: true,
+      message: `Video transferred to ${
+        targetUser.displayName || targetUser.username
+      } successfully`,
+      video: updatedVideo,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get all articles
+export const getAllArticles = async (req, res, next) => {
+  try {
+    const articles = await Article.find().sort({ createdAt: -1 });
+
+    // Manually populate user data
+    const articlesWithUserData = await Promise.all(
+      articles.map(async (article) => {
+        const articleObj = article.toObject();
+        try {
+          const user = await User.findById(articleObj.author).select(
+            'username displayName displayImage'
+          );
+          articleObj.author = user || {
+            username: 'Unknown',
+            displayName: 'Unknown User',
+            displayImage: null,
+          };
+        } catch (err) {
+          articleObj.author = {
+            username: 'Unknown',
+            displayName: 'Unknown User',
+            displayImage: null,
+          };
+        }
+        return articleObj;
+      })
+    );
+
+    res.status(200).json({
+      success: true,
+      articles: articlesWithUserData,
+      total: articlesWithUserData.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Delete article
+export const deleteArticle = async (req, res, next) => {
+  try {
+    const { articleId } = req.params;
+
+    const article = await Article.findByIdAndDelete(articleId);
+
+    if (!article) {
+      return next(createError(404, 'Article not found'));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Article deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Toggle article pause status (pause/unpause)
+export const toggleArticlePause = async (req, res, next) => {
+  try {
+    const { articleId } = req.params;
+    const { reason } = req.body; // Optional reason from admin
+
+    const article = await Article.findById(articleId);
+
+    if (!article) {
+      return next(createError(404, 'Article not found'));
+    }
+
+    const wasPaused = article.isPaused;
+
+    // Toggle pause status
+    article.isPaused = !article.isPaused;
+    await article.save();
+
+    // Send notification to content owner if paused
+    if (article.isPaused && !wasPaused) {
+      let notificationMessage = `Action required: Your article has been paused. Please review the content guidelines.`;
+
+      if (reason) {
+        notificationMessage += ` Reason: ${reason}`;
+      }
+
+      const notification = await Notification.create({
+        recipient: article.author,
+        sender: req.user.id,
+        type: 'content_paused',
+        message: notificationMessage,
+        relatedArticle: articleId,
+        adminReason: reason || null,
+      });
+
+      // Populate sender info
+      await notification.populate(
+        'sender',
+        'username displayName displayImage'
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Article ${
+        article.isPaused ? 'paused' : 'unpaused'
+      } successfully`,
+      article,
     });
   } catch (error) {
     next(error);

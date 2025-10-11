@@ -773,6 +773,9 @@ const DashboardSettings = () => {
     logo: null,
     favicon: null,
     siteName: 'Mysoov.TV',
+    siteTitle: 'Mysoov.TV - Social Media Platform',
+    metaDescription:
+      'Connect, share, and discover amazing content on Mysoov.TV',
   });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
@@ -1057,12 +1060,15 @@ const DashboardSettings = () => {
   const handleSaveBranding = async () => {
     try {
       setSavingBranding(true);
+      console.log('💾 Saving branding...', branding);
 
       // Save to localStorage
       localStorage.setItem('siteBranding', JSON.stringify(branding));
+      console.log('✅ Saved to localStorage');
 
       // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('brandingUpdated'));
+      console.log('✅ Dispatched brandingUpdated event');
 
       // Update favicon dynamically
       if (branding.favicon) {
@@ -1073,11 +1079,37 @@ const DashboardSettings = () => {
         link.rel = 'shortcut icon';
         link.href = branding.favicon;
         document.getElementsByTagName('head')[0].appendChild(link);
+        console.log('✅ Updated favicon');
+      }
+
+      // Update document title dynamically
+      if (branding.siteTitle) {
+        document.title = branding.siteTitle;
+        console.log('✅ Updated document title to:', branding.siteTitle);
+      }
+
+      // Update meta description dynamically
+      if (branding.metaDescription) {
+        let metaDescription = document.querySelector(
+          'meta[name="description"]'
+        );
+        if (!metaDescription) {
+          metaDescription = document.createElement('meta');
+          metaDescription.name = 'description';
+          document.getElementsByTagName('head')[0].appendChild(metaDescription);
+          console.log('✅ Created new meta description tag');
+        }
+        metaDescription.content = branding.metaDescription;
+        console.log(
+          '✅ Updated meta description to:',
+          branding.metaDescription
+        );
       }
 
       setSuccess('Branding saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      console.error('❌ Failed to save branding:', err);
       setError('Failed to save branding');
       setTimeout(() => setError(''), 3000);
     } finally {
@@ -1626,6 +1658,94 @@ const DashboardSettings = () => {
             </p>
           </BrandingCard>
         </BrandingGrid>
+
+        {/* SEO Settings Section */}
+        <div
+          style={{
+            marginTop: '32px',
+            padding: '24px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: 'var(--secondary-color)',
+              marginBottom: '16px',
+              fontFamily: 'var(--primary-fonts)',
+            }}
+          >
+            SEO Settings
+          </h3>
+          <p
+            style={{
+              color: '#999',
+              fontSize: '14px',
+              marginBottom: '20px',
+              fontFamily: 'var(--secondary-fonts)',
+            }}
+          >
+            Configure your site's title and meta description for search engines
+            and social media sharing.
+          </p>
+
+          <FormGroup>
+            <Label>Site Title</Label>
+            <Input
+              type='text'
+              value={branding.siteTitle}
+              onChange={(e) =>
+                setBranding((prev) => ({
+                  ...prev,
+                  siteTitle: e.target.value,
+                }))
+              }
+              placeholder='Enter site title (e.g., Mysoov.TV - Social Media Platform)'
+              maxLength={60}
+            />
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '8px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              Recommended: 50-60 characters. This appears in browser tabs and
+              search results.
+            </p>
+          </FormGroup>
+
+          <FormGroup style={{ marginTop: '20px' }}>
+            <Label>Meta Description</Label>
+            <Textarea
+              value={branding.metaDescription}
+              onChange={(e) =>
+                setBranding((prev) => ({
+                  ...prev,
+                  metaDescription: e.target.value,
+                }))
+              }
+              placeholder='Enter a brief description of your site for search engines'
+              rows={4}
+              maxLength={160}
+            />
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '8px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              Recommended: 150-160 characters. This appears in search engine
+              results below your site title.
+            </p>
+          </FormGroup>
+        </div>
 
         <SaveButton
           onClick={handleSaveBranding}

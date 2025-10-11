@@ -8,6 +8,7 @@ import { NavbarUserLoading } from '../components/loading/UserInfoLoading';
 import styled from 'styled-components';
 import { IoIosSearch } from 'react-icons/io';
 import { AiOutlineUpload } from 'react-icons/ai';
+import { HiOutlinePencilAlt } from 'react-icons/hi';
 import UserMenu from './modal/UserMenu';
 
 import ClickListener from './ClickListerner';
@@ -29,8 +30,9 @@ const ContentWrapper = styled.div`
 
 const Logo = styled.h2`
   color: #fff;
-  font-family: 'Lobster';
+  font-family: var(--secondary-fonts);
   font-size: 30px;
+  font-weight: 600;
   display: flex;
   align-items: center;
 `;
@@ -95,6 +97,35 @@ const UploadButton = styled.button`
   background-color: var(--secondary-color);
   border-radius: 3px;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    padding: 8px;
+    font-size: 18px;
+
+    span {
+      display: none;
+    }
+  }
+`;
+
+const ArticleButton = styled.button`
+  font-family: var(--secondary-fonts);
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--secondary-color);
+  background-color: transparent;
+  color: var(--secondary-color);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 
   @media (max-width: 768px) {
     padding: 8px;
@@ -246,12 +277,22 @@ const Navbar = () => {
             <IoIosSearch />
           </Search>
           <ButtonWrapper>
-            <Link to='upload' onClick={guardClick}>
-              <UploadButton>
-                <AiOutlineUpload />
-                <span>Upload</span>
-              </UploadButton>
-            </Link>
+            {currentUser && (
+              <>
+                <Link to='/upload'>
+                  <UploadButton>
+                    <AiOutlineUpload />
+                    <span>Upload</span>
+                  </UploadButton>
+                </Link>
+                <Link to='/article/new'>
+                  <ArticleButton>
+                    <HiOutlinePencilAlt />
+                    <span>Write</span>
+                  </ArticleButton>
+                </Link>
+              </>
+            )}
 
             {currentUser ? (
               <ClickListener>

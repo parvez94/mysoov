@@ -9,18 +9,9 @@ const Container = styled.div`
 `;
 
 const Header = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 30px;
   padding-bottom: 20px;
   border-bottom: 0.5px solid rgba(255, 255, 255, 0.2);
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
 `;
 
 const Title = styled.h1`
@@ -29,30 +20,6 @@ const Title = styled.h1`
   font-size: 28px;
   font-weight: 600;
   margin: 0;
-`;
-
-const ActionButton = styled.button`
-  background: none;
-  border: 1px solid var(--secondary-color);
-  color: var(--secondary-color);
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-family: var(--secondary-fonts);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: var(--secondary-color);
-    color: var(--tertiary-color);
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 `;
 
 const NotificationsList = styled.div`
@@ -108,7 +75,6 @@ const NotificationsPage = () => {
     error,
     fetchNotifications,
     markAsRead,
-    markAllAsRead,
     deleteNotification,
   } = useNotifications();
 
@@ -129,17 +95,7 @@ const NotificationsPage = () => {
   return (
     <Container>
       <Header>
-        <Title>
-          Notifications
-          {unreadCount > 0 && ` (${unreadCount} unread)`}
-        </Title>
-        <HeaderActions>
-          {unreadCount > 0 && (
-            <ActionButton onClick={markAllAsRead}>
-              Mark all as read
-            </ActionButton>
-          )}
-        </HeaderActions>
+        <Title>Notifications</Title>
       </Header>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}

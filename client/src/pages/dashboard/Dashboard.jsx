@@ -1,7 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate, Link } from 'react-router-dom';
 import styled from 'styled-components';
+import axios from 'axios';
 import { MdPeople, MdVideoLibrary, MdSettings } from 'react-icons/md';
+import { HiOutlineNewspaper } from 'react-icons/hi2';
+import { Spinner } from '../../components/index';
 
 const Container = styled.div`
   padding: 40px;
@@ -108,10 +112,68 @@ const InfoText = styled.p`
 
 const Dashboard = () => {
   const { currentUser } = useSelector((state) => state.user);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalVideos: 0,
+    totalArticles: 0,
+    totalViews: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to='/' replace />;
+  }
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/admin/stats`,
+        {
+          withCredentials: true,
+        }
+      );
+      console.log('Dashboard stats response:', response.data);
+      setStats(
+        response.data.stats || {
+          totalUsers: 0,
+          totalVideos: 0,
+          totalArticles: 0,
+          totalViews: 0,
+        }
+      );
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+      console.error('Error details:', err.response?.data);
+      setError(err.response?.data?.message || 'Failed to load statistics');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatNumber = (num) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  };
+
+  if (isLoading) {
+    return (
+      <Container>
+        <Spinner />
+      </Container>
+    );
   }
 
   return (
@@ -128,7 +190,7 @@ const Dashboard = () => {
           </IconWrapper>
           <StatInfo>
             <StatLabel>Total Users</StatLabel>
-            <StatValue>-</StatValue>
+            <StatValue>{formatNumber(stats.totalUsers || 0)}</StatValue>
           </StatInfo>
         </StatCard>
 
@@ -137,8 +199,18 @@ const Dashboard = () => {
             <MdVideoLibrary />
           </IconWrapper>
           <StatInfo>
-            <StatLabel>Total Videos</StatLabel>
-            <StatValue>-</StatValue>
+            <StatLabel>Total Posts</StatLabel>
+            <StatValue>{formatNumber(stats.totalVideos || 0)}</StatValue>
+          </StatInfo>
+        </StatCard>
+
+        <StatCard to='/dashboard/articles'>
+          <IconWrapper $color='linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'>
+            <HiOutlineNewspaper />
+          </IconWrapper>
+          <StatInfo>
+            <StatLabel>Total Articles</StatLabel>
+            <StatValue>{formatNumber(stats.totalArticles || 0)}</StatValue>
           </StatInfo>
         </StatCard>
 
@@ -157,9 +229,12 @@ const Dashboard = () => {
         <SectionTitle>Quick Actions</SectionTitle>
         <InfoText>
           Click on the cards above to navigate to different sections:
-          <br />• <strong>Total Users</strong> - Manage all registered users
-          <br />• <strong>Total Videos</strong> - View and manage all video
-          posts
+          <br />• <strong>Total Users</strong> - Manage all registered users (
+          {formatNumber(stats.totalUsers || 0)})
+          <br />• <strong>Total Posts</strong> - View and manage all posts
+          (videos & images) ({formatNumber(stats.totalVideos || 0)})
+          <br />• <strong>Total Articles</strong> - View and manage all blog
+          articles ({formatNumber(stats.totalArticles || 0)})
           <br />• <strong>Admin Settings</strong> - Configure admin permissions
         </InfoText>
       </Section>
@@ -167,8 +242,8 @@ const Dashboard = () => {
       <Section>
         <SectionTitle>System Status</SectionTitle>
         <InfoText>
-          All systems operational. Dashboard statistics will be implemented in
-          future updates.
+          All systems operational. Total views:{' '}
+          {formatNumber(stats.totalViews || 0)}
         </InfoText>
       </Section>
     </Container>

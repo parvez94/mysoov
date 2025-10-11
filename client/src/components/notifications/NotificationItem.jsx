@@ -48,6 +48,18 @@ const Time = styled.span`
   opacity: 0.8;
 `;
 
+const AdminReason = styled.div`
+  margin-top: 8px;
+  padding: 10px;
+  background-color: rgba(202, 8, 6, 0.1);
+  border-left: 3px solid var(--primary-color);
+  border-radius: 4px;
+  font-family: var(--secondary-fonts);
+  font-size: 13px;
+  color: var(--secondary-color);
+  line-height: 1.4;
+`;
+
 const Actions = styled.div`
   display: flex;
   gap: 12px;
@@ -85,14 +97,15 @@ const UnreadDot = styled.div`
 `;
 
 const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
-  const handleMarkAsRead = () => {
+  const handleDelete = () => {
+    onDelete(notification._id);
+  };
+
+  const handleView = () => {
+    // Mark as read when clicking View
     if (!notification.read) {
       onMarkAsRead(notification._id);
     }
-  };
-
-  const handleDelete = () => {
-    onDelete(notification._id);
   };
 
   const getNotificationLink = () => {
@@ -105,6 +118,15 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
         return notification.relatedVideo
           ? `/video/${notification.relatedVideo._id}`
           : '#';
+      case 'content_paused':
+      case 'content_unpaused':
+        // For paused/unpaused content, link to the appropriate content
+        if (notification.relatedVideo) {
+          return `/video/${notification.relatedVideo._id}`;
+        } else if (notification.relatedArticle) {
+          return `/blog/${notification.relatedArticle.slug}`;
+        }
+        return '#';
       default:
         return '#';
     }
@@ -127,14 +149,17 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
           })}
         </Time>
 
+        {notification.adminReason && (
+          <AdminReason>
+            <strong>Admin Note:</strong> {notification.adminReason}
+          </AdminReason>
+        )}
+
         <Actions>
           {notification.type !== 'follow' && (
-            <Link to={getNotificationLink()}>
+            <Link to={getNotificationLink()} onClick={handleView}>
               <ActionButton>View</ActionButton>
             </Link>
-          )}
-          {!notification.read && (
-            <ActionButton onClick={handleMarkAsRead}>Mark as read</ActionButton>
           )}
           <ActionButton onClick={handleDelete}>Delete</ActionButton>
         </Actions>

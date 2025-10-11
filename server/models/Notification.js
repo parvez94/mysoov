@@ -14,7 +14,15 @@ const NotificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['follow', 'like', 'comment', 'reply', 'video_upload'],
+      enum: [
+        'follow',
+        'like',
+        'comment',
+        'reply',
+        'video_upload',
+        'content_paused',
+        'content_unpaused',
+      ],
       required: true,
     },
     message: {
@@ -26,9 +34,18 @@ const NotificationSchema = new mongoose.Schema(
       ref: 'Video',
       default: null,
     },
+    relatedArticle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Article',
+      default: null,
+    },
     relatedComment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Comment',
+      default: null,
+    },
+    adminReason: {
+      type: String,
       default: null,
     },
     read: {

@@ -10,7 +10,12 @@ import styled from 'styled-components';
 import { createPortal } from 'react-dom';
 import { IoClose } from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
-import { FollowButton, PostCard, VerifiedBadge } from '../components';
+import {
+  FollowButton,
+  PostCard,
+  ArticleCard,
+  VerifiedBadge,
+} from '../components';
 import { resolveImageUrl } from '../utils/imageUtils';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import UsernameAvailabilityIndicator from '../components/UsernameAvailabilityIndicator';
@@ -159,7 +164,7 @@ const Tab = styled.div`
 const VideosContainer = styled.div`
   margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 
   @media (max-width: 768px) {
@@ -392,8 +397,9 @@ const PublicProfile = () => {
 
   const [channel, setChannel] = useState(null);
   const [videos, setVideos] = useState([]);
+  const [articles, setArticles] = useState([]);
   const [savedVideos, setSavedVideos] = useState([]);
-  const [activeTab, setActiveTab] = useState('videos'); // 'videos' | 'saved'
+  const [activeTab, setActiveTab] = useState('posts'); // 'posts' | 'videos' | 'articles' | 'bookmarked'
   const [openEdit, setOpenEdit] = useState(false);
   const [displayNameEdit, setDisplayNameEdit] = useState('');
   const [usernameEdit, setUsernameEdit] = useState('');
@@ -403,6 +409,7 @@ const PublicProfile = () => {
   const [saving, setSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [videosLoading, setVideosLoading] = useState(true);
+  const [articlesLoading, setArticlesLoading] = useState(false);
   const [savedVideosLoading, setSavedVideosLoading] = useState(false);
 
   // Modal states
@@ -424,6 +431,12 @@ const PublicProfile = () => {
   const handleVideoDelete = (videoId) => {
     setVideos((prevVideos) =>
       prevVideos.filter((video) => video._id !== videoId)
+    );
+  };
+
+  const handleArticleDelete = (articleId) => {
+    setArticles((prevArticles) =>
+      prevArticles.filter((article) => article._id !== articleId)
     );
   };
 
@@ -522,7 +535,7 @@ const PublicProfile = () => {
   useEffect(() => {
     let cancelled = false;
     const loadSaved = async () => {
-      if (activeTab !== 'saved') return;
+      if (activeTab !== 'bookmarked') return;
       if (!currentUser?._id) return;
       if (!isOwn) return; // backend also enforces
 
@@ -560,6 +573,48 @@ const PublicProfile = () => {
       cancelled = true;
     };
   }, [activeTab, currentUser?._id, isOwn]);
+
+  // Load articles when switching to Articles tab
+  useEffect(() => {
+    let cancelled = false;
+    const loadArticles = async () => {
+      if (activeTab !== 'articles') return;
+      if (!channel?._id) return;
+
+      setArticlesLoading(true);
+      try {
+        const res = await fetch(
+          `${API}/api/v1/blog/user/${channel._id}/articles`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            credentials: 'include',
+          }
+        );
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setArticles(Array.isArray(data) ? data : []);
+          } else {
+            setArticles([]);
+          }
+          setArticlesLoading(false);
+        }
+      } catch (_) {
+        if (!cancelled) {
+          setArticles([]);
+          setArticlesLoading(false);
+        }
+      }
+    };
+    loadArticles();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, channel?._id]);
 
   // Keep edit form state in sync with current user when opening
   useEffect(() => {
@@ -779,33 +834,140 @@ const PublicProfile = () => {
       <VideosWrapper>
         <Navbar>
           <Tab
+            $active={activeTab === 'posts'}
+            onClick={() => setActiveTab('posts')}
+          >
+            Posts
+          </Tab>
+          <Tab
             $active={activeTab === 'videos'}
             onClick={() => setActiveTab('videos')}
           >
             Videos
           </Tab>
+          <Tab
+            $active={activeTab === 'articles'}
+            onClick={() => setActiveTab('articles')}
+          >
+            Articles
+          </Tab>
           {isOwn && (
             <Tab
-              $active={activeTab === 'saved'}
-              onClick={() => setActiveTab('saved')}
+              $active={activeTab === 'bookmarked'}
+              onClick={() => setActiveTab('bookmarked')}
             >
               Bookmarked
             </Tab>
           )}
         </Navbar>
         <VideosContainer>
-          {(activeTab === 'videos' && videosLoading) ||
-          (activeTab === 'saved' && savedVideosLoading) ? (
-            // Show loading skeleton for videos
-            [1, 2, 3, 4, 5, 6].map((i) => (
+          {/* Loading states */}
+          {((activeTab === 'posts' && videosLoading) ||
+            (activeTab === 'videos' && videosLoading) ||
+            (activeTab === 'articles' && articlesLoading) ||
+            (activeTab === 'bookmarked' && savedVideosLoading)) &&
+            [1, 2, 3].map((i) => (
               <div key={i}>
-                <LoadingText height='300px' width='100%' marginBottom='8px' />
+                <LoadingText height='200px' width='100%' marginBottom='8px' />
                 <LoadingText height='16px' width='80%' marginBottom='4px' />
                 <LoadingText height='16px' width='60%' marginBottom='0px' />
               </div>
-            ))
-          ) : activeTab === 'saved' && isOwn ? (
-            savedVideos.length > 0 ? (
+            ))}
+
+          {/* Posts Tab - Image posts only */}
+          {activeTab === 'posts' &&
+            !videosLoading &&
+            (() => {
+              const imagePosts = videos.filter((v) => v.mediaType === 'image');
+              return imagePosts.length > 0 ? (
+                imagePosts.map((v) => (
+                  <PostCard
+                    key={v._id}
+                    channel={channel || {}}
+                    video={v}
+                    user={currentUser}
+                    hideFollowButton={!isOwn}
+                    onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
+                    onVideoDelete={isOwn ? handleVideoDelete : undefined}
+                    enableVideoLink={true}
+                  />
+                ))
+              ) : (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontFamily: 'var(--secondary-fonts)',
+                  }}
+                >
+                  No image posts yet
+                </div>
+              );
+            })()}
+
+          {/* Videos Tab - Video posts only */}
+          {activeTab === 'videos' &&
+            !videosLoading &&
+            (() => {
+              const videoPosts = videos.filter((v) => v.mediaType === 'video');
+              return videoPosts.length > 0 ? (
+                videoPosts.map((v) => (
+                  <PostCard
+                    key={v._id}
+                    channel={channel || {}}
+                    video={v}
+                    user={currentUser}
+                    hideFollowButton={!isOwn}
+                    onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
+                    onVideoDelete={isOwn ? handleVideoDelete : undefined}
+                    enableVideoLink={true}
+                  />
+                ))
+              ) : (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontFamily: 'var(--secondary-fonts)',
+                  }}
+                >
+                  No videos yet
+                </div>
+              );
+            })()}
+
+          {/* Articles Tab */}
+          {activeTab === 'articles' &&
+            !articlesLoading &&
+            (articles.length > 0 ? (
+              articles.map((article) => (
+                <ArticleCard
+                  key={article._id}
+                  article={article}
+                  isOwner={isOwn}
+                  onArticleDelete={handleArticleDelete}
+                />
+              ))
+            ) : (
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  color: 'rgba(255, 255, 255, 0.6)',
+                  fontFamily: 'var(--secondary-fonts)',
+                }}
+              >
+                No articles yet
+              </div>
+            ))}
+
+          {/* Bookmarked Tab */}
+          {activeTab === 'bookmarked' &&
+            !savedVideosLoading &&
+            isOwn &&
+            (savedVideos.length > 0 ? (
               savedVideos.map((v) => (
                 <PostCard
                   key={v._id}
@@ -828,42 +990,15 @@ const PublicProfile = () => {
             ) : (
               <div
                 style={{
-                  gridColumn: '1 / -1',
                   textAlign: 'center',
                   padding: '40px 20px',
                   color: 'rgba(255, 255, 255, 0.6)',
                   fontFamily: 'var(--secondary-fonts)',
                 }}
               >
-                No bookmarked videos yet
+                No bookmarked posts yet
               </div>
-            )
-          ) : videos.length > 0 ? (
-            videos.map((v) => (
-              <PostCard
-                key={v._id}
-                channel={channel || {}}
-                video={v}
-                user={currentUser}
-                hideFollowButton={!isOwn}
-                onVideoUpdate={isOwn ? handleVideoUpdate : undefined}
-                onVideoDelete={isOwn ? handleVideoDelete : undefined}
-                enableVideoLink={true}
-              />
-            ))
-          ) : (
-            <div
-              style={{
-                gridColumn: '1 / -1',
-                textAlign: 'center',
-                padding: '40px 20px',
-                color: 'rgba(255, 255, 255, 0.6)',
-                fontFamily: 'var(--secondary-fonts)',
-              }}
-            >
-              No videos yet
-            </div>
-          )}
+            ))}
         </VideosContainer>
       </VideosWrapper>
 

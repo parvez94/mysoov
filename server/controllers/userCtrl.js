@@ -176,9 +176,7 @@ export const likeVideo = async (req, res, next) => {
         video.userId,
         userId,
         'like',
-        `${user.displayName || user.username} liked your video "${
-          video.title
-        }"`,
+        `${user.displayName || user.username} liked your post`,
         videoId
       );
     }

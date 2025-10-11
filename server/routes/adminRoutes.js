@@ -6,6 +6,11 @@ import {
   updateUser,
   deleteUser,
   deleteVideo,
+  toggleVideoPrivacy,
+  transferVideo,
+  getAllArticles,
+  deleteArticle,
+  toggleArticlePause,
   getAllAdmins,
   searchUsers,
   promoteToAdmin,
@@ -36,6 +41,13 @@ router.delete('/users/:userId', deleteUser);
 // Video management
 router.get('/videos', getAllVideos);
 router.delete('/videos/:videoId', deleteVideo);
+router.put('/videos/:videoId/toggle-privacy', toggleVideoPrivacy);
+router.put('/videos/:videoId/transfer', transferVideo);
+
+// Article management
+router.get('/articles', getAllArticles);
+router.delete('/articles/:articleId', deleteArticle);
+router.put('/articles/:articleId/toggle-pause', toggleArticlePause);
 
 // Admin management
 router.get('/admins', getAllAdmins);

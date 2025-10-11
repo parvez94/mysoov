@@ -258,15 +258,19 @@ const DashboardUsers = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get('/api/admin/users', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/admin/users`,
+        {
+          withCredentials: true,
+        }
+      );
+      console.log('Dashboard users response:', response.data);
+      console.log('Total users found:', response.data.users?.length || 0);
       setUsers(response.data.users || []);
       setFilteredUsers(response.data.users || []);
     } catch (err) {
       console.error('Error fetching users:', err);
+      console.error('Error details:', err.response?.data);
       setError(err.response?.data?.message || 'Failed to load users');
     } finally {
       setIsLoading(false);

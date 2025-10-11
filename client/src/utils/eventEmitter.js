@@ -29,6 +29,7 @@ export const EVENTS = {
   NOTIFICATION_READ: 'notification_read',
   NOTIFICATION_ALL_READ: 'notification_all_read',
   NOTIFICATION_DELETED: 'notification_deleted',
+  NOTIFICATION_CREATED: 'notification_created',
   MESSAGE_READ: 'message_read',
   UNREAD_COUNT_UPDATED: 'unread_count_updated',
 };

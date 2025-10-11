@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSocket } from '../contexts/SocketContext';
 import { globalEventEmitter, EVENTS } from '../utils/eventEmitter';
-import { playNotificationSound } from '../utils/soundUtils';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5100';
@@ -11,7 +9,6 @@ export const useNotifications = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { socket } = useSocket();
 
   // Fetch notifications from API
   const fetchNotifications = useCallback(async (page = 1, limit = 20) => {
@@ -136,48 +133,29 @@ export const useNotifications = () => {
     [notifications]
   );
 
-  // Socket event handlers for real-time notifications
+  // Fetch unread count on mount and set up periodic polling
   useEffect(() => {
-    if (!socket) return;
+    fetchUnreadCount();
 
-    console.log('🔔 Setting up newNotification listener on socket:', socket.id);
+    // Poll for new notifications every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchUnreadCount();
+    }, 30000); // 30 seconds
 
-    // Real-time notifications via Socket.IO
-    socket.on('newNotification', (notification) => {
-      console.log('🔔 Received newNotification event:', notification);
-      setNotifications((prev) => {
-        return [notification, ...prev];
-      });
-      setUnreadCount((prev) => {
-        return prev + 1;
-      });
-
-      // Play notification sound
-      console.log('🔔 About to play notification sound...');
-      playNotificationSound();
-      console.log('🔔 playNotificationSound() called');
-
-      // Show browser notification if permission granted
-      if (Notification.permission === 'granted') {
-        new Notification('New Notification', {
-          body: notification.message,
-          icon: '/default-user.png',
-        });
+    // Refresh count when page becomes visible (user switches tabs or navigates)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchUnreadCount();
       }
-    });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      console.log('🔔 Removing newNotification listener');
-      socket.off('newNotification');
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [socket]);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
+  }, [fetchUnreadCount]);
 
   // Listen for events from other hook instances
   useEffect(() => {
@@ -206,6 +184,16 @@ export const useNotifications = () => {
       }
     };
 
+    const handleNotificationCreated = () => {
+      // Refresh unread count when a new notification is created
+      fetchUnreadCount();
+    };
+
+    const handleUnreadCountUpdated = () => {
+      // Refresh unread count when explicitly requested
+      fetchUnreadCount();
+    };
+
     globalEventEmitter.on(EVENTS.NOTIFICATION_READ, handleNotificationRead);
     globalEventEmitter.on(
       EVENTS.NOTIFICATION_ALL_READ,
@@ -214,6 +202,14 @@ export const useNotifications = () => {
     globalEventEmitter.on(
       EVENTS.NOTIFICATION_DELETED,
       handleNotificationDeleted
+    );
+    globalEventEmitter.on(
+      EVENTS.NOTIFICATION_CREATED,
+      handleNotificationCreated
+    );
+    globalEventEmitter.on(
+      EVENTS.UNREAD_COUNT_UPDATED,
+      handleUnreadCountUpdated
     );
 
     return () => {
@@ -226,8 +222,16 @@ export const useNotifications = () => {
         EVENTS.NOTIFICATION_DELETED,
         handleNotificationDeleted
       );
+      globalEventEmitter.off(
+        EVENTS.NOTIFICATION_CREATED,
+        handleNotificationCreated
+      );
+      globalEventEmitter.off(
+        EVENTS.UNREAD_COUNT_UPDATED,
+        handleUnreadCountUpdated
+      );
     };
-  }, []);
+  }, [fetchUnreadCount]);
 
   return {
     notifications,

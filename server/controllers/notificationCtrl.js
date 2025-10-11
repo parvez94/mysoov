@@ -17,6 +17,9 @@ export const createNotification = async (
 
     // Don't create notification if sender and recipient are the same
     if (recipientIdStr === senderIdStr) {
+      console.log(
+        '⏭️  Skipping notification: sender and recipient are the same'
+      );
       return null;
     }
 
@@ -30,18 +33,23 @@ export const createNotification = async (
     });
 
     await notification.save();
+    console.log('✅ Notification saved to database:', notification._id);
 
-    // Populate sender information
+    // Populate sender information before sending
     await notification.populate('sender', 'username displayName displayImage');
 
-    // Send real-time notification via Socket.IO
-    if (global.io) {
-      const roomName = `user_${recipientIdStr}`;
-      global.io.to(roomName).emit('newNotification', notification);
+    // Also populate related video if exists
+    if (relatedVideo) {
+      await notification.populate('relatedVideo', 'title thumbnail');
     }
+
+    console.log(
+      '✅ Notification saved successfully (will be fetched on next request)'
+    );
 
     return notification;
   } catch (error) {
+    console.error('❌ Error creating notification:', error);
     return null;
   }
 };
@@ -57,6 +65,7 @@ export const getNotifications = async (req, res, next) => {
     const notifications = await Notification.find({ recipient: userId })
       .populate('sender', 'username displayName displayImage')
       .populate('relatedVideo', 'title thumbnail')
+      .populate('relatedArticle', 'title slug')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

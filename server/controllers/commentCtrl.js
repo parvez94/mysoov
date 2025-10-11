@@ -39,9 +39,7 @@ export const addComment = async (req, res, next) => {
         video.userId,
         req.user.id,
         'comment',
-        `${user.displayName || user.username} commented on your video "${
-          video?.title || 'your video'
-        }"`,
+        `${user.displayName || user.username} commented on your post`,
         video._id,
         savedComment._id
       );
