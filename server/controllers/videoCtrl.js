@@ -48,11 +48,47 @@ export const updateVideo = async (req, res, next) => {
     if (!video) return next(createError(404, 'Video not found'));
 
     if (req.user.id === video.userId) {
+      // If video is paused (privacy: 'Private') and user is editing it,
+      // set pendingReview flag to request admin review
+      const wasPaused = video.privacy === 'Private';
+
+      const updateData = { ...req.body };
+
+      if (wasPaused) {
+        updateData.pendingReview = true;
+        updateData.reviewRequestedAt = new Date();
+      }
+
       const updatedVideo = await Video.findByIdAndUpdate(
         req.params.id,
-        { $set: req.body },
+        { $set: updateData },
         { new: true }
       );
+
+      // Notify admin if review is requested
+      if (wasPaused && updateData.pendingReview) {
+        // Import Notification model at the top if not already imported
+        const Notification = (await import('../models/Notification.js'))
+          .default;
+        const User = (await import('../models/User.js')).default;
+
+        // Find admin users
+        const admins = await User.find({ role: 'admin' });
+
+        // Create notification for each admin
+        for (const admin of admins) {
+          await Notification.create({
+            recipient: admin._id,
+            sender: req.user.id,
+            type: 'review_requested',
+            message: `A user has edited their paused ${
+              video.mediaType === 'image' ? 'post' : 'video'
+            } and requested review.`,
+            relatedVideo: video._id,
+          });
+        }
+      }
+
       res.status(200).json(updatedVideo);
     } else {
       return next(createError(403, 'You can update only your video'));

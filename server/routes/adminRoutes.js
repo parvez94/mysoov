@@ -19,6 +19,9 @@ import {
   updatePricingPlans,
   getStorageSettings,
   updateStorageSettings,
+  getPendingReviews,
+  approveReview,
+  rejectReview,
 } from '../controllers/adminCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
@@ -61,5 +64,10 @@ router.put('/pricing-plans', updatePricingPlans);
 // Storage settings management
 router.get('/storage-settings', getStorageSettings);
 router.put('/storage-settings', updateStorageSettings);
+
+// Content review management
+router.get('/reviews/pending', getPendingReviews);
+router.post('/reviews/:contentType/:contentId/approve', approveReview);
+router.post('/reviews/:contentType/:contentId/reject', rejectReview);
 
 export default router;

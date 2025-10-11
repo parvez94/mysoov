@@ -703,3 +703,193 @@ export const updateStorageSettings = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get pending reviews (videos and articles)
+export const getPendingReviews = async (req, res, next) => {
+  try {
+    // Find videos pending review (paused and pendingReview = true)
+    const videos = await Video.find({
+      privacy: 'Private',
+      pendingReview: true,
+    })
+      .sort({ reviewRequestedAt: -1 })
+      .lean();
+
+    // Manually populate user data for videos
+    const videosWithUserData = await Promise.all(
+      videos.map(async (video) => {
+        const user = await User.findById(video.userId).select(
+          'username displayName displayImage'
+        );
+        return {
+          ...video,
+          user,
+          contentType: 'video',
+        };
+      })
+    );
+
+    // Find articles pending review
+    const articles = await Article.find({
+      isPaused: true,
+      pendingReview: true,
+    })
+      .populate('author', 'username displayName profilePic')
+      .sort({ reviewRequestedAt: -1 })
+      .lean();
+
+    const articlesWithType = articles.map((article) => ({
+      ...article,
+      contentType: 'article',
+    }));
+
+    // Combine and sort by reviewRequestedAt
+    const allPendingReviews = [...videosWithUserData, ...articlesWithType].sort(
+      (a, b) => new Date(b.reviewRequestedAt) - new Date(a.reviewRequestedAt)
+    );
+
+    res.status(200).json({
+      success: true,
+      total: allPendingReviews.length,
+      reviews: allPendingReviews,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Approve review (unpause content)
+export const approveReview = async (req, res, next) => {
+  try {
+    const { contentId, contentType } = req.params;
+    const { notes } = req.body;
+
+    let content;
+    let Model;
+    let notificationField;
+
+    if (contentType === 'video') {
+      Model = Video;
+      notificationField = 'relatedVideo';
+      content = await Video.findById(contentId);
+
+      if (!content) {
+        return next(createError(404, 'Video not found'));
+      }
+
+      // Unpause video
+      content.privacy = 'Public';
+      content.pendingReview = false;
+      content.lastReviewedBy = req.user.id;
+      content.reviewNotes = notes || '';
+      await content.save();
+    } else if (contentType === 'article') {
+      Model = Article;
+      notificationField = 'relatedArticle';
+      content = await Article.findById(contentId);
+
+      if (!content) {
+        return next(createError(404, 'Article not found'));
+      }
+
+      // Unpause article
+      content.isPaused = false;
+      content.pendingReview = false;
+      content.lastReviewedBy = req.user.id;
+      content.reviewNotes = notes || '';
+      await content.save();
+    } else {
+      return next(createError(400, 'Invalid content type'));
+    }
+
+    // Notify content owner
+    const ownerId = contentType === 'video' ? content.userId : content.author;
+
+    await Notification.create({
+      recipient: ownerId,
+      sender: req.user.id,
+      type: 'review_approved',
+      message: `Great news! Your ${contentType} has been reviewed and approved. It's now public again.${
+        notes ? ` Admin note: ${notes}` : ''
+      }`,
+      [notificationField]: contentId,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${
+        contentType.charAt(0).toUpperCase() + contentType.slice(1)
+      } approved and unpaused successfully`,
+      content,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reject review (keep content paused)
+export const rejectReview = async (req, res, next) => {
+  try {
+    const { contentId, contentType } = req.params;
+    const { notes } = req.body;
+
+    if (!notes || notes.trim() === '') {
+      return next(createError(400, 'Rejection reason is required'));
+    }
+
+    let content;
+    let notificationField;
+
+    if (contentType === 'video') {
+      notificationField = 'relatedVideo';
+      content = await Video.findById(contentId);
+
+      if (!content) {
+        return next(createError(404, 'Video not found'));
+      }
+
+      // Keep paused but clear pendingReview flag
+      content.pendingReview = false;
+      content.lastReviewedBy = req.user.id;
+      content.reviewNotes = notes;
+      await content.save();
+    } else if (contentType === 'article') {
+      notificationField = 'relatedArticle';
+      content = await Article.findById(contentId);
+
+      if (!content) {
+        return next(createError(404, 'Article not found'));
+      }
+
+      // Keep paused but clear pendingReview flag
+      content.pendingReview = false;
+      content.lastReviewedBy = req.user.id;
+      content.reviewNotes = notes;
+      await content.save();
+    } else {
+      return next(createError(400, 'Invalid content type'));
+    }
+
+    // Notify content owner
+    const ownerId = contentType === 'video' ? content.userId : content.author;
+
+    await Notification.create({
+      recipient: ownerId,
+      sender: req.user.id,
+      type: 'review_rejected',
+      message: `Your ${contentType} review was not approved. Reason: ${notes}. Please make the necessary changes and resubmit.`,
+      [notificationField]: contentId,
+      adminReason: notes,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${
+        contentType.charAt(0).toUpperCase() + contentType.slice(1)
+      } review rejected`,
+      content,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

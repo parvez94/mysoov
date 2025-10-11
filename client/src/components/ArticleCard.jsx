@@ -82,7 +82,38 @@ const DateText = styled.div`
   margin-top: auto;
 `;
 
+const StatusBadge = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--secondary-fonts);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  background-color: ${(props) => {
+    if (props.$isPaused) return 'rgba(255, 152, 0, 0.15)';
+    if (props.$isDraft) return 'rgba(158, 158, 158, 0.15)';
+    return 'transparent';
+  }};
+  color: ${(props) => {
+    if (props.$isPaused) return '#ff9800';
+    if (props.$isDraft) return '#9e9e9e';
+    return 'var(--secondary-color)';
+  }};
+  border: 1px solid
+    ${(props) => {
+      if (props.$isPaused) return 'rgba(255, 152, 0, 0.3)';
+      if (props.$isDraft) return 'rgba(158, 158, 158, 0.3)';
+      return 'transparent';
+    }};
+`;
+
 const ArticleCard = ({ article, isOwner, onArticleDelete }) => {
+  const isPaused = article.isPaused;
+  const isDraft = !article.published;
+
   return (
     <Card>
       <CardLink to={`/blog/${article.slug}`}>
@@ -93,6 +124,11 @@ const ArticleCard = ({ article, isOwner, onArticleDelete }) => {
           <Header>
             <Title>{article.title}</Title>
           </Header>
+          {isOwner && (isPaused || isDraft) && (
+            <StatusBadge $isPaused={isPaused} $isDraft={isDraft}>
+              {isPaused ? '⏸ Paused by Admin' : '📝 Draft'}
+            </StatusBadge>
+          )}
           <Excerpt>{article.content?.substring(0, 150)}...</Excerpt>
           <DateText>
             {new Date(article.createdAt).toLocaleDateString('en-US', {

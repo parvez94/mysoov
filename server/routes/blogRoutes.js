@@ -11,7 +11,7 @@ import {
   deleteArticle,
   getUserArticles,
 } from '../controllers/blogCtrl.js';
-import { verifyToken } from '../middlewares/auth.js';
+import { verifyToken, optionalAuth } from '../middlewares/auth.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
 
 const router = express.Router();
@@ -37,8 +37,8 @@ router.get('/articles/:id/edit', verifyToken, getArticleById);
 router.put('/articles/:id', verifyToken, updateArticle);
 router.delete('/articles/:id', verifyToken, deleteArticle);
 
-// Get articles by user (for profile page)
-router.get('/user/:userId/articles', getUserArticles);
+// Get articles by user (for profile page) - uses optional auth to detect own profile
+router.get('/user/:userId/articles', optionalAuth, getUserArticles);
 
 // Public routes (parameterized routes come last)
 router.get('/articles', getPublishedArticles);

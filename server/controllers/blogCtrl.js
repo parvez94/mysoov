@@ -165,16 +165,44 @@ const updateArticle = async (req, res, next) => {
       }
     }
 
+    // If article is paused and user is editing it, set pendingReview flag
+    const wasPaused = article.isPaused;
+
     article.title = title;
     article.slug = slug;
     article.content = content;
     article.featuredImage = featuredImage || '';
     article.published = published;
 
+    if (wasPaused && isAuthor) {
+      article.pendingReview = true;
+      article.reviewRequestedAt = new Date();
+    }
+
     const updatedArticle = await article.save();
     const populatedArticle = await Article.findById(updatedArticle._id)
       .populate('author', 'displayName username profilePic')
       .lean();
+
+    // Notify admin if review is requested
+    if (wasPaused && isAuthor && article.pendingReview) {
+      const Notification = (await import('../models/Notification.js')).default;
+      const User = (await import('../models/User.js')).default;
+
+      // Find admin users
+      const admins = await User.find({ role: 'admin' });
+
+      // Create notification for each admin
+      for (const admin of admins) {
+        await Notification.create({
+          recipient: admin._id,
+          sender: req.user.id,
+          type: 'review_requested',
+          message: `A user has edited their paused article and requested review.`,
+          relatedArticle: article._id,
+        });
+      }
+    }
 
     res.status(200).json(populatedArticle);
   } catch (err) {

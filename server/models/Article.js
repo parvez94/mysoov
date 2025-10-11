@@ -39,6 +39,23 @@ const ArticleSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    pendingReview: {
+      type: Boolean,
+      default: false,
+    },
+    reviewRequestedAt: {
+      type: Date,
+      default: null,
+    },
+    lastReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    reviewNotes: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,
