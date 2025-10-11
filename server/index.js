@@ -216,22 +216,27 @@ const connectDB = async () => {
   // Create connection promise
   connectionPromise = (async () => {
     try {
-      await mongoose.connect(mongoUrl, {
+      // Optimized settings for Vercel serverless functions
+      const connectionOptions = {
         bufferCommands: false,
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 10000, // Increased for serverless cold starts
         socketTimeoutMS: 45000,
         connectTimeoutMS: 10000,
-      });
+      };
+
+      await mongoose.connect(mongoUrl, connectionOptions);
 
       isConnected = true;
       connectionPromise = null;
 
+      console.log('✅ MongoDB connected successfully');
       return;
     } catch (err) {
       isConnected = false;
       connectionPromise = null;
 
+      console.error('❌ MongoDB connection error:', err.message);
       throw new Error(`Failed to connect to database: ${err.message}`);
     }
   })();
@@ -303,15 +308,27 @@ if (process.env.NODE_ENV !== 'production') {
   startServer();
 } else {
   // For production (Vercel), ensure DB connection is established
+  // Vercel serverless functions will call connectDB() on each cold start
   connectDB()
     .then(() => {
       console.log('✅ Database connected successfully (production)');
+      console.log('Environment check:', {
+        hasMongoUrl: !!process.env.MONGO_URL,
+        hasSecretKey: !!process.env.SECRET_KEY,
+        hasCloudinary: !!(process.env.CLOUD_NAME && process.env.CLOUD_API),
+        nodeEnv: process.env.NODE_ENV,
+      });
     })
     .catch((error) => {
       console.error(
         '❌ Production server initialization failed:',
         error.message
       );
+      console.error('Environment variables check:', {
+        hasMongoUrl: !!process.env.MONGO_URL,
+        hasSecretKey: !!process.env.SECRET_KEY,
+        nodeEnv: process.env.NODE_ENV,
+      });
     });
 }
 
