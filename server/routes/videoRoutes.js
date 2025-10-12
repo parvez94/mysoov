@@ -10,6 +10,7 @@ import {
   trend,
   videoFeeds,
   search,
+  searchByAccessCode,
 } from '../controllers/videoCtrl.js';
 
 const router = express.Router();
@@ -52,6 +53,7 @@ router.delete('/:id', verifyToken, deleteVideo);
 router.get('/find/:id', optionalAuth, getVideo);
 router.get('/random', randomVideos);
 router.get('/feeds', verifyToken, videoFeeds);
+router.get('/search', searchByAccessCode);
 
 // router.get("/search", search)
 // router.put("/view/:id", addView)

@@ -64,6 +64,11 @@ const videoSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    accessCode: {
+      type: String,
+      default: null,
+      index: true, // Index for faster search
+    },
   },
   { timestamps: true }
 );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { openModal } from '../redux/modal/modalSlice';
 import { toggleUserMenu, setUserMenu } from '../redux/user/userSlice';
 import { useNavbarUserLoading } from '../hooks/useUserDataLoading';
@@ -175,6 +175,7 @@ const MenuBar = styled.div`
 
 const Navbar = () => {
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [branding, setBranding] = useState({
     logo: null,
     favicon: null,
@@ -182,6 +183,7 @@ const Navbar = () => {
   });
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { currentUser, showUserMenu } = useSelector((state) => state.user);
 
   const { isLoading: userLoading, avatarUrl } =
@@ -193,6 +195,20 @@ const Navbar = () => {
 
   const handleShowMenu = () => {
     dispatch(toggleUserMenu());
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery(''); // Clear search after navigating
+    }
+  };
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch(e);
+    }
   };
 
   // Prevent navigation for guests and open login modal instead
@@ -273,8 +289,13 @@ const Navbar = () => {
             )}
           </Logo>
           <Search>
-            <Input placeholder='Search...' />
-            <IoIosSearch />
+            <Input
+              placeholder='Search by access code...'
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={handleSearchKeyPress}
+            />
+            <IoIosSearch onClick={handleSearch} style={{ cursor: 'pointer' }} />
           </Search>
           <ButtonWrapper>
             {currentUser && (

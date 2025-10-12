@@ -21,6 +21,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import ArticleEditor from './pages/ArticleEditor';
 import RefreshUser from './pages/RefreshUser';
+import SearchResults from './pages/SearchResults';
 
 const router = createBrowserRouter([
   {
@@ -93,7 +94,10 @@ const router = createBrowserRouter([
         //   },
         // ],
       },
-
+      {
+        path: 'search',
+        element: <SearchResults />,
+      },
       {
         path: ':username',
         element: <PublicProfile />,

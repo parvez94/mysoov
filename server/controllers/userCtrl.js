@@ -275,10 +275,11 @@ export const getUserVideos = async (req, res, next) => {
 
     let query = { userId: profileUserId };
 
-    // If viewing someone else's profile, only show public videos
-    // If viewing own profile, show all videos (public and private)
+    // If viewing someone else's profile, only show public videos without access codes
+    // If viewing own profile, show all videos (public and private, with or without access codes)
     if (String(currentUserId) !== String(profileUserId)) {
       query.privacy = 'Public';
+      query.$or = [{ accessCode: null }, { accessCode: { $exists: false } }];
     }
 
     const videos = await Video.find(query).sort({ createdAt: -1 });

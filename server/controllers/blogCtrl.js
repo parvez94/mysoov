@@ -34,6 +34,7 @@ const getArticleBySlug = async (req, res, next) => {
   try {
     const { slug } = req.params;
     const currentUserId = req.user?.id;
+    const isAdmin = req.user?.role === 'admin';
 
     // First, try to find a published and non-paused article
     let article = await Article.findOne({
@@ -44,11 +45,14 @@ const getArticleBySlug = async (req, res, next) => {
       .populate('author', 'displayName username profilePic')
       .lean();
 
-    // If not found, check if user is the author and allow viewing their own paused/draft article
+    // If not found, check if user is the author or admin and allow viewing paused/draft article
     if (!article && currentUserId) {
       article = await Article.findOne({
         slug,
-        author: currentUserId,
+        $or: [
+          { author: currentUserId },
+          ...(isAdmin ? [{}] : []), // Admin can view any article
+        ],
       })
         .populate('author', 'displayName username profilePic')
         .lean();
@@ -58,11 +62,9 @@ const getArticleBySlug = async (req, res, next) => {
       return next(createError(404, 'Article not found'));
     }
 
-    // Check if article is paused and user is not the author
-    if (
-      article.isPaused &&
-      String(article.author._id) !== String(currentUserId)
-    ) {
+    // Check if article is paused and user is not the author or admin
+    const isAuthor = String(article.author._id) === String(currentUserId);
+    if (article.isPaused && !isAuthor && !isAdmin) {
       return next(createError(403, 'This article is currently unavailable'));
     }
 
@@ -174,7 +176,9 @@ const updateArticle = async (req, res, next) => {
     article.featuredImage = featuredImage || '';
     article.published = published;
 
+    // If article was paused, keep it paused and require admin approval
     if (wasPaused && isAuthor) {
+      article.isPaused = true; // Keep it paused
       article.pendingReview = true;
       article.reviewRequestedAt = new Date();
     }

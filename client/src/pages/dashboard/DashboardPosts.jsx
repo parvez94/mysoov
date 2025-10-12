@@ -1,10 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
 import { Spinner } from '../../components/index';
-import { FaPlay, FaPause, FaTrash, FaEye, FaExchangeAlt } from 'react-icons/fa';
+import {
+  FaPlay,
+  FaPause,
+  FaTrash,
+  FaEye,
+  FaExchangeAlt,
+  FaCheck,
+  FaTimes,
+} from 'react-icons/fa';
 
 const Container = styled.div`
   padding: 40px;
@@ -84,6 +92,8 @@ const Tbody = styled.tbody``;
 
 const Tr = styled.tr`
   transition: background 0.2s ease;
+  background: ${(props) =>
+    props.$highlighted ? 'rgba(202, 8, 6, 0.15)' : 'transparent'};
 
   &:hover {
     background: rgba(255, 255, 255, 0.05);
@@ -91,6 +101,23 @@ const Tr = styled.tr`
 
   &:not(:last-child) td {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  ${(props) =>
+    props.$highlighted &&
+    `
+    animation: highlightPulse 2s ease-in-out;
+    border-left: 3px solid var(--primary-color);
+  `}
+
+  @keyframes highlightPulse {
+    0%,
+    100% {
+      background: rgba(202, 8, 6, 0.15);
+    }
+    50% {
+      background: rgba(202, 8, 6, 0.25);
+    }
   }
 `;
 
@@ -147,15 +174,33 @@ const StatusBadge = styled.span`
   font-size: 12px;
   font-weight: 500;
   background: ${(props) =>
-    props.status === 'Public'
+    props.$pending
+      ? 'rgba(202, 8, 6, 0.2)'
+      : props.status === 'Public'
       ? 'rgba(76, 175, 80, 0.2)'
       : 'rgba(255, 152, 0, 0.2)'};
-  color: ${(props) => (props.status === 'Public' ? '#4caf50' : '#ff9800')};
+  color: ${(props) =>
+    props.$pending
+      ? 'var(--primary-color)'
+      : props.status === 'Public'
+      ? '#4caf50'
+      : '#ff9800'};
   border: 1px solid
     ${(props) =>
-      props.status === 'Public'
+      props.$pending
+        ? 'rgba(202, 8, 6, 0.3)'
+        : props.status === 'Public'
         ? 'rgba(76, 175, 80, 0.3)'
         : 'rgba(255, 152, 0, 0.3)'};
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const StatusContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 `;
 
 const ActionButtons = styled.div`
@@ -535,6 +580,9 @@ const PauseReasonButtons = styled.div`
 
 const DashboardPosts = () => {
   const { currentUser } = useSelector((state) => state.user);
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  const highlightRef = useRef(null);
   const [videos, setVideos] = useState([]);
   const [filteredVideos, setFilteredVideos] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -550,6 +598,8 @@ const DashboardPosts = () => {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [pauseReasonModal, setPauseReasonModal] = useState(null);
   const [pauseReason, setPauseReason] = useState('');
+  const [reviewModal, setReviewModal] = useState(null); // { video, action: 'approve' | 'reject' }
+  const [reviewNotes, setReviewNotes] = useState('');
 
   // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
@@ -559,6 +609,18 @@ const DashboardPosts = () => {
   useEffect(() => {
     fetchVideos();
   }, []);
+
+  // Scroll to highlighted post after videos are loaded
+  useEffect(() => {
+    if (highlightId && highlightRef.current && !isLoading) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 300);
+    }
+  }, [highlightId, isLoading, filteredVideos]);
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -772,6 +834,78 @@ const DashboardPosts = () => {
     }
   };
 
+  const handleOpenReviewModal = (video, action) => {
+    setReviewModal({ video, action });
+    setReviewNotes('');
+  };
+
+  const handleReviewAction = async () => {
+    if (!reviewModal) return;
+
+    const { video, action } = reviewModal;
+
+    // Require notes for rejection
+    if (action === 'reject' && !reviewNotes.trim()) {
+      setError('Please provide a reason for rejection');
+      return;
+    }
+
+    try {
+      setActionLoading((prev) => ({ ...prev, [video._id]: action }));
+      setError(null);
+      setSuccess(null);
+
+      const endpoint = `${
+        import.meta.env.VITE_API_URL
+      }/api/admin/reviews/video/${video._id}/${action}`;
+
+      await axios.post(
+        endpoint,
+        { notes: reviewNotes },
+        { withCredentials: true }
+      );
+
+      // Update video in local state
+      setVideos((prev) =>
+        prev.map((v) =>
+          v._id === video._id
+            ? {
+                ...v,
+                pendingReview: false,
+                privacy: action === 'approve' ? 'Public' : v.privacy,
+              }
+            : v
+        )
+      );
+
+      setFilteredVideos((prev) =>
+        prev.map((v) =>
+          v._id === video._id
+            ? {
+                ...v,
+                pendingReview: false,
+                privacy: action === 'approve' ? 'Public' : v.privacy,
+              }
+            : v
+        )
+      );
+
+      setSuccess(
+        action === 'approve'
+          ? 'Post approved and made public'
+          : 'Post review rejected'
+      );
+      setTimeout(() => setSuccess(null), 3000);
+      setReviewModal(null);
+      setReviewNotes('');
+    } catch (err) {
+      console.error(`Error ${action}ing review:`, err);
+      setError(err.response?.data?.message || `Failed to ${action} review`);
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [video._id]: null }));
+    }
+  };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -824,84 +958,127 @@ const DashboardPosts = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {filteredVideos.map((video) => (
-                <Tr key={video._id}>
-                  <Td>
-                    <UserInfo>
-                      {video.userId?.displayImage ? (
-                        <Avatar
-                          src={video.userId.displayImage}
-                          alt={video.userId.username}
-                        />
-                      ) : (
-                        <DefaultAvatar>
-                          {(
-                            video.userId?.displayName ||
+              {filteredVideos.map((video) => {
+                const isHighlighted = highlightId === video._id;
+                return (
+                  <Tr
+                    key={video._id}
+                    $highlighted={isHighlighted}
+                    ref={isHighlighted ? highlightRef : null}
+                  >
+                    <Td>
+                      <UserInfo>
+                        {video.userId?.displayImage ? (
+                          <Avatar
+                            src={video.userId.displayImage}
+                            alt={video.userId.username}
+                          />
+                        ) : (
+                          <DefaultAvatar>
+                            {(
+                              video.userId?.displayName ||
+                              video.userId?.username ||
+                              'U'
+                            )
+                              .charAt(0)
+                              .toUpperCase()}
+                          </DefaultAvatar>
+                        )}
+                        <Username>
+                          {video.userId?.displayName ||
                             video.userId?.username ||
-                            'U'
-                          )
-                            .charAt(0)
-                            .toUpperCase()}
-                        </DefaultAvatar>
-                      )}
-                      <Username>
-                        {video.userId?.displayName ||
-                          video.userId?.username ||
-                          'Unknown'}
-                      </Username>
-                    </UserInfo>
-                  </Td>
-                  <Td>
-                    <Caption title={video.caption}>
-                      {video.caption || 'No caption'}
-                    </Caption>
-                  </Td>
-                  <Td>{formatDate(video.createdAt)}</Td>
-                  <Td>
-                    <StatusBadge status={video.privacy}>
-                      {video.privacy === 'Public' ? 'Active' : 'Paused'}
-                    </StatusBadge>
-                  </Td>
-                  <Td>{video.likes?.length || 0}</Td>
-                  <Td>
-                    <ActionButtons>
-                      <ViewLink to={`/video/${video._id}`} title='View post'>
-                        <FaEye />
-                      </ViewLink>
-                      <IconButton
-                        onClick={() => handleOpenPauseDialog(video)}
-                        disabled={actionLoading[video._id] === 'toggle'}
-                        color={
-                          video.privacy === 'Public' ? '#ff9800' : '#4caf50'
-                        }
-                        title={
-                          video.privacy === 'Public'
-                            ? 'Pause (hide from public)'
-                            : 'Unpause (show in public)'
-                        }
-                      >
-                        {video.privacy === 'Public' ? <FaPause /> : <FaPlay />}
-                      </IconButton>
-                      <IconButton
-                        onClick={() => handleOpenTransferModal(video)}
-                        disabled={actionLoading[video._id] === 'transfer'}
-                        color='#2196f3'
-                        title='Transfer to another user'
-                      >
-                        <FaExchangeAlt />
-                      </IconButton>
-                      <IconButton
-                        onClick={() => setConfirmDelete(video)}
-                        disabled={actionLoading[video._id] === 'delete'}
-                        color='#f44336'
-                        title='Delete post'
-                      >
-                        <FaTrash />
-                      </IconButton>
-                    </ActionButtons>
-                  </Td>
-                </Tr>
-              ))}
+                            'Unknown'}
+                        </Username>
+                      </UserInfo>
+                    </Td>
+                    <Td>
+                      <Caption title={video.caption}>
+                        {video.caption || 'No caption'}
+                      </Caption>
+                    </Td>
+                    <Td>{formatDate(video.createdAt)}</Td>
+                    <Td>
+                      <StatusContainer>
+                        <StatusBadge status={video.privacy}>
+                          {video.privacy === 'Public' ? 'Active' : 'Paused'}
+                        </StatusBadge>
+                        {video.pendingReview && (
+                          <StatusBadge $pending={true}>
+                            ⚠️ Pending Review
+                          </StatusBadge>
+                        )}
+                      </StatusContainer>
+                    </Td>
+                    <Td>{video.likes?.length || 0}</Td>
+                    <Td>
+                      <ActionButtons>
+                        <ViewLink to={`/video/${video._id}`} title='View post'>
+                          <FaEye />
+                        </ViewLink>
+                        {video.pendingReview ? (
+                          <>
+                            <IconButton
+                              onClick={() =>
+                                handleOpenReviewModal(video, 'approve')
+                              }
+                              disabled={actionLoading[video._id] === 'approve'}
+                              color='#4caf50'
+                              title='Approve and make public'
+                            >
+                              <FaCheck />
+                            </IconButton>
+                            <IconButton
+                              onClick={() =>
+                                handleOpenReviewModal(video, 'reject')
+                              }
+                              disabled={actionLoading[video._id] === 'reject'}
+                              color='#f44336'
+                              title='Reject review'
+                            >
+                              <FaTimes />
+                            </IconButton>
+                          </>
+                        ) : (
+                          <IconButton
+                            onClick={() => handleOpenPauseDialog(video)}
+                            disabled={actionLoading[video._id] === 'toggle'}
+                            color={
+                              video.privacy === 'Public' ? '#ff9800' : '#4caf50'
+                            }
+                            title={
+                              video.privacy === 'Public'
+                                ? 'Pause (hide from public)'
+                                : 'Unpause (show in public)'
+                            }
+                          >
+                            {video.privacy === 'Public' ? (
+                              <FaPause />
+                            ) : (
+                              <FaPlay />
+                            )}
+                          </IconButton>
+                        )}
+                        <IconButton
+                          onClick={() => handleOpenTransferModal(video)}
+                          disabled={actionLoading[video._id] === 'transfer'}
+                          color='#2196f3'
+                          title='Transfer to another user'
+                        >
+                          <FaExchangeAlt />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => setConfirmDelete(video)}
+                          disabled={actionLoading[video._id] === 'delete'}
+                          color='#f44336'
+                          title='Delete post'
+                        >
+                          <FaTrash />
+                        </IconButton>
+                      </ActionButtons>
+                    </Td>
+                  </Tr>
+                );
+              })}
             </Tbody>
           </Table>
         </TableWrapper>
@@ -1028,6 +1205,62 @@ const DashboardPosts = () => {
                 {actionLoading[pauseReasonModal._id] === 'toggle'
                   ? 'Pausing...'
                   : 'Pause Content'}
+              </ConfirmButton>
+            </PauseReasonButtons>
+          </PauseReasonBox>
+        </PauseReasonDialog>
+      )}
+
+      {reviewModal && (
+        <PauseReasonDialog
+          onClick={() => {
+            setReviewModal(null);
+            setReviewNotes('');
+          }}
+        >
+          <PauseReasonBox onClick={(e) => e.stopPropagation()}>
+            <PauseReasonTitle>
+              {reviewModal.action === 'approve'
+                ? 'Approve Content'
+                : 'Reject Content'}
+            </PauseReasonTitle>
+            <PauseReasonText>
+              {reviewModal.action === 'approve'
+                ? 'You are about to approve this content and make it public. The owner will be notified. You can optionally add a note.'
+                : 'You are about to reject this content review. The content will remain private. Please provide a reason for rejection so the owner can make necessary changes.'}
+            </PauseReasonText>
+            <PauseReasonInput
+              placeholder={
+                reviewModal.action === 'approve'
+                  ? 'Add note (optional)...'
+                  : 'Enter rejection reason (required)...'
+              }
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+            />
+            <PauseReasonButtons>
+              <ConfirmButton
+                onClick={() => {
+                  setReviewModal(null);
+                  setReviewNotes('');
+                }}
+              >
+                Cancel
+              </ConfirmButton>
+              <ConfirmButton
+                danger={reviewModal.action === 'reject'}
+                onClick={handleReviewAction}
+                disabled={
+                  actionLoading[reviewModal.video._id] === reviewModal.action
+                }
+              >
+                {actionLoading[reviewModal.video._id] === reviewModal.action
+                  ? reviewModal.action === 'approve'
+                    ? 'Approving...'
+                    : 'Rejecting...'
+                  : reviewModal.action === 'approve'
+                  ? 'Approve & Publish'
+                  : 'Reject Review'}
               </ConfirmButton>
             </PauseReasonButtons>
           </PauseReasonBox>

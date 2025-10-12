@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
 import { MdEdit, MdDelete, MdOpenInNew } from 'react-icons/md';
-import { FaPause, FaPlay } from 'react-icons/fa';
+import { FaPause, FaPlay, FaCheck, FaTimes } from 'react-icons/fa';
 import ThreeDotsLoader from '../../components/loading/ThreeDotsLoader';
 
 const Container = styled.div`
@@ -96,6 +96,23 @@ const TableRow = styled.div`
     border-bottom: none;
   }
 
+  ${(props) =>
+    props.$highlighted &&
+    `
+    animation: highlightPulse 2s ease-in-out 3;
+    border-left: 3px solid var(--primary-color);
+  `}
+
+  @keyframes highlightPulse {
+    0%,
+    100% {
+      background: rgba(202, 8, 6, 0.15);
+    }
+    50% {
+      background: rgba(202, 8, 6, 0.25);
+    }
+  }
+
   @media (max-width: 1024px) {
     grid-template-columns: 2fr 1fr 180px;
   }
@@ -144,6 +161,7 @@ const StatusBadge = styled.span`
   font-size: 12px;
   font-weight: 500;
   background: ${(props) => {
+    if (props.$pendingReview) return '#2196f3';
     if (props.$paused) return '#f44336';
     return props.$published ? '#4caf50' : '#ff9800';
   }};
@@ -301,6 +319,7 @@ const PauseReasonButtons = styled.div`
 
 const DashboardArticles = () => {
   const { currentUser } = useSelector((state) => state.user);
+  const [searchParams] = useSearchParams();
   const [articles, setArticles] = useState([]);
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -309,6 +328,10 @@ const DashboardArticles = () => {
   const [success, setSuccess] = useState('');
   const [pauseReasonModal, setPauseReasonModal] = useState(null);
   const [pauseReason, setPauseReason] = useState('');
+  const [reviewModal, setReviewModal] = useState(null); // { article, action: 'approve' | 'reject' }
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [highlightId, setHighlightId] = useState(null);
+  const highlightRef = useRef(null);
 
   // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
@@ -335,6 +358,26 @@ const DashboardArticles = () => {
       setFilteredArticles(filtered);
     }
   }, [searchQuery, articles]);
+
+  // Handle highlight from URL parameter
+  useEffect(() => {
+    const highlightParam = searchParams.get('highlight');
+    if (highlightParam) {
+      setHighlightId(highlightParam);
+    }
+  }, [searchParams]);
+
+  // Scroll to highlighted article after data loads
+  useEffect(() => {
+    if (highlightId && !loading && highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 300);
+    }
+  }, [highlightId, loading]);
 
   const fetchArticles = async () => {
     try {
@@ -398,6 +441,72 @@ const DashboardArticles = () => {
       setPauseReason('');
     } catch (err) {
       setError('Failed to toggle article pause status');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleOpenReviewModal = (article, action) => {
+    setReviewModal({ article, action });
+    setReviewNotes('');
+  };
+
+  const handleReviewAction = async () => {
+    if (!reviewModal) return;
+
+    const { article, action } = reviewModal;
+
+    // Validate rejection reason
+    if (action === 'reject' && !reviewNotes.trim()) {
+      setError('Please provide a reason for rejection');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const endpoint = `${
+        import.meta.env.VITE_API_URL
+      }/api/admin/reviews/article/${article._id}/${action}`;
+
+      await axios.post(
+        endpoint,
+        { notes: reviewNotes },
+        {
+          withCredentials: true,
+        }
+      );
+
+      setSuccess(
+        `Article ${
+          action === 'approve' ? 'approved' : 'rejected'
+        } successfully!`
+      );
+      setTimeout(() => setSuccess(''), 3000);
+
+      // Update local state immediately
+      setArticles((prevArticles) =>
+        prevArticles.map((a) =>
+          a._id === article._id
+            ? {
+                ...a,
+                pendingReview: false,
+                published: action === 'approve',
+                isPaused: action === 'reject',
+              }
+            : a
+        )
+      );
+
+      // Close modal and reset
+      setReviewModal(null);
+      setReviewNotes('');
+
+      // Refresh articles list
+      fetchArticles();
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          `Failed to ${action} article. Please try again.`
+      );
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -473,74 +582,113 @@ const DashboardArticles = () => {
             <div>Status</div>
             <div>Actions</div>
           </TableHeader>
-          {filteredArticles.map((article) => (
-            <TableRow key={article._id}>
-              <Cell>
-                <ArticleTitle>{article.title}</ArticleTitle>
-              </Cell>
-              <HideOnMobile>
-                <Cell>{article.author?.displayName || 'Unknown'}</Cell>
-              </HideOnMobile>
-              <HideOnMobile>
-                <Cell>{formatDate(article.createdAt)}</Cell>
-              </HideOnMobile>
-              <Cell $label='Status'>
-                <StatusBadge
-                  $published={article.published}
-                  $paused={article.isPaused}
-                >
-                  {article.isPaused
-                    ? 'Paused'
-                    : article.published
-                    ? 'Active'
-                    : 'Draft'}
-                </StatusBadge>
-              </Cell>
-              <Cell $label='Actions'>
-                <Actions>
-                  <ActionButton
-                    as='a'
-                    href={`/blog/${article.slug}`}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    title='View Article'
+          {filteredArticles.map((article) => {
+            const isHighlighted = highlightId === article._id;
+            return (
+              <TableRow
+                key={article._id}
+                $highlighted={isHighlighted}
+                ref={isHighlighted ? highlightRef : null}
+              >
+                <Cell>
+                  <ArticleTitle>{article.title}</ArticleTitle>
+                </Cell>
+                <HideOnMobile>
+                  <Cell>{article.author?.displayName || 'Unknown'}</Cell>
+                </HideOnMobile>
+                <HideOnMobile>
+                  <Cell>{formatDate(article.createdAt)}</Cell>
+                </HideOnMobile>
+                <Cell $label='Status'>
+                  <StatusBadge
+                    $published={article.published}
+                    $paused={article.isPaused}
+                    $pendingReview={article.pendingReview}
                   >
-                    <MdOpenInNew />
-                  </ActionButton>
-                  <ActionButton
-                    onClick={() => handleOpenPauseDialog(article)}
-                    title={
-                      article.isPaused
-                        ? 'Unpause (show in public)'
-                        : 'Pause (hide from public)'
-                    }
-                    style={{
-                      background: article.isPaused
-                        ? 'rgba(76, 175, 80, 0.2)'
-                        : 'rgba(255, 152, 0, 0.2)',
-                      color: article.isPaused ? '#4caf50' : '#ff9800',
-                    }}
-                  >
-                    {article.isPaused ? <FaPlay /> : <FaPause />}
-                  </ActionButton>
-                  <ActionButton
-                    as={Link}
-                    to={`/article/${article._id}`}
-                    title='Edit'
-                  >
-                    <MdEdit />
-                  </ActionButton>
-                  <ActionButton
-                    $danger
-                    onClick={() => handleDelete(article._id)}
-                    title='Delete'
-                  >
-                    <MdDelete />
-                  </ActionButton>
-                </Actions>
-              </Cell>
-            </TableRow>
-          ))}
+                    {article.pendingReview
+                      ? 'Pending Review'
+                      : article.isPaused
+                      ? 'Paused'
+                      : article.published
+                      ? 'Active'
+                      : 'Draft'}
+                  </StatusBadge>
+                </Cell>
+                <Cell $label='Actions'>
+                  <Actions>
+                    <ActionButton
+                      as='a'
+                      href={`/blog/${article.slug}`}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      title='View Article'
+                    >
+                      <MdOpenInNew />
+                    </ActionButton>
+                    {article.pendingReview ? (
+                      <>
+                        <ActionButton
+                          onClick={() =>
+                            handleOpenReviewModal(article, 'approve')
+                          }
+                          title='Approve Article'
+                          style={{
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            color: '#4caf50',
+                          }}
+                        >
+                          <FaCheck />
+                        </ActionButton>
+                        <ActionButton
+                          onClick={() =>
+                            handleOpenReviewModal(article, 'reject')
+                          }
+                          title='Reject Article'
+                          style={{
+                            background: 'rgba(244, 67, 54, 0.2)',
+                            color: '#f44336',
+                          }}
+                        >
+                          <FaTimes />
+                        </ActionButton>
+                      </>
+                    ) : (
+                      <ActionButton
+                        onClick={() => handleOpenPauseDialog(article)}
+                        title={
+                          article.isPaused
+                            ? 'Unpause (show in public)'
+                            : 'Pause (hide from public)'
+                        }
+                        style={{
+                          background: article.isPaused
+                            ? 'rgba(76, 175, 80, 0.2)'
+                            : 'rgba(255, 152, 0, 0.2)',
+                          color: article.isPaused ? '#4caf50' : '#ff9800',
+                        }}
+                      >
+                        {article.isPaused ? <FaPlay /> : <FaPause />}
+                      </ActionButton>
+                    )}
+                    <ActionButton
+                      as={Link}
+                      to={`/article/${article._id}`}
+                      title='Edit'
+                    >
+                      <MdEdit />
+                    </ActionButton>
+                    <ActionButton
+                      $danger
+                      onClick={() => handleDelete(article._id)}
+                      title='Delete'
+                    >
+                      <MdDelete />
+                    </ActionButton>
+                  </Actions>
+                </Cell>
+              </TableRow>
+            );
+          })}
         </ArticlesTable>
       )}
 
@@ -571,6 +719,61 @@ const DashboardArticles = () => {
                 }}
               >
                 Confirm Pause
+              </ActionButton>
+            </PauseReasonButtons>
+          </PauseReasonBox>
+        </PauseReasonDialog>
+      )}
+
+      {/* Review Modal (Approve/Reject) */}
+      {reviewModal && (
+        <PauseReasonDialog onClick={() => setReviewModal(null)}>
+          <PauseReasonBox onClick={(e) => e.stopPropagation()}>
+            <PauseReasonTitle>
+              {reviewModal.action === 'approve'
+                ? 'Approve Article'
+                : 'Reject Article'}
+            </PauseReasonTitle>
+            <PauseReasonText>
+              {reviewModal.action === 'approve' ? (
+                <>
+                  You are about to approve "{reviewModal.article.title}". The
+                  article will be made public and the author will be notified.
+                  You can optionally add notes:
+                </>
+              ) : (
+                <>
+                  You are about to reject "{reviewModal.article.title}". The
+                  article will remain private and the author will be notified.
+                  Please provide a reason for rejection:
+                </>
+              )}
+            </PauseReasonText>
+            <PauseReasonInput
+              placeholder={
+                reviewModal.action === 'approve'
+                  ? 'Optional: Add any notes for the author'
+                  : 'Required: Explain why this article is being rejected'
+              }
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              required={reviewModal.action === 'reject'}
+            />
+            <PauseReasonButtons>
+              <ActionButton onClick={() => setReviewModal(null)}>
+                Cancel
+              </ActionButton>
+              <ActionButton
+                onClick={handleReviewAction}
+                style={{
+                  background:
+                    reviewModal.action === 'approve' ? '#4caf50' : '#f44336',
+                  color: 'white',
+                }}
+              >
+                {reviewModal.action === 'approve'
+                  ? 'Confirm Approval'
+                  : 'Confirm Rejection'}
               </ActionButton>
             </PauseReasonButtons>
           </PauseReasonBox>

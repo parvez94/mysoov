@@ -127,6 +127,31 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
           return `/blog/${notification.relatedArticle.slug}`;
         }
         return '#';
+      case 'review_requested':
+        // For review requests, admin should go to dashboard to review the post
+        if (notification.relatedVideo) {
+          return `/dashboard/posts?highlight=${
+            notification.relatedVideo._id || notification.relatedVideo
+          }`;
+        } else if (notification.relatedArticle) {
+          return `/dashboard/articles?highlight=${
+            notification.relatedArticle._id || notification.relatedArticle
+          }`;
+        }
+        return '/dashboard/posts';
+      case 'review_approved':
+      case 'review_rejected':
+        // For review responses, user should see their content
+        if (notification.relatedVideo) {
+          return `/video/${
+            notification.relatedVideo._id || notification.relatedVideo
+          }`;
+        } else if (notification.relatedArticle) {
+          return `/blog/${
+            notification.relatedArticle.slug || notification.relatedArticle
+          }`;
+        }
+        return '#';
       default:
         return '#';
     }

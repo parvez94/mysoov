@@ -84,7 +84,8 @@ const Video = styled.video`
   background: #000;
 
   @media (max-width: 768px) {
-    max-width: calc(100vw - 90px);
+    max-width: 100%;
+    width: 100%;
     max-height: 70vh;
   }
 `;
@@ -100,7 +101,8 @@ const Image = styled.img`
   background: #000;
 
   @media (max-width: 768px) {
-    max-width: calc(100vw - 90px);
+    max-width: 100%;
+    width: 100%;
     max-height: 70vh;
   }
 `;
@@ -111,6 +113,11 @@ const YouTubeEmbed = styled.iframe`
   border-radius: 10px;
   border: none;
   background: #000;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+  }
 `;
 
 const VideoStats = styled.div`
