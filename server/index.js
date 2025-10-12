@@ -167,19 +167,23 @@ app.get('/api/test-auth', (req, res) => {
 });
 
 // Middleware to check database connection for API routes
-app.use('/api', (req, res, next) => {
-  // Just check if connection is ready, don't try to reconnect on every request
-  if (mongoose.connection.readyState !== 1) {
+app.use('/api', async (req, res, next) => {
+  try {
+    // If not connected, try to connect (important for serverless cold starts)
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+    next();
+  } catch (error) {
     return res.status(503).json({
       success: false,
       message: 'Database service temporarily unavailable',
       error:
         process.env.NODE_ENV === 'production'
           ? 'Connection failed'
-          : 'Database not connected',
+          : error.message,
     });
   }
-  next();
 });
 
 app.use('/api/v1/auth', authRouter);
@@ -220,9 +224,12 @@ const connectDB = async () => {
       const connectionOptions = {
         bufferCommands: false,
         maxPoolSize: 10,
-        serverSelectionTimeoutMS: 10000, // Increased for serverless cold starts
+        minPoolSize: 2,
+        serverSelectionTimeoutMS: 15000, // Increased for serverless cold starts
         socketTimeoutMS: 45000,
-        connectTimeoutMS: 10000,
+        connectTimeoutMS: 15000,
+        retryWrites: true,
+        retryReads: true,
       };
 
       await mongoose.connect(mongoUrl, connectionOptions);
@@ -307,8 +314,8 @@ if (process.env.NODE_ENV !== 'production') {
 
   startServer();
 } else {
-  // For production (Vercel), ensure DB connection is established
-  // Vercel serverless functions will call connectDB() on each cold start
+  // For production (Vercel), attempt initial connection but don't fail
+  // The middleware will handle connection on first request if needed
   connectDB()
     .then(() => {
       console.log('✅ Database connected successfully (production)');
@@ -320,15 +327,16 @@ if (process.env.NODE_ENV !== 'production') {
       });
     })
     .catch((error) => {
-      console.error(
-        '❌ Production server initialization failed:',
+      console.warn(
+        '⚠️ Initial database connection failed, will retry on first request:',
         error.message
       );
-      console.error('Environment variables check:', {
+      console.log('Environment variables check:', {
         hasMongoUrl: !!process.env.MONGO_URL,
         hasSecretKey: !!process.env.SECRET_KEY,
         nodeEnv: process.env.NODE_ENV,
       });
+      // Don't exit - let the middleware handle connection on first request
     });
 }
 
