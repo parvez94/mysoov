@@ -134,9 +134,10 @@ const LeftSidebar = () => {
   const { currentUser } = useSelector((state) => state.user);
   const location = useLocation();
 
-  // Get notification count
-  const { unreadCount: notificationCount, fetchUnreadCount } =
-    useNotifications();
+  // Get notification count (only fetch if user is authenticated)
+  const { unreadCount: notificationCount, fetchUnreadCount } = useNotifications(
+    !!currentUser
+  );
 
   // Refresh notification count when navigating between pages
   useEffect(() => {

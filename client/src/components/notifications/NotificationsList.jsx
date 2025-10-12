@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
+import { useSelector } from 'react-redux';
 import { useNotifications } from '../../hooks/useNotifications';
 import NotificationItem from './NotificationItem';
 import Spinner from '../Spinner';
@@ -68,6 +69,8 @@ const ErrorMessage = styled.div`
 `;
 
 const NotificationsPage = () => {
+  const { currentUser } = useSelector((state) => state.user);
+
   const {
     notifications,
     unreadCount,
@@ -76,11 +79,13 @@ const NotificationsPage = () => {
     fetchNotifications,
     markAsRead,
     deleteNotification,
-  } = useNotifications();
+  } = useNotifications(!!currentUser);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (currentUser) {
+      fetchNotifications();
+    }
+  }, [fetchNotifications, currentUser]);
 
   if (loading && notifications.length === 0) {
     return (

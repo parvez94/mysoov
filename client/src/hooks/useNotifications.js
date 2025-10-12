@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5100';
 
-export const useNotifications = () => {
+export const useNotifications = (isAuthenticated = false) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -135,6 +135,11 @@ export const useNotifications = () => {
 
   // Fetch unread count on mount and set up periodic polling
   useEffect(() => {
+    // Only fetch if user is authenticated
+    if (!isAuthenticated) {
+      return;
+    }
+
     fetchUnreadCount();
 
     // Poll for new notifications every 30 seconds
@@ -155,7 +160,7 @@ export const useNotifications = () => {
       clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, isAuthenticated]);
 
   // Listen for events from other hook instances
   useEffect(() => {

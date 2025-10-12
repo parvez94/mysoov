@@ -4,6 +4,7 @@ import { Provider } from 'react-redux';
 import App from './App.jsx';
 import GlobalStyle from './GlobalStyle';
 import store from './store/store.js';
+import './config/axios.js'; // Configure axios globally
 
 // Set --vh CSS variable to handle mobile viewport height correctly
 function setVhVar() {
