@@ -181,11 +181,9 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
         )}
 
         <Actions>
-          {notification.type !== 'follow' && (
-            <Link to={getNotificationLink()} onClick={handleView}>
-              <ActionButton>View</ActionButton>
-            </Link>
-          )}
+          <Link to={getNotificationLink()} onClick={handleView}>
+            <ActionButton>View</ActionButton>
+          </Link>
           <ActionButton onClick={handleDelete}>Delete</ActionButton>
         </Actions>
       </Content>
