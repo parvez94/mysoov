@@ -4,10 +4,18 @@ import { createError } from '../utils/error.js';
 export const verifyToken = (req, res, next) => {
   const token = req.cookies.access_token;
 
-  if (!token) return next(createError(401, 'Not authenticated.'));
+  if (!token) {
+    // Log for debugging in production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('No token found. Cookies:', Object.keys(req.cookies));
+      console.log('Cookie header:', req.headers.cookie);
+    }
+    return next(createError(401, 'Not authenticated.'));
+  }
 
   jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
     if (err) {
+      console.log('Token verification failed:', err.message);
       return next(createError(403, 'Token not valid.'));
     }
 

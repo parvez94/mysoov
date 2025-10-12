@@ -58,11 +58,17 @@ app.use(
 // Additional CORS headers for production
 if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header(
-      'Access-Control-Allow-Origin',
-      'https://mysoov-frontend.vercel.app'
-    );
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      'https://mysoov-frontend.vercel.app',
+      'https://mysoov-backend.vercel.app',
+    ];
+
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    }
+
     res.header(
       'Access-Control-Allow-Methods',
       'GET, POST, PUT, PATCH, DELETE, OPTIONS'
@@ -156,11 +162,14 @@ app.get('/api/test-auth', (req, res) => {
     success: true,
     message: 'Auth test endpoint',
     hasToken: !!token,
-    cookies: req.cookies,
+    tokenLength: token ? token.length : 0,
+    cookies: Object.keys(req.cookies),
+    allCookies: req.cookies,
     headers: {
       origin: req.headers.origin,
       'user-agent': req.headers['user-agent'],
-      cookie: req.headers.cookie,
+      cookie: req.headers.cookie ? 'present' : 'missing',
+      cookieLength: req.headers.cookie ? req.headers.cookie.length : 0,
     },
     timestamp: new Date().toISOString(),
   });
