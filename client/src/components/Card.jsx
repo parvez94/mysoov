@@ -143,9 +143,9 @@ const Icon = styled.div`
   cursor: pointer;
 
   svg {
-    width: 50px;
-    height: 50px;
-    padding: 12px;
+    width: 40px;
+    height: 40px;
+    padding: 8px;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.12);
   }
@@ -315,7 +315,6 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                 ) : (
                   <HiOutlineBookmark />
                 )}
-                <StatsWrapper>{video?.saved?.length || 0}</StatsWrapper>
               </Icon>
             )}
           </VideoStats>
