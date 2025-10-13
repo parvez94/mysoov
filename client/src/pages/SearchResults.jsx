@@ -2,11 +2,25 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import styled from 'styled-components';
-import { Card } from '../components';
+import { Card, HomeSidebar } from '../components';
 
 const Container = styled.div`
-  padding: 20px;
-  min-height: calc(100vh - var(--navbar-h));
+  display: flex;
+  justify-content: space-between;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const Wrapper = styled.div`
+  flex: 7;
+  padding: 20px 50px;
+
+  @media (max-width: 768px) {
+    flex: 1;
+    padding: 20px;
+  }
 `;
 
 const Title = styled.h2`
@@ -33,14 +47,10 @@ const CodeBadge = styled.span`
 `;
 
 const VideosGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 20px;
   margin-top: 20px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
 `;
 
 const Message = styled.div`
@@ -114,7 +124,10 @@ const SearchResults = () => {
   if (!query) {
     return (
       <Container>
-        <Message>Please enter an access code to search.</Message>
+        <Wrapper>
+          <Message>Please enter an access code to search.</Message>
+        </Wrapper>
+        <HomeSidebar />
       </Container>
     );
   }
@@ -122,38 +135,44 @@ const SearchResults = () => {
   if (loading) {
     return (
       <Container>
-        <LoadingSpinner>Searching...</LoadingSpinner>
+        <Wrapper>
+          <LoadingSpinner>Searching...</LoadingSpinner>
+        </Wrapper>
+        <HomeSidebar />
       </Container>
     );
   }
 
   return (
     <Container>
-      <Title>
-        Search Results for: <CodeBadge>{query}</CodeBadge>
-      </Title>
-      <Subtitle>
-        {videos.length > 0
-          ? `Found ${videos.length} video${videos.length !== 1 ? 's' : ''}`
-          : 'No videos found with this access code'}
-      </Subtitle>
+      <Wrapper>
+        <Title>
+          Search Results for: <CodeBadge>{query}</CodeBadge>
+        </Title>
+        <Subtitle>
+          {videos.length > 0
+            ? `Found ${videos.length} video${videos.length !== 1 ? 's' : ''}`
+            : 'No videos found with this access code'}
+        </Subtitle>
 
-      {error && <ErrorMessage>{error}</ErrorMessage>}
+        {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {videos.length > 0 ? (
-        <VideosGrid>
-          {videos.map((video) => (
-            <Card key={video._id} video={video} />
-          ))}
-        </VideosGrid>
-      ) : (
-        <Message>
-          No videos found with access code "{query}".
-          <br />
-          <br />
-          Make sure you have the correct code and try again.
-        </Message>
-      )}
+        {videos.length > 0 ? (
+          <VideosGrid>
+            {videos.map((video) => (
+              <Card key={video._id} video={video} />
+            ))}
+          </VideosGrid>
+        ) : (
+          <Message>
+            No videos found with access code "{query}".
+            <br />
+            <br />
+            Make sure you have the correct code and try again.
+          </Message>
+        )}
+      </Wrapper>
+      <HomeSidebar />
     </Container>
   );
 };
