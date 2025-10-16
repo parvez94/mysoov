@@ -273,7 +273,10 @@ export const getUserVideos = async (req, res, next) => {
     const profileUserId = req.params.id;
     const currentUserId = req.user?.id;
 
-    let query = { userId: profileUserId };
+    let query = {
+      userId: profileUserId,
+      isFilm: { $ne: true }, // Exclude films from profile
+    };
 
     // If viewing someone else's profile, only show public videos without access codes
     // If viewing own profile, show all videos (public and private, with or without access codes)

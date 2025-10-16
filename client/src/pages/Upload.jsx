@@ -215,33 +215,6 @@ const Select = styled.select`
 
 const Option = styled.option``;
 
-const AccessCodeInput = styled.input`
-  margin-top: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 8px;
-  border-radius: 4px;
-  background-color: transparent;
-  color: var(--secondary-color);
-  font-family: var(--secondary-fonts);
-  width: 100%;
-
-  &:focus {
-    outline: 0;
-    border-color: var(--primary-color);
-  }
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.3);
-  }
-`;
-
-const HelpText = styled.p`
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  margin-top: 4px;
-  font-family: var(--secondary-fonts);
-`;
-
 const ButtonsWrapper = styled.div`
   margin-top: 20px;
   display: flex;
@@ -350,13 +323,11 @@ const RemoveButton = styled.button`
 
 const Upload = () => {
   const currentUser = useSelector((state) => state.user.currentUser);
-  const isAdmin = currentUser?.role === 'admin';
 
   const [videoFile, setVideoFile] = useState(null); // server-returned {public_id, url}
   const [fileName, setFileName] = useState('');
   const [caption, setCaption] = useState('');
   const [privacy, setPrivacy] = useState('');
-  const [accessCode, setAccessCode] = useState(''); // Access code for restricted videos (admin only)
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [status, setStatus] = useState('idle'); // 'idle' | 'uploading' | 'success' | 'error' | 'indeterminate' | 'canceled'
@@ -493,7 +464,6 @@ const Upload = () => {
         mediaType: mediaType,
         privacy: privacy || 'Public',
         storageProvider: videoFile?.provider || 'cloudinary', // Include storage provider
-        accessCode: accessCode.trim() || null, // Include access code (case-insensitive, trimmed)
       };
 
       const response = await fetch(addUrl, {
@@ -506,7 +476,9 @@ const Upload = () => {
       if (!response.ok)
         throw new Error(`HTTP error! Status: ${response.status}`);
 
-      await response.json();
+      const result = await response.json();
+      const videoId = result.video?._id;
+
       window.location.href = '/';
     } catch (error) {
       alert('Failed to create post. Please try again.');
@@ -844,7 +816,7 @@ const Upload = () => {
           <CaptionWrapper ref={wrapperRef}>
             <Caption
               ref={captionRef}
-              placeholder='Caption'
+              placeholder='Title'
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
             />
@@ -871,22 +843,6 @@ const Upload = () => {
               </EmojiPopover>
             )}
           </CaptionWrapper>
-
-          {isAdmin && (
-            <OptionWrapper>
-              <Label>Access Code (Optional)</Label>
-              <AccessCodeInput
-                type='text'
-                placeholder='e.g., John-231-GC'
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value)}
-              />
-              <HelpText>
-                Videos with an access code will be hidden from public feed. Only
-                users who search with this code can find them.
-              </HelpText>
-            </OptionWrapper>
-          )}
 
           <OptionWrapper>
             <Label>Who can see this post</Label>

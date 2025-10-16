@@ -108,6 +108,7 @@ import notificationRouter from './routes/notificationRoutes.js';
 import adminRouter from './routes/adminRoutes.js';
 import publicRouter from './routes/publicRoutes.js';
 import blogRouter from './routes/blogRoutes.js';
+import filmRouter from './routes/filmRoutes.js';
 
 // Health check route
 app.get('/', (req, res) => {
@@ -175,6 +176,33 @@ app.get('/api/test-auth', (req, res) => {
   });
 });
 
+// Debug endpoint to check video structure
+app.get('/api/debug-video/:id', async (req, res) => {
+  try {
+    const Video = (await import('./models/Video.js')).default;
+    const video = await Video.findById(req.params.id);
+    if (!video) {
+      return res.status(404).json({ error: 'Video not found' });
+    }
+    res.json({
+      _id: video._id,
+      caption: video.caption,
+      videoUrl: video.videoUrl,
+      videoUrlType: typeof video.videoUrl,
+      hasUrl: !!video.videoUrl?.url,
+      urlValue: video.videoUrl?.url,
+      storageProvider: video.storageProvider,
+      mediaType: video.mediaType,
+      privacy: video.privacy,
+      isFilm: video.isFilm,
+      userId: video.userId,
+      filmDirectoryId: video.filmDirectoryId,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Middleware to check database connection for API routes
 app.use('/api', async (req, res, next) => {
   try {
@@ -205,6 +233,7 @@ app.use('/api/v1/admin', adminRouter); // Fixed: Added v1 prefix
 app.use('/api/admin', adminRouter); // Keep backward compatibility
 app.use('/api/public', publicRouter);
 app.use('/api/v1/blog', blogRouter);
+app.use('/api/v1/films', filmRouter);
 
 // Database connection
 let isConnected = false;

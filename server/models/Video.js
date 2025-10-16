@@ -69,6 +69,15 @@ const videoSchema = new mongoose.Schema(
       default: null,
       index: true, // Index for faster search
     },
+    isFilm: {
+      type: Boolean,
+      default: false,
+    },
+    filmDirectoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'FilmDirectory',
+      default: null,
+    },
   },
   { timestamps: true }
 );

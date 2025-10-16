@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { Link, useLocation } from 'react-router-dom';
@@ -8,6 +8,12 @@ import {
   MdOutlineExplore,
   MdOutlineNotificationsNone,
   MdDashboard,
+  MdPeople,
+  MdVideoLibrary,
+  MdSettings,
+  MdKeyboardArrowDown,
+  MdKeyboardArrowUp,
+  MdMovie,
 } from 'react-icons/md';
 import { LuUser2 } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
@@ -87,6 +93,51 @@ const NotificationBadge = styled.div`
   }
 `;
 
+const DashboardMenu = styled.div`
+  cursor: pointer;
+`;
+
+const DashboardNavItem = styled(NavItem)`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ArrowIcon = styled.span`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const SubMenu = styled.div`
+  padding-left: 35px;
+  margin-top: 5px;
+  display: ${(props) => (props.$isOpen ? 'block' : 'none')};
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const SubMenuItem = styled(NavItem)`
+  font-size: 16px;
+  padding: 10px 5px;
+  color: rgba(255, 255, 255, 0.7);
+
+  &:hover {
+    color: var(--primary-color);
+  }
+
+  svg {
+    font-size: 18px;
+  }
+`;
+
 const Wrapper = styled.div`
   border-top: 0.5px solid rgba(255, 255, 255, 0.2);
   padding: 20px 0;
@@ -133,6 +184,7 @@ const LeftSidebar = () => {
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
   const location = useLocation();
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
   // Get notification count (only fetch if user is authenticated)
   const { unreadCount: notificationCount, fetchUnreadCount } = useNotifications(
@@ -145,6 +197,13 @@ const LeftSidebar = () => {
       fetchUnreadCount();
     }
   }, [location.pathname, currentUser, fetchUnreadCount]);
+
+  // Auto-open dashboard submenu when on dashboard pages
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard')) {
+      setIsDashboardOpen(true);
+    }
+  }, [location.pathname]);
 
   // Prevent navigation for guests and open login modal instead
   const guardClick = (e) => {
@@ -217,14 +276,60 @@ const LeftSidebar = () => {
           </NavItem>
         </Link>
 
-        {/* Admin Dashboard Menu */}
+        {/* Admin Dashboard Menu with Submenu */}
         {isAdmin && (
-          <Link to='/dashboard'>
-            <NavItem>
-              <MdDashboard />
-              <span>Dashboard</span>
-            </NavItem>
-          </Link>
+          <DashboardMenu>
+            <Link to='/dashboard'>
+              <DashboardNavItem>
+                <MdDashboard />
+                <span>Dashboard</span>
+                <ArrowIcon
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setIsDashboardOpen(!isDashboardOpen);
+                  }}
+                >
+                  {isDashboardOpen ? (
+                    <MdKeyboardArrowUp />
+                  ) : (
+                    <MdKeyboardArrowDown />
+                  )}
+                </ArrowIcon>
+              </DashboardNavItem>
+            </Link>
+            <SubMenu $isOpen={isDashboardOpen}>
+              <Link to='/dashboard/users'>
+                <SubMenuItem>
+                  <MdPeople />
+                  <span>Users</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/posts'>
+                <SubMenuItem>
+                  <MdVideoLibrary />
+                  <span>Posts</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/articles'>
+                <SubMenuItem>
+                  <HiOutlineNewspaper />
+                  <span>Articles</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/films'>
+                <SubMenuItem>
+                  <MdMovie />
+                  <span>Films</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/settings'>
+                <SubMenuItem>
+                  <MdSettings />
+                  <span>Settings</span>
+                </SubMenuItem>
+              </Link>
+            </SubMenu>
+          </DashboardMenu>
         )}
       </Nav>
       {!currentUser && (

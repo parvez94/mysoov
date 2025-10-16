@@ -382,11 +382,33 @@ const Video = () => {
     );
   }
 
+  // Helper function to get video URL (handle both object and string formats)
+  const getVideoUrl = () => {
+    if (!currentVideo?.videoUrl) return null;
+
+    // If videoUrl is a string, return it directly
+    if (typeof currentVideo.videoUrl === 'string') {
+      return currentVideo.videoUrl;
+    }
+
+    // If videoUrl is an object, return the url property
+    if (
+      typeof currentVideo.videoUrl === 'object' &&
+      currentVideo.videoUrl.url
+    ) {
+      return currentVideo.videoUrl.url;
+    }
+
+    return null;
+  };
+
   // Check if video is from YouTube
+  const videoUrl = getVideoUrl();
   const isYouTubeVideo =
     currentVideo?.videoUrl?.provider === 'youtube' ||
     currentVideo?.storageProvider === 'youtube' ||
-    currentVideo?.videoUrl?.url?.includes('youtube.com/embed');
+    videoUrl?.includes('youtube.com/embed') ||
+    videoUrl?.includes('youtube.com/watch');
 
   // Add parameters to YouTube URL to remove overlays
   const getCleanYouTubeUrl = (url) => {
@@ -409,20 +431,32 @@ const Video = () => {
     <Container>
       <Main>
         <VideoWrapper $isImage={currentVideo?.mediaType === 'image'}>
-          {currentVideo?.mediaType === 'image' ? (
+          {!videoUrl ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: 'var(--secondary-color)',
+              }}
+            >
+              Video URL not found
+            </div>
+          ) : currentVideo?.mediaType === 'image' ? (
             <ImagePlayer
-              src={currentVideo?.videoUrl.url}
+              src={videoUrl}
               alt={currentVideo?.caption || 'Post image'}
             />
           ) : isYouTubeVideo ? (
             <YouTubePlayer
-              src={getCleanYouTubeUrl(currentVideo?.videoUrl.url)}
+              src={getCleanYouTubeUrl(videoUrl)}
               title={currentVideo?.caption || 'Video'}
               allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
               allowFullScreen
             />
           ) : (
-            <VideoPlayer src={currentVideo?.videoUrl.url} controls />
+            <VideoPlayer src={videoUrl} controls />
           )}
         </VideoWrapper>
         <ContentWrapper>

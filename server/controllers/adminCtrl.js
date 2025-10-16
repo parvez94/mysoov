@@ -32,7 +32,10 @@ export const getAllUsers = async (req, res, next) => {
 // Get all videos
 export const getAllVideos = async (req, res, next) => {
   try {
-    const videos = await Video.find().sort({ createdAt: -1 });
+    // Exclude films from admin dashboard posts
+    const videos = await Video.find({ isFilm: { $ne: true } }).sort({
+      createdAt: -1,
+    });
 
     // Manually populate user data since userId is stored as String, not ObjectId
     const videosWithUserData = await Promise.all(

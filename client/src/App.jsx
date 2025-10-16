@@ -17,6 +17,7 @@ import DashboardUsers from './pages/dashboard/DashboardUsers';
 import DashboardPosts from './pages/dashboard/DashboardPosts';
 import DashboardSettings from './pages/dashboard/DashboardSettings';
 import DashboardArticles from './pages/dashboard/DashboardArticles';
+import DashboardFilms from './pages/dashboard/DashboardFilms';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import ArticleEditor from './pages/ArticleEditor';
@@ -67,6 +68,10 @@ const router = createBrowserRouter([
       {
         path: 'dashboard/articles',
         element: <DashboardArticles />,
+      },
+      {
+        path: 'dashboard/films',
+        element: <DashboardFilms />,
       },
       {
         path: 'blog',

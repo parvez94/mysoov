@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
-import { MdPeople, MdVideoLibrary, MdSettings } from 'react-icons/md';
+import { MdPeople, MdVideoLibrary } from 'react-icons/md';
 import { HiOutlineNewspaper } from 'react-icons/hi2';
 import { Spinner } from '../../components/index';
 
@@ -38,7 +38,7 @@ const StatsGrid = styled.div`
   margin-bottom: 40px;
 `;
 
-const StatCard = styled(Link)`
+const StatCard = styled.div`
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -46,16 +46,6 @@ const StatCard = styled(Link)`
   display: flex;
   align-items: center;
   gap: 20px;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
 `;
 
 const IconWrapper = styled.div`
@@ -184,7 +174,7 @@ const Dashboard = () => {
       </Subtitle>
 
       <StatsGrid>
-        <StatCard to='/dashboard/users'>
+        <StatCard>
           <IconWrapper $color='linear-gradient(135deg, #667eea 0%, #764ba2 100%)'>
             <MdPeople />
           </IconWrapper>
@@ -194,7 +184,7 @@ const Dashboard = () => {
           </StatInfo>
         </StatCard>
 
-        <StatCard to='/dashboard/posts'>
+        <StatCard>
           <IconWrapper $color='linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'>
             <MdVideoLibrary />
           </IconWrapper>
@@ -204,7 +194,7 @@ const Dashboard = () => {
           </StatInfo>
         </StatCard>
 
-        <StatCard to='/dashboard/articles'>
+        <StatCard>
           <IconWrapper $color='linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'>
             <HiOutlineNewspaper />
           </IconWrapper>
@@ -213,28 +203,19 @@ const Dashboard = () => {
             <StatValue>{formatNumber(stats.totalArticles || 0)}</StatValue>
           </StatInfo>
         </StatCard>
-
-        <StatCard to='/dashboard/settings'>
-          <IconWrapper $color='linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'>
-            <MdSettings />
-          </IconWrapper>
-          <StatInfo>
-            <StatLabel>Admin Settings</StatLabel>
-            <StatValue>→</StatValue>
-          </StatInfo>
-        </StatCard>
       </StatsGrid>
 
       <Section>
         <SectionTitle>Quick Actions</SectionTitle>
         <InfoText>
-          Click on the cards above to navigate to different sections:
-          <br />• <strong>Total Users</strong> - Manage all registered users (
+          Use the dashboard submenu in the sidebar to navigate to different
+          sections:
+          <br />• <strong>Users</strong> - Manage all registered users (
           {formatNumber(stats.totalUsers || 0)})
-          <br />• <strong>Total Posts</strong> - View and manage all posts
-          (videos & images) ({formatNumber(stats.totalVideos || 0)})
-          <br />• <strong>Total Articles</strong> - View and manage all blog
-          articles ({formatNumber(stats.totalArticles || 0)})
+          <br />• <strong>Posts</strong> - View and manage all posts (videos &
+          images) ({formatNumber(stats.totalVideos || 0)})
+          <br />• <strong>Articles</strong> - View and manage all blog articles
+          ({formatNumber(stats.totalArticles || 0)})
           <br />• <strong>Admin Settings</strong> - Configure admin permissions
         </InfoText>
       </Section>

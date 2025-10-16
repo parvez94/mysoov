@@ -160,6 +160,7 @@ export const randomVideos = async (req, res, next) => {
     pipeline.push({
       $match: {
         privacy: 'Public',
+        isFilm: { $ne: true }, // Exclude films from explore
         $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
       },
     });
@@ -217,6 +218,7 @@ export const trend = async (req, res, next) => {
     // Only show public videos without access codes in trending
     const videos = await Video.find({
       privacy: 'Public',
+      isFilm: { $ne: true }, // Exclude films from trending
       $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
     }).sort({ views: -1 });
     res.status(200).json(videos);
@@ -241,6 +243,7 @@ export const videoFeeds = async (req, res, next) => {
     const currentUserPosts = await Video.find({
       userId: req.user.id,
       privacy: 'Public',
+      isFilm: { $ne: true }, // Exclude films from profile
       $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
     });
 
@@ -258,6 +261,7 @@ export const videoFeeds = async (req, res, next) => {
           return await Video.find({
             userId: channelId,
             privacy: 'Public',
+            isFilm: { $ne: true }, // Exclude films from feed
             $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
           });
         })
@@ -273,6 +277,7 @@ export const videoFeeds = async (req, res, next) => {
         {
           $match: {
             privacy: 'Public',
+            isFilm: { $ne: true }, // Exclude films from fallback feed
             $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
           },
         },

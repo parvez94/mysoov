@@ -275,7 +275,21 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
         <HomeText caption={caption} />
         <VideoWrapper>
           <VideoContainer>
-            {mediaType === 'image' ? (
+            {!videoUrl || !videoUrl.url ? (
+              <div
+                style={{
+                  padding: '20px',
+                  background: 'rgba(255, 0, 0, 0.1)',
+                  borderRadius: '10px',
+                  color: '#ff4444',
+                  textAlign: 'center',
+                }}
+              >
+                ⚠️ Video URL is missing or corrupted
+                <br />
+                <small>Video ID: {_id}</small>
+              </div>
+            ) : mediaType === 'image' ? (
               <Image src={videoUrl.url} alt={caption || 'Post image'} />
             ) : isYouTubeVideo ? (
               <YouTubeEmbed
