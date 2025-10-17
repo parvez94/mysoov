@@ -302,6 +302,101 @@ mongoose.connection.on('disconnected', () => {
   isConnected = false;
 });
 
+// Route to serve video page with Open Graph meta tags (for social media crawlers like Facebook)
+app.get('/video/:id', async (req, res) => {
+  try {
+    // Ensure DB is connected
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
+    const Video = (await import('./models/Video.js')).default;
+    const User = (await import('./models/User.js')).default;
+
+    const video = await Video.findById(req.params.id);
+
+    if (!video || video.privacy === 'Private') {
+      return res.status(404).send('Video not found');
+    }
+
+    // Fetch user info for channel avatar
+    const user = await User.findById(video.userId);
+
+    // Extract video data
+    const videoUrl =
+      typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
+
+    const thumbnailUrl =
+      user?.displayImage ||
+      video.thumbnail ||
+      'https://via.placeholder.com/1200x630?text=Mysoov';
+
+    const videoTitle = video.caption || 'Check out this video on Mysoov!';
+    const videoDescription =
+      video.caption ||
+      'Amazing content on Mysoov - Connect, share, and discover videos!';
+
+    const shareUrl = `${
+      process.env.FRONTEND_URL || 'https://mysoov.tv'
+    }/video/${video._id}`;
+
+    // Generate HTML with Open Graph meta tags
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="${videoDescription.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    
+    <!-- Open Graph tags for social sharing -->
+    <meta property="og:title" content="${videoTitle.replace(/"/g, '&quot;')}" />
+    <meta property="og:description" content="${videoDescription.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    <meta property="og:image" content="${thumbnailUrl}" />
+    <meta property="og:url" content="${shareUrl}" />
+    <meta property="og:type" content="video.other" />
+    <meta property="og:site_name" content="Mysoov" />
+    ${videoUrl ? `<meta property="og:video" content="${videoUrl}" />` : ''}
+    <meta property="og:video:type" content="video/mp4" />
+    <meta property="og:video:width" content="1280" />
+    <meta property="og:video:height" content="720" />
+    
+    <!-- Twitter Card tags -->
+    <meta name="twitter:title" content="${videoTitle.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    <meta name="twitter:description" content="${videoDescription.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    <meta name="twitter:image" content="${thumbnailUrl}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    
+    <title>${videoTitle} - Mysoov</title>
+    <script>
+        // Redirect to the actual app after meta tags are read
+        window.location.href = '${shareUrl}';
+    </script>
+</head>
+<body>
+    <p>Redirecting to video...</p>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlContent);
+  } catch (error) {
+    console.error('Error rendering video page:', error);
+    res.status(500).send('Error loading video');
+  }
+});
+
 // Graceful shutdown
 process.on('SIGINT', async () => {
   try {

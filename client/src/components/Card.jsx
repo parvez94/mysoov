@@ -244,7 +244,39 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
 
   const handleShare = () =>
     guardOr(() => {
-      /* TODO: share flow */
+      // Generate the video URL to share - use backend URL so Facebook can crawl meta tags
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5100';
+      const videoUrl = `${apiUrl}/video/${_id}`;
+
+      // If Facebook SDK is available, use the Share Dialog
+      if (window.FB) {
+        FB.ui(
+          {
+            method: 'share',
+            href: videoUrl,
+            hashtag: '#Mysoov',
+            quote: caption || 'Check out this amazing content on Mysoov!',
+          },
+          function (response) {
+            if (response) {
+              console.log('Video shared on Facebook successfully!');
+            }
+          }
+        );
+      } else {
+        // Fallback: Open Facebook share dialog in a new window
+        const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+          videoUrl
+        )}&quote=${encodeURIComponent(
+          caption || 'Check out this amazing content on Mysoov!'
+        )}`;
+
+        window.open(
+          facebookShareUrl,
+          'facebook-share-dialog',
+          'width=800,height=600'
+        );
+      }
     });
 
   const isOwnVideo =

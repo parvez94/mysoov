@@ -292,6 +292,88 @@ const Video = () => {
     fetchData();
   }, [path, dispatch]);
 
+  // Update Open Graph meta tags for social sharing
+  useEffect(() => {
+    if (!currentVideo) return;
+
+    const updateMetaTags = () => {
+      const videoUrl =
+        typeof currentVideo.videoUrl === 'string'
+          ? currentVideo.videoUrl
+          : currentVideo.videoUrl?.url;
+
+      const thumbnailUrl =
+        channel?.avatar ||
+        currentVideo?.thumbnail ||
+        'https://via.placeholder.com/1200x630?text=Mysoov';
+      const videoTitle =
+        currentVideo?.caption || 'Check out this video on Mysoov!';
+      const videoDescription =
+        currentVideo?.caption ||
+        'Amazing content on Mysoov - Connect, share, and discover videos!';
+      const shareUrl = `${window.location.origin}/video/${currentVideo._id}`;
+
+      // Helper function to set or update meta tag
+      const setMetaTag = (property, content) => {
+        let tag = document.querySelector(`meta[property="${property}"]`);
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('property', property);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      // Set Open Graph tags
+      setMetaTag('og:title', videoTitle);
+      setMetaTag('og:description', videoDescription);
+      setMetaTag('og:image', thumbnailUrl);
+      setMetaTag('og:url', shareUrl);
+      setMetaTag('og:type', 'video.other');
+      setMetaTag('og:site_name', 'Mysoov');
+
+      // Set video-specific tags if it's a video
+      if (videoUrl && !videoUrl.includes('youtube.com')) {
+        setMetaTag('og:video', videoUrl);
+        setMetaTag('og:video:type', 'video/mp4');
+        setMetaTag('og:video:width', '1280');
+        setMetaTag('og:video:height', '720');
+      }
+
+      // Also set Twitter tags for better social sharing
+      let twitterTitle = document.querySelector('meta[name="twitter:title"]');
+      if (!twitterTitle) {
+        twitterTitle = document.createElement('meta');
+        twitterTitle.setAttribute('name', 'twitter:title');
+        document.head.appendChild(twitterTitle);
+      }
+      twitterTitle.setAttribute('content', videoTitle);
+
+      let twitterDescription = document.querySelector(
+        'meta[name="twitter:description"]'
+      );
+      if (!twitterDescription) {
+        twitterDescription = document.createElement('meta');
+        twitterDescription.setAttribute('name', 'twitter:description');
+        document.head.appendChild(twitterDescription);
+      }
+      twitterDescription.setAttribute('content', videoDescription);
+
+      let twitterImage = document.querySelector('meta[name="twitter:image"]');
+      if (!twitterImage) {
+        twitterImage = document.createElement('meta');
+        twitterImage.setAttribute('name', 'twitter:image');
+        document.head.appendChild(twitterImage);
+      }
+      twitterImage.setAttribute('content', thumbnailUrl);
+
+      // Update page title
+      document.title = `${videoTitle} - Mysoov`;
+    };
+
+    updateMetaTags();
+  }, [currentVideo, channel]);
+
   const guardOr = (fn) => {
     if (!currentUser) {
       dispatch(openModal());
@@ -312,7 +394,41 @@ const Video = () => {
 
   const handleShare = () =>
     guardOr(() => {
-      /* TODO: share flow */
+      // Generate the video URL to share - use backend URL so Facebook can crawl meta tags
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5100';
+      const shareUrl = `${apiUrl}/video/${currentVideo._id}`;
+
+      // If Facebook SDK is available, use the Share Dialog
+      if (window.FB) {
+        FB.ui(
+          {
+            method: 'share',
+            href: shareUrl,
+            hashtag: '#Mysoov',
+            quote:
+              currentVideo?.caption ||
+              'Check out this amazing content on Mysoov!',
+          },
+          function (response) {
+            if (response) {
+              console.log('Video shared on Facebook successfully!');
+            }
+          }
+        );
+      } else {
+        // Fallback: Open Facebook share dialog in a new window
+        const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+          shareUrl
+        )}&quote=${encodeURIComponent(
+          currentVideo?.caption || 'Check out this amazing content on Mysoov!'
+        )}`;
+
+        window.open(
+          facebookShareUrl,
+          'facebook-share-dialog',
+          'width=800,height=600'
+        );
+      }
     });
   const handleBookmark = () =>
     guardOr(() => {
