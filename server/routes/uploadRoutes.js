@@ -170,6 +170,44 @@ router.options('/upload/image', (req, res) => {
   res.status(200).end();
 });
 
+// Generate Cloudinary signature for client-side uploads
+router.post('/upload/signature', verifyToken, async (req, res) => {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const folder = req.body.folder || 'videos';
+    const resourceType = req.body.resourceType || 'video';
+
+    // Get user's upload limit based on subscription
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Generate signature for Cloudinary upload
+    const paramsToSign = {
+      timestamp: timestamp,
+      folder: folder,
+      resource_type: resourceType,
+    };
+
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      process.env.CLOUD_SECRET
+    );
+
+    res.json({
+      signature,
+      timestamp,
+      cloudName: process.env.CLOUD_NAME,
+      apiKey: process.env.CLOUD_API,
+      folder,
+    });
+  } catch (err) {
+    console.error('Signature generation error:', err);
+    return res.status(500).json({ msg: 'Internal server error' });
+  }
+});
+
 // Upload profile image
 router.post('/upload/image', verifyToken, async (req, res) => {
   try {

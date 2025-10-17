@@ -17,5 +17,11 @@
         "Access-Control-Allow-Credentials": "true"
       }
     }
-  ]
+  ],
+  "functions": {
+    "index.js": {
+      "maxDuration": 60,
+      "memory": 3008
+    }
+  }
 }

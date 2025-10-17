@@ -372,8 +372,6 @@ const Upload = () => {
   };
 
   const handleUpload = async (e) => {
-    const uploadUrl = `${import.meta.env.VITE_API_URL}/api/v1/upload`;
-
     try {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -390,9 +388,6 @@ const Upload = () => {
       setMediaType(detectedMediaType);
       setFileName(file.name);
 
-      const formData = new FormData();
-      formData.append(detectedMediaType, file);
-
       setUploading(true);
       setUploadProgress(0);
       setStatus('uploading');
@@ -401,8 +396,33 @@ const Upload = () => {
       const controller = new AbortController();
       controllerRef.current = controller;
 
-      const res = await axios.post(uploadUrl, formData, {
-        withCredentials: true, // send cookies for auth
+      // Step 1: Get Cloudinary signature from server
+      const signatureResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload/signature`,
+        {
+          folder: detectedMediaType === 'video' ? 'videos' : 'images',
+          resourceType: detectedMediaType,
+        },
+        {
+          withCredentials: true,
+          signal: controller.signal,
+        }
+      );
+
+      const { signature, timestamp, cloudName, apiKey, folder } =
+        signatureResponse.data;
+
+      // Step 2: Upload directly to Cloudinary
+      const cloudinaryFormData = new FormData();
+      cloudinaryFormData.append('file', file);
+      cloudinaryFormData.append('signature', signature);
+      cloudinaryFormData.append('timestamp', timestamp);
+      cloudinaryFormData.append('api_key', apiKey);
+      cloudinaryFormData.append('folder', folder);
+
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${detectedMediaType}/upload`;
+
+      const res = await axios.post(cloudinaryUrl, cloudinaryFormData, {
         signal: controller.signal,
         onUploadProgress: (evt) => {
           if (evt.total) {
@@ -416,7 +436,12 @@ const Upload = () => {
         },
       });
 
-      const data = await res.data; // { public_id, url }
+      const data = {
+        public_id: res.data.public_id,
+        url: res.data.secure_url,
+        provider: 'cloudinary',
+      };
+
       setVideoFile(data);
       setStatus('success');
       setUploading(false);
@@ -440,7 +465,11 @@ const Upload = () => {
         setStatus('error');
       } else {
         setStatus('error');
-        alert(err?.response?.data?.msg || 'Upload failed. Please try again.');
+        alert(
+          err?.response?.data?.msg ||
+            err?.response?.data?.error?.message ||
+            'Upload failed. Please try again.'
+        );
       }
       setUploading(false);
       controllerRef.current = null;

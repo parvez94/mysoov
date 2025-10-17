@@ -871,19 +871,31 @@ const DashboardFilms = () => {
       setError(null);
       setUploadProgress(0);
 
-      const formData = new FormData();
-      formData.append('video', uploadFile); // Changed from 'file' to 'video'
-      formData.append('caption', uploadCaption);
-      formData.append('filmDirectoryId', selectedDirectory._id);
-
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/upload`,
-        formData,
+      // Step 1: Get Cloudinary signature from server
+      const signatureResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload/signature`,
         {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+          folder: 'videos',
+          resourceType: 'video',
+        },
+        { withCredentials: true }
+      );
+
+      const { signature, timestamp, cloudName, apiKey, folder } =
+        signatureResponse.data;
+
+      // Step 2: Upload directly to Cloudinary
+      const cloudinaryFormData = new FormData();
+      cloudinaryFormData.append('file', uploadFile);
+      cloudinaryFormData.append('signature', signature);
+      cloudinaryFormData.append('timestamp', timestamp);
+      cloudinaryFormData.append('api_key', apiKey);
+      cloudinaryFormData.append('folder', folder);
+
+      const cloudinaryResponse = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
+        cloudinaryFormData,
+        {
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
@@ -893,13 +905,19 @@ const DashboardFilms = () => {
         }
       );
 
-      // Now create the video entry with the uploaded file info
+      const uploadResult = {
+        url: cloudinaryResponse.data.secure_url,
+        public_id: cloudinaryResponse.data.public_id,
+        provider: 'cloudinary',
+      };
+
+      // Step 3: Create the video entry with the uploaded file info
       const videoData = {
         caption: uploadCaption || 'Untitled Film',
-        videoUrl: response.data, // This is the full response object with { url, public_id, provider }
+        videoUrl: uploadResult, // This is the full response object with { url, public_id, provider }
         mediaType: 'video',
         privacy: 'Private', // Films are private by default (capitalized)
-        storageProvider: response.data.provider || 'cloudinary',
+        storageProvider: uploadResult.provider || 'cloudinary',
         isFilm: true, // Mark as film to exclude from regular feeds
         filmDirectoryId: selectedDirectory._id, // Link to directory
       };
@@ -912,7 +930,7 @@ const DashboardFilms = () => {
 
       const videoId = videoResponse.data.video?._id;
 
-      // Assign the video to the film directory
+      // Step 4: Assign the video to the film directory
       if (videoId) {
         await axios.post(
           `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${
@@ -945,7 +963,11 @@ const DashboardFilms = () => {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Error uploading film:', err);
-      setError(err.response?.data?.message || 'Failed to upload film');
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error?.message ||
+          'Failed to upload film'
+      );
     } finally {
       setIsUploading(false);
     }
