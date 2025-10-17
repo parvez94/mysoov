@@ -184,10 +184,10 @@ router.post('/upload/signature', verifyToken, async (req, res) => {
     }
 
     // Generate signature for Cloudinary upload
+    // Only sign parameters that will be sent to Cloudinary
     const paramsToSign = {
       timestamp: timestamp,
       folder: folder,
-      resource_type: resourceType,
     };
 
     const signature = cloudinary.utils.api_sign_request(
