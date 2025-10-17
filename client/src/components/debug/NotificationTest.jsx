@@ -103,9 +103,6 @@ const NotificationTest = () => {
         { withCredentials: true }
       );
 
-      console.log('🔔 Test notification response:', response.data);
-      console.log('🔔 Notification object:', response.data.notification);
-
       setResult({
         type: 'success',
         message: `Test notification sent successfully! Notification ID: ${

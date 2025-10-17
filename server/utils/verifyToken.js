@@ -6,17 +6,12 @@ export const verifyToken = (req, res, next) => {
 
   if (!token) {
     // Log for debugging in production
-    if (process.env.NODE_ENV === 'production') {
-      console.log('No token found. Cookies:', Object.keys(req.cookies));
-      console.log('Cookie header:', req.headers.cookie);
-    }
+    if (process.env.NODE_ENV === 'production') {    }
     return next(createError(401, 'Not authenticated.'));
   }
 
   jwt.verify(token, process.env.SECRET_KEY, (err, user) => {
-    if (err) {
-      console.log('Token verification failed:', err.message);
-      return next(createError(403, 'Token not valid.'));
+    if (err) {      return next(createError(403, 'Token not valid.'));
     }
 
     req.user = user;

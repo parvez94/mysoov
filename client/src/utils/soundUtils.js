@@ -41,39 +41,25 @@ class SoundManager {
     const initAudio = async (event) => {
       if (!this.audioContext) {
         try {
-          console.log(
-            '🔊 Creating AudioContext from user interaction:',
-            event?.type
-          );
           this.audioContext = new (window.AudioContext ||
             window.webkitAudioContext)();
 
-          console.log(
-            '🔊 AudioContext state after creation:',
-            this.audioContext.state
-          );
-
           // Resume audio context if it's suspended (required by some browsers)
           if (this.audioContext.state === 'suspended') {
-            console.log('🔊 Attempting to resume suspended AudioContext...');
             await this.audioContext.resume();
             this.isAudioContextReady = true;
-            console.log('🔊 AudioContext resumed and ready');
           } else {
             this.isAudioContextReady = true;
-            console.log('🔊 AudioContext created and ready');
           }
         } catch (error) {
-          console.error('🔊 Error creating AudioContext:', error);
+          // Silent fail
         }
       } else if (this.audioContext.state === 'suspended') {
         try {
-          console.log('🔊 Resuming existing suspended AudioContext...');
           await this.audioContext.resume();
           this.isAudioContextReady = true;
-          console.log('🔊 AudioContext resumed successfully');
         } catch (error) {
-          console.error('🔊 Error resuming AudioContext:', error);
+          // Silent fail
         }
       }
     };
@@ -103,19 +89,16 @@ class SoundManager {
     // Create a pleasant notification sound
     this.sounds.notification = () => {
       if (!this.isEnabled) {
-        console.log('🔊 Sound is disabled');
         return;
       }
 
       if (!this.isAudioContextReady || !this.audioContext) {
-        console.log('🔊 Audio context not ready');
         return;
       }
 
       try {
         // Resume context if suspended
         if (this.audioContext.state === 'suspended') {
-          console.log('🔊 Resuming suspended audio context');
           this.audioContext.resume();
         }
 
@@ -145,7 +128,7 @@ class SoundManager {
         oscillator.start(this.audioContext.currentTime);
         oscillator.stop(this.audioContext.currentTime + 0.3);
       } catch (error) {
-        console.error('🔊 Error creating notification sound:', error);
+        // Silent fail
       }
     };
   }
@@ -193,25 +176,16 @@ class SoundManager {
 
   async playNotificationSound() {
     try {
-      console.log('🔊 Attempting to play notification sound', {
-        isEnabled: this.isEnabled,
-        isAudioContextReady: this.isAudioContextReady,
-        audioContextState: this.audioContext?.state,
-        hasSound: !!this.sounds.notification,
-      });
-
       // Try to initialize audio context if not ready
       if (!this.isAudioContextReady) {
-        console.log('🔊 Audio context not ready, initializing now...');
         await this.initializeAudioContextNow();
       }
 
       if (this.sounds.notification) {
         this.sounds.notification();
-        console.log('🔊 Notification sound played successfully');
       }
     } catch (error) {
-      console.error('🔊 Error playing notification sound:', error);
+      // Silent fail
     }
   }
 
@@ -238,7 +212,6 @@ class SoundManager {
   async initializeAudioContextNow() {
     if (!this.audioContext) {
       try {
-        console.log('🔊 Creating AudioContext now');
         this.audioContext = new (window.AudioContext ||
           window.webkitAudioContext)();
 
@@ -246,21 +219,18 @@ class SoundManager {
         if (this.audioContext.state === 'suspended') {
           await this.audioContext.resume();
           this.isAudioContextReady = true;
-          console.log('🔊 AudioContext resumed and ready (async)');
         } else {
           this.isAudioContextReady = true;
-          console.log('🔊 AudioContext created and ready (async)');
         }
       } catch (error) {
-        console.error('🔊 Error creating AudioContext:', error);
+        // Silent fail
       }
     } else if (this.audioContext.state === 'suspended') {
       try {
         await this.audioContext.resume();
         this.isAudioContextReady = true;
-        console.log('🔊 Existing AudioContext resumed');
       } catch (error) {
-        console.error('🔊 Error resuming AudioContext:', error);
+        // Silent fail
       }
     }
   }

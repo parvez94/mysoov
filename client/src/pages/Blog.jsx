@@ -184,7 +184,7 @@ const Blog = () => {
       );
       setArticles(response.data);
     } catch (error) {
-      console.error('Failed to fetch articles:', error);
+      // Silent fail
     } finally {
       setLoading(false);
     }

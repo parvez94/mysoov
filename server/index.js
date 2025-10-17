@@ -273,16 +273,10 @@ const connectDB = async () => {
       await mongoose.connect(mongoUrl, connectionOptions);
 
       isConnected = true;
-      connectionPromise = null;
-
-      console.log('✅ MongoDB connected successfully');
-      return;
+      connectionPromise = null;      return;
     } catch (err) {
       isConnected = false;
-      connectionPromise = null;
-
-      console.error('❌ MongoDB connection error:', err.message);
-      throw new Error(`Failed to connect to database: ${err.message}`);
+      connectionPromise = null;      throw new Error(`Failed to connect to database: ${err.message}`);
     }
   })();
 
@@ -391,9 +385,7 @@ app.get('/video/:id', async (req, res) => {
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(htmlContent);
-  } catch (error) {
-    console.error('Error rendering video page:', error);
-    res.status(500).send('Error loading video');
+  } catch (error) {    res.status(500).send('Error loading video');
   }
 });
 
@@ -433,15 +425,9 @@ if (process.env.NODE_ENV !== 'production') {
     try {
       // Connect to database BEFORE starting the server
       await connectDB();
-      console.log('✅ Database connected successfully');
-
       // Start listening only after DB is connected
-      app.listen(port, () => {
-        console.log(`✅ Server running on http://localhost:${port}`);
-      });
-    } catch (error) {
-      console.error('❌ Failed to start server:', error.message);
-      process.exit(1);
+      app.listen(port, () => {      });
+    } catch (error) {      process.exit(1);
     }
   };
 
@@ -450,26 +436,8 @@ if (process.env.NODE_ENV !== 'production') {
   // For production (Vercel), attempt initial connection but don't fail
   // The middleware will handle connection on first request if needed
   connectDB()
-    .then(() => {
-      console.log('✅ Database connected successfully (production)');
-      console.log('Environment check:', {
-        hasMongoUrl: !!process.env.MONGO_URL,
-        hasSecretKey: !!process.env.SECRET_KEY,
-        hasCloudinary: !!(process.env.CLOUD_NAME && process.env.CLOUD_API),
-        nodeEnv: process.env.NODE_ENV,
-      });
-    })
-    .catch((error) => {
-      console.warn(
-        '⚠️ Initial database connection failed, will retry on first request:',
-        error.message
-      );
-      console.log('Environment variables check:', {
-        hasMongoUrl: !!process.env.MONGO_URL,
-        hasSecretKey: !!process.env.SECRET_KEY,
-        nodeEnv: process.env.NODE_ENV,
-      });
-      // Don't exit - let the middleware handle connection on first request
+    .then(() => {    })
+    .catch((error) => {      // Don't exit - let the middleware handle connection on first request
     });
 }
 

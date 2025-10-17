@@ -294,9 +294,7 @@ const fetchPricingPlans = async () => {
         },
       };
     }
-  } catch (err) {
-    console.error('Failed to fetch pricing plans from API:', err);
-  }
+  } catch (err) {  }
 
   // Return defaults if API fails
   return {
@@ -336,11 +334,7 @@ const PricingModal = ({ isOpen, onClose, errorInfo }) => {
 
   // Listen for custom event when admin updates pricing (for real-time updates)
   useEffect(() => {
-    const handlePricingUpdate = async () => {
-      console.log(
-        'PricingModal - Received pricingUpdated event, refetching...'
-      );
-      const { plans, config } = await fetchPricingPlans();
+    const handlePricingUpdate = async () => {      const { plans, config } = await fetchPricingPlans();
       setPricingPlans(plans);
       setPricingConfig(config);
     };

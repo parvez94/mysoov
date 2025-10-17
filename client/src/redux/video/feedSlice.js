@@ -36,24 +36,6 @@ export const fetchVideos = createAsyncThunk(
 
       const data = await response.json();
 
-      // Debug: Log YouTube videos
-      const youtubeVideos = data.filter(
-        (v) =>
-          v?.videoUrl?.url?.includes('youtube.com') ||
-          v?.storageProvider === 'youtube'
-      );
-      if (youtubeVideos.length > 0) {
-        console.log(
-          'API returned YouTube videos:',
-          youtubeVideos.map((v) => ({
-            id: v._id,
-            storageProvider: v.storageProvider,
-            'videoUrl.provider': v.videoUrl?.provider,
-            url: v.videoUrl?.url,
-          }))
-        );
-      }
-
       return data;
     } catch (err) {
       throw err;

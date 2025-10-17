@@ -328,7 +328,6 @@ const SearchResults = () => {
           setFilmDirectory(filmResponse.data.directory);
         } catch (filmErr) {
           // If no film directory found, search for regular videos
-          console.log('No film directory found, searching videos...');
         }
 
         // Also search for regular videos
@@ -342,10 +341,9 @@ const SearchResults = () => {
           );
           setVideos(videoResponse.data);
         } catch (videoErr) {
-          console.log('No videos found');
+          // No videos found
         }
       } catch (err) {
-        console.error('Search error:', err);
         setError(
           err.response?.data?.message || 'Failed to search. Please try again.'
         );
@@ -388,7 +386,6 @@ const SearchResults = () => {
         navigate('/');
       }, 1500);
     } catch (err) {
-      console.error('Verify error:', err);
       setError(
         err.response?.data?.message || 'Invalid access code. Please try again.'
       );

@@ -263,15 +263,9 @@ const DashboardUsers = () => {
         {
           withCredentials: true,
         }
-      );
-      console.log('Dashboard users response:', response.data);
-      console.log('Total users found:', response.data.users?.length || 0);
-      setUsers(response.data.users || []);
+      );      setUsers(response.data.users || []);
       setFilteredUsers(response.data.users || []);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      console.error('Error details:', err.response?.data);
-      setError(err.response?.data?.message || 'Failed to load users');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to load users');
     } finally {
       setIsLoading(false);
     }

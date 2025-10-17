@@ -665,9 +665,7 @@ const DashboardPosts = () => {
       );
       setVideos(response.data.videos || []);
       setFilteredVideos(response.data.videos || []);
-    } catch (err) {
-      console.error('Error fetching videos:', err);
-      setError(err.response?.data?.message || 'Failed to load posts');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to load posts');
     } finally {
       setIsLoading(false);
     }
@@ -707,9 +705,7 @@ const DashboardPosts = () => {
       // Close the pause reason modal if open
       setPauseReasonModal(null);
       setPauseReason('');
-    } catch (err) {
-      console.error('Error toggling video privacy:', err);
-      setError(err.response?.data?.message || 'Failed to update video status');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to update video status');
     } finally {
       setActionLoading((prev) => ({ ...prev, [videoId]: null }));
     }
@@ -752,9 +748,7 @@ const DashboardPosts = () => {
       setSuccess('Video deleted successfully');
       setTimeout(() => setSuccess(null), 3000);
       setConfirmDelete(null);
-    } catch (err) {
-      console.error('Error deleting video:', err);
-      setError(err.response?.data?.message || 'Failed to delete video');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to delete video');
       setConfirmDelete(null);
     } finally {
       setActionLoading((prev) => ({ ...prev, [videoId]: null }));
@@ -772,9 +766,7 @@ const DashboardPosts = () => {
       );
       setUsers(response.data.users || []);
       setFilteredUsers(response.data.users || []);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      setError(err.response?.data?.message || 'Failed to load users');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to load users');
     } finally {
       setLoadingUsers(false);
     }
@@ -826,9 +818,7 @@ const DashboardPosts = () => {
       setSuccess(response.data.message || 'Video transferred successfully');
       setTimeout(() => setSuccess(null), 3000);
       setTransferModal(null);
-    } catch (err) {
-      console.error('Error transferring video:', err);
-      setError(err.response?.data?.message || 'Failed to transfer video');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to transfer video');
     } finally {
       setActionLoading((prev) => ({ ...prev, [transferModal._id]: null }));
     }
@@ -898,9 +888,7 @@ const DashboardPosts = () => {
       setTimeout(() => setSuccess(null), 3000);
       setReviewModal(null);
       setReviewNotes('');
-    } catch (err) {
-      console.error(`Error ${action}ing review:`, err);
-      setError(err.response?.data?.message || `Failed to ${action} review`);
+    } catch (err) {      setError(err.response?.data?.message || `Failed to ${action} review`);
     } finally {
       setActionLoading((prev) => ({ ...prev, [video._id]: null }));
     }

@@ -16,11 +16,7 @@ export const createNotification = async (
     const senderIdStr = senderId.toString();
 
     // Don't create notification if sender and recipient are the same
-    if (recipientIdStr === senderIdStr) {
-      console.log(
-        '⏭️  Skipping notification: sender and recipient are the same'
-      );
-      return null;
+    if (recipientIdStr === senderIdStr) {      return null;
     }
 
     const notification = new Notification({
@@ -33,8 +29,6 @@ export const createNotification = async (
     });
 
     await notification.save();
-    console.log('✅ Notification saved to database:', notification._id);
-
     // Populate sender information before sending
     await notification.populate('sender', 'username displayName displayImage');
 
@@ -42,15 +36,8 @@ export const createNotification = async (
     if (relatedVideo) {
       await notification.populate('relatedVideo', 'title thumbnail');
     }
-
-    console.log(
-      '✅ Notification saved successfully (will be fetched on next request)'
-    );
-
     return notification;
-  } catch (error) {
-    console.error('❌ Error creating notification:', error);
-    return null;
+  } catch (error) {    return null;
   }
 };
 

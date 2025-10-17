@@ -391,9 +391,7 @@ const DashboardArticles = () => {
       );
       setArticles(response.data.articles || []);
       setFilteredArticles(response.data.articles || []);
-    } catch (err) {
-      console.error('Failed to fetch articles:', err);
-      // Only show error if it's not a 404 (no articles found is okay)
+    } catch (err) {      // Only show error if it's not a 404 (no articles found is okay)
       if (err.response?.status !== 404) {
         setError('Failed to load articles. Please try again.');
       } else {

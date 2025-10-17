@@ -16,7 +16,6 @@ export const refreshUserData = async (userId) => {
     );
     return response.data;
   } catch (error) {
-    console.error('Failed to refresh user data:', error);
     throw error;
   }
 };

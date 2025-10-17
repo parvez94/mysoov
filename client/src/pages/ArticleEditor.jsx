@@ -243,7 +243,6 @@ const ArticleEditor = () => {
       );
       setFormData(response.data);
     } catch (err) {
-      console.error('Failed to fetch article:', err);
       setError(err.response?.data?.message || 'Failed to load article');
     } finally {
       setLoading(false);

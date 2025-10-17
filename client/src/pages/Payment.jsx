@@ -234,7 +234,7 @@ const loadPricingConfig = () => {
       return JSON.parse(savedConfig);
     }
   } catch (err) {
-    console.error('Failed to load pricing config:', err);
+    // Silent fail
   }
   return {
     supportEmail: 'support@mysoov.com',
@@ -257,7 +257,7 @@ const loadPricingPlans = () => {
       return paidPlans;
     }
   } catch (err) {
-    console.error('Failed to load pricing plans:', err);
+    // Silent fail
   }
   return defaultPricingPlans;
 };

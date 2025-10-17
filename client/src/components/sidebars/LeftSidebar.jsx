@@ -15,7 +15,7 @@ import {
   MdKeyboardArrowUp,
   MdMovie,
 } from 'react-icons/md';
-import { LuUser2 } from 'react-icons/lu';
+import { LuUser } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
 import { HiOutlineNewspaper } from 'react-icons/hi2';
 
@@ -255,14 +255,14 @@ const LeftSidebar = () => {
         {currentUser ? (
           <Link to={`/${currentUser.username}`}>
             <NavItem>
-              <LuUser2 />
+              <LuUser />
               <span>Profile</span>
             </NavItem>
           </Link>
         ) : (
           <Link to='profile' onClick={guardClick}>
             <NavItem>
-              <LuUser2 />
+              <LuUser />
               <span>Profile</span>
             </NavItem>
           </Link>

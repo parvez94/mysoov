@@ -125,16 +125,13 @@ const App = () => {
     const applyBranding = () => {
       try {
         const savedBranding = localStorage.getItem('siteBranding');
-        console.log('🎨 Applying branding...', savedBranding);
 
         if (savedBranding) {
           const branding = JSON.parse(savedBranding);
-          console.log('📦 Branding data:', branding);
 
           // Update document title
           if (branding.siteTitle) {
             document.title = branding.siteTitle;
-            console.log('✅ Updated document title to:', branding.siteTitle);
           }
 
           // Update meta description
@@ -148,13 +145,8 @@ const App = () => {
               document
                 .getElementsByTagName('head')[0]
                 .appendChild(metaDescription);
-              console.log('✅ Created new meta description tag');
             }
             metaDescription.content = branding.metaDescription;
-            console.log(
-              '✅ Updated meta description to:',
-              branding.metaDescription
-            );
           }
 
           // Update favicon
@@ -166,13 +158,10 @@ const App = () => {
             link.rel = 'shortcut icon';
             link.href = branding.favicon;
             document.getElementsByTagName('head')[0].appendChild(link);
-            console.log('✅ Updated favicon to:', branding.favicon);
           }
-        } else {
-          console.log('ℹ️ No saved branding found in localStorage');
         }
       } catch (err) {
-        console.error('❌ Failed to apply branding:', err);
+        // Silent fail
       }
     };
 
@@ -181,7 +170,6 @@ const App = () => {
 
     // Listen for branding updates
     const handleBrandingUpdate = () => {
-      console.log('🔄 Branding update event received');
       applyBranding();
     };
 

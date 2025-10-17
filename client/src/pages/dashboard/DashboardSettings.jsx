@@ -854,7 +854,6 @@ const DashboardSettings = () => {
         );
       }
     } catch (err) {
-      console.error('Failed to fetch pricing plans:', err);
       // If fetch fails, try to load from localStorage
       const savedPlans = localStorage.getItem('pricingPlans');
       if (savedPlans) {
@@ -865,17 +864,13 @@ const DashboardSettings = () => {
           if (free?.maxUploadSize) {
             setFreeUploadSize(free.maxUploadSize);
           }
-        } catch (parseErr) {
-          console.error('Failed to parse saved pricing plans:', parseErr);
-        }
+        } catch (parseErr) {}
       }
       const savedConfig = localStorage.getItem('pricingConfig');
       if (savedConfig) {
         try {
           setPricingConfig(JSON.parse(savedConfig));
-        } catch (parseErr) {
-          console.error('Failed to parse saved pricing config:', parseErr);
-        }
+        } catch (parseErr) {}
       }
     }
   };
@@ -897,7 +892,6 @@ const DashboardSettings = () => {
       );
       setSearchResults(nonAdminUsers);
     } catch (err) {
-      console.error('Search error:', err);
     } finally {
       setSearching(false);
     }
@@ -962,9 +956,7 @@ const DashboardSettings = () => {
         const parsed = JSON.parse(savedBranding);
         setBranding(parsed);
       }
-    } catch (err) {
-      console.error('Failed to fetch branding:', err);
-    }
+    } catch (err) {}
   };
 
   const handleLogoUpload = async (e) => {
@@ -1060,16 +1052,10 @@ const DashboardSettings = () => {
   const handleSaveBranding = async () => {
     try {
       setSavingBranding(true);
-      console.log('💾 Saving branding...', branding);
-
       // Save to localStorage
       localStorage.setItem('siteBranding', JSON.stringify(branding));
-      console.log('✅ Saved to localStorage');
-
       // Dispatch custom event to notify other components
       window.dispatchEvent(new Event('brandingUpdated'));
-      console.log('✅ Dispatched brandingUpdated event');
-
       // Update favicon dynamically
       if (branding.favicon) {
         const link =
@@ -1079,13 +1065,11 @@ const DashboardSettings = () => {
         link.rel = 'shortcut icon';
         link.href = branding.favicon;
         document.getElementsByTagName('head')[0].appendChild(link);
-        console.log('✅ Updated favicon');
       }
 
       // Update document title dynamically
       if (branding.siteTitle) {
         document.title = branding.siteTitle;
-        console.log('✅ Updated document title to:', branding.siteTitle);
       }
 
       // Update meta description dynamically
@@ -1097,19 +1081,13 @@ const DashboardSettings = () => {
           metaDescription = document.createElement('meta');
           metaDescription.name = 'description';
           document.getElementsByTagName('head')[0].appendChild(metaDescription);
-          console.log('✅ Created new meta description tag');
         }
         metaDescription.content = branding.metaDescription;
-        console.log(
-          '✅ Updated meta description to:',
-          branding.metaDescription
-        );
       }
 
       setSuccess('Branding saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error('❌ Failed to save branding:', err);
       setError('Failed to save branding');
       setTimeout(() => setError(''), 3000);
     } finally {
@@ -1130,9 +1108,7 @@ const DashboardSettings = () => {
         storageProvider: response.data.storageProvider || 'cloudinary',
         youtubeConfigured: response.data.youtubeConfigured || false,
       });
-    } catch (err) {
-      console.error('Failed to fetch storage settings:', err);
-    }
+    } catch (err) {}
   };
 
   const handleStorageProviderChange = (provider) => {
@@ -1177,15 +1153,6 @@ const DashboardSettings = () => {
   };
 
   const handlePricingChange = (planId, field, value) => {
-    console.log('DashboardSettings - handlePricingChange:', {
-      planId,
-      field,
-      value,
-      parsedValue:
-        field === 'price' || field === 'maxUploadSize'
-          ? parseFloat(value) || 0
-          : value,
-    });
     setPricingPlans((prev) => {
       const updated = {
         ...prev,
@@ -1201,7 +1168,6 @@ const DashboardSettings = () => {
               : value,
         },
       };
-      console.log('DashboardSettings - Updated pricingPlans state:', updated);
       return updated;
     });
   };
@@ -1219,9 +1185,7 @@ const DashboardSettings = () => {
           const parsed = JSON.parse(savedPlans);
           const { free, ...paidPlans } = parsed;
           existingPlans = paidPlans;
-        } catch (err) {
-          console.error('Failed to parse existing plans:', err);
-        }
+        } catch (err) {}
       }
 
       // Combine free upload size with existing paid plans
@@ -1262,7 +1226,6 @@ const DashboardSettings = () => {
       setSuccess('Free upload size updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error('Error saving free upload size:', err);
       setError(
         err.response?.data?.message || 'Failed to save free upload size'
       );
@@ -1275,13 +1238,6 @@ const DashboardSettings = () => {
   const handleSavePricing = async () => {
     try {
       setSavingPricing(true);
-
-      console.log('DashboardSettings - handleSavePricing - Current state:', {
-        pricingPlans,
-        freeUploadSize,
-        pricingConfig,
-      });
-
       // Combine free upload size with paid plans
       const allPlans = {
         free: {
@@ -1297,14 +1253,7 @@ const DashboardSettings = () => {
         },
         ...pricingPlans,
       };
-
-      console.log('DashboardSettings - About to save allPlans:', allPlans);
-
       // Save to server
-      console.log(
-        'DashboardSettings - Making API call to:',
-        `${import.meta.env.VITE_API_URL}/api/admin/pricing-plans`
-      );
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/admin/pricing-plans`,
         { pricingPlans: allPlans, pricingConfig },
@@ -1312,34 +1261,18 @@ const DashboardSettings = () => {
           withCredentials: true,
         }
       );
-      console.log('DashboardSettings - API response:', response.data);
-
       // Also save to localStorage for immediate client-side access
       localStorage.setItem('pricingPlans', JSON.stringify(allPlans));
       localStorage.setItem('pricingConfig', JSON.stringify(pricingConfig));
-      console.log('DashboardSettings - Saved to localStorage:', {
-        allPlans,
-        pricingConfig,
-      });
-      console.log(
-        'DashboardSettings - Verify localStorage:',
-        JSON.parse(localStorage.getItem('pricingPlans'))
-      );
-
       // Dispatch custom event to notify other components in the same tab
       window.dispatchEvent(
         new CustomEvent('pricingUpdated', {
           detail: { pricingPlans: allPlans, pricingConfig },
         })
       );
-      console.log('DashboardSettings - Dispatched pricingUpdated event');
-
       setSuccess('Pricing plans updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error('DashboardSettings - ERROR in handleSavePricing:', err);
-      console.error('DashboardSettings - Error response:', err.response);
-      console.error('DashboardSettings - Error message:', err.message);
       setError(err.response?.data?.message || 'Failed to save pricing plans');
       setTimeout(() => setError(''), 3000);
     } finally {
@@ -1375,9 +1308,7 @@ const DashboardSettings = () => {
           {}
         );
         setPricingPlans(validatedPlans);
-      } catch (err) {
-        console.error('Failed to load pricing plans:', err);
-      }
+      } catch (err) {}
     }
   }, []);
 

@@ -68,7 +68,6 @@ const RefreshUser = () => {
           navigate('/');
         }, 1000);
       } catch (error) {
-        console.error('Failed to refresh user data:', error);
         navigate('/');
       }
     };

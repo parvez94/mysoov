@@ -109,19 +109,6 @@ const PostCard = ({
     return urlObj.toString();
   };
 
-  // Debug logging
-  if (src?.includes('youtube.com')) {
-    console.log('YouTube Video Debug:', {
-      videoId: video?._id,
-      src,
-      'videoUrl.provider': video?.videoUrl?.provider,
-      storageProvider: video?.storageProvider,
-      isYouTubeVideo,
-      mediaType,
-      willRenderAs: isYouTubeVideo ? 'IFRAME' : 'VIDEO TAG',
-    });
-  }
-
   const videoContent = (
     <>
       <VideoText video={video} />

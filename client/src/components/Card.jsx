@@ -211,18 +211,6 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
     return urlObj.toString();
   };
 
-  // Debug logging for YouTube videos in feed
-  if (videoUrl?.url?.includes('youtube.com')) {
-    console.log('Feed Card - YouTube Video Debug:', {
-      videoId: _id,
-      url: videoUrl?.url,
-      'videoUrl.provider': videoUrl?.provider,
-      storageProvider,
-      isYouTubeVideo,
-      willRenderAs: isYouTubeVideo ? 'IFRAME' : 'VIDEO TAG',
-    });
-  }
-
   const guardOr = (fn) => {
     if (!currentUser) {
       dispatch(openModal());
@@ -258,9 +246,7 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
             quote: caption || 'Check out this amazing content on Mysoov!',
           },
           function (response) {
-            if (response) {
-              console.log('Video shared on Facebook successfully!');
-            }
+            // Share completed
           }
         );
       } else {

@@ -129,9 +129,7 @@ const Dashboard = () => {
         {
           withCredentials: true,
         }
-      );
-      console.log('Dashboard stats response:', response.data);
-      setStats(
+      );      setStats(
         response.data.stats || {
           totalUsers: 0,
           totalVideos: 0,
@@ -139,10 +137,7 @@ const Dashboard = () => {
           totalViews: 0,
         }
       );
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-      console.error('Error details:', err.response?.data);
-      setError(err.response?.data?.message || 'Failed to load statistics');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to load statistics');
     } finally {
       setIsLoading(false);
     }

@@ -410,9 +410,7 @@ const Video = () => {
               'Check out this amazing content on Mysoov!',
           },
           function (response) {
-            if (response) {
-              console.log('Video shared on Facebook successfully!');
-            }
+            // Share completed
           }
         );
       } else {

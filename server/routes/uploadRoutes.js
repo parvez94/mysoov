@@ -115,12 +115,7 @@ router.post('/upload', verifyToken, async (req, res) => {
           videoId: youtubeResult.videoId,
           thumbnailUrl: youtubeResult.thumbnailUrl,
         };
-      } catch (youtubeError) {
-        console.error(
-          'YouTube upload failed, falling back to Cloudinary:',
-          youtubeError
-        );
-        // Fallback to Cloudinary if YouTube fails
+      } catch (youtubeError) {        // Fallback to Cloudinary if YouTube fails
         provider = 'cloudinary';
       }
     }
@@ -147,9 +142,7 @@ router.post('/upload', verifyToken, async (req, res) => {
 
     // Send response
     res.json(result);
-  } catch (err) {
-    console.error('Upload error:', err);
-    return res
+  } catch (err) {    return res
       .status(500)
       .json({ msg: err.message || 'Internal server error' });
   }
@@ -202,9 +195,7 @@ router.post('/upload/signature', verifyToken, async (req, res) => {
       apiKey: process.env.CLOUD_API,
       folder,
     });
-  } catch (err) {
-    console.error('Signature generation error:', err);
-    return res.status(500).json({ msg: 'Internal server error' });
+  } catch (err) {    return res.status(500).json({ msg: 'Internal server error' });
   }
 });
 

@@ -722,23 +722,9 @@ const DashboardFilms = () => {
         {
           withCredentials: true,
         }
-      );
-      console.log('📂 Fetched directories:', response.data.directories);
-      console.log('📂 Total directories:', response.data.directories?.length);
-      response.data.directories?.forEach((dir, index) => {
-        console.log(
-          `📂 Directory ${index + 1}:`,
-          dir.folderName,
-          '- Films:',
-          dir.films?.length,
-          '- Films array:',
-          dir.films
-        );
-      });
+      );      response.data.directories?.forEach((dir, index) => {      });
       setDirectories(response.data.directories || []);
-    } catch (err) {
-      console.error('Error fetching directories:', err);
-      setError(
+    } catch (err) {      setError(
         err.response?.data?.message || 'Failed to load film directories'
       );
     } finally {
@@ -755,9 +741,7 @@ const DashboardFilms = () => {
         }
       );
       setStats(response.data.stats || {});
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-    }
+    } catch (err) {    }
   };
 
   const handleCreateFolder = async (e) => {
@@ -777,9 +761,7 @@ const DashboardFilms = () => {
       fetchDirectories();
       fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error('Error creating directory:', err);
-      setError(err.response?.data?.message || 'Failed to create directory');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to create directory');
     }
   };
 
@@ -806,17 +788,11 @@ const DashboardFilms = () => {
       fetchDirectories();
       fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error('Error deleting directory:', err);
-      setError(err.response?.data?.message || 'Failed to delete directory');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to delete directory');
     }
   };
 
   const handleViewFilms = async (directory) => {
-    console.log('📁 Opening directory:', directory);
-    console.log('📁 Films in directory:', directory.films);
-    console.log('📁 Films count:', directory.films?.length);
-
     // Fetch the directory with populated films to ensure we have the latest data
     try {
       const response = await axios.get(
@@ -824,13 +800,8 @@ const DashboardFilms = () => {
           directory._id
         }`,
         { withCredentials: true }
-      );
-      console.log('📁 Fetched directory with films:', response.data.directory);
-      console.log('📁 Populated films:', response.data.directory.films);
-      setSelectedDirectory(response.data.directory);
-    } catch (err) {
-      console.error('Error fetching directory:', err);
-      // Fallback to the directory from the list
+      );      setSelectedDirectory(response.data.directory);
+    } catch (err) {      // Fallback to the directory from the list
       setSelectedDirectory(directory);
     }
 
@@ -962,9 +933,7 @@ const DashboardFilms = () => {
 
       fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error('Error uploading film:', err);
-      setError(
+    } catch (err) {      setError(
         err.response?.data?.message ||
           err.response?.data?.error?.message ||
           'Failed to upload film'
@@ -982,15 +951,11 @@ const DashboardFilms = () => {
         {},
         { withCredentials: true }
       );
-      setSuccess(response.data.message);
-      console.log('✅ Sync result:', response.data);
-      // Refresh directories after sync
+      setSuccess(response.data.message);      // Refresh directories after sync
       await fetchDirectories();
       await fetchStats();
       setTimeout(() => setSuccess(null), 5000);
-    } catch (err) {
-      console.error('Error syncing films:', err);
-      setError(err.response?.data?.message || 'Failed to sync films');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to sync films');
     }
   };
 
@@ -1021,9 +986,7 @@ const DashboardFilms = () => {
       await fetchDirectories();
       await fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error('Error deleting video:', err);
-      setError(err.response?.data?.message || 'Failed to delete video');
+    } catch (err) {      setError(err.response?.data?.message || 'Failed to delete video');
     }
   };
 

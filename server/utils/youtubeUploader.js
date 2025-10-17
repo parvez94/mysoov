@@ -81,9 +81,7 @@ export const uploadToYouTube = async (filePath, metadata = {}) => {
       provider: 'youtube',
       data: res.data,
     };
-  } catch (error) {
-    console.error('YouTube upload error:', error);
-    throw new Error(
+  } catch (error) {    throw new Error(
       error.response?.data?.error?.message ||
         error.message ||
         'Failed to upload video to YouTube'
@@ -106,9 +104,7 @@ export const deleteFromYouTube = async (videoId) => {
     });
 
     return true;
-  } catch (error) {
-    console.error('YouTube delete error:', error);
-    throw new Error('Failed to delete video from YouTube');
+  } catch (error) {    throw new Error('Failed to delete video from YouTube');
   }
 };
 
@@ -132,9 +128,7 @@ export const getYouTubeVideoDetails = async (videoId) => {
     }
 
     return res.data.items[0];
-  } catch (error) {
-    console.error('YouTube get video error:', error);
-    throw new Error('Failed to get video details from YouTube');
+  } catch (error) {    throw new Error('Failed to get video details from YouTube');
   }
 };
 
@@ -169,9 +163,7 @@ export const getTokensFromCode = async (code) => {
     const oauth2Client = getYouTubeClient();
     const { tokens } = await oauth2Client.getToken(code);
     return tokens;
-  } catch (error) {
-    console.error('Error getting tokens:', error);
-    throw new Error('Failed to exchange authorization code for tokens');
+  } catch (error) {    throw new Error('Failed to exchange authorization code for tokens');
   }
 };
 

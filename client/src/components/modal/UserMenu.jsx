@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { LuUser2 } from 'react-icons/lu';
+import { LuUser } from 'react-icons/lu';
 import { MdOutlineLogout } from 'react-icons/md';
 import { IoSettingsOutline } from 'react-icons/io5';
 import { logout } from '../../redux/user/userSlice';
@@ -42,7 +42,7 @@ const UserMenu = () => {
     <Container>
       <Link to={profileTo}>
         <MenuItem>
-          <LuUser2 />
+          <LuUser />
           Profile
         </MenuItem>
       </Link>

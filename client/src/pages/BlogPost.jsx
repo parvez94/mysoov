@@ -232,7 +232,6 @@ const BlogPost = () => {
       );
       setArticle(response.data);
     } catch (error) {
-      console.error('Failed to fetch article:', error);
       setError(
         error.response?.status === 404
           ? 'Article not found'

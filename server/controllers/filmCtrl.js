@@ -10,17 +10,7 @@ export const getAllFilmDirectories = async (req, res, next) => {
       .populate('createdBy', 'username displayName displayImage')
       .populate('redeemedBy', 'username displayName displayImage')
       .populate('films')
-      .sort({ createdAt: -1 });
-
-    console.log('🎬 Total directories:', directories.length);
-    directories.forEach((dir, index) => {
-      console.log(
-        `🎬 Directory ${index + 1}:`,
-        dir.folderName,
-        '- Films:',
-        dir.films?.length
-      );
-    });
+      .sort({ createdAt: -1 });    directories.forEach((dir, index) => {    });
 
     res.status(200).json({
       success: true,
@@ -45,12 +35,6 @@ export const getFilmDirectory = async (req, res, next) => {
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
     }
-
-    console.log('🎬 Directory found:', directory.folderName);
-    console.log('🎬 Films array:', directory.films);
-    console.log('🎬 Films count:', directory.films?.length);
-    console.log('🎬 First film:', directory.films?.[0]);
-
     res.status(200).json({
       success: true,
       directory,
@@ -131,16 +115,9 @@ export const uploadFilmToDirectory = async (req, res, next) => {
     // Add video to directory
     if (!directory.films.includes(videoId)) {
       directory.films.push(videoId);
-      await directory.save();
-      console.log('✅ Film added to directory:', directory.folderName);
-      console.log('✅ Total films in directory:', directory.films.length);
-    } else {
-      console.log('⚠️ Film already in directory');
-    }
+      await directory.save();    } else {    }
 
     await directory.populate('films');
-    console.log('✅ Populated films:', directory.films?.length);
-
     res.status(200).json({
       success: true,
       message: 'Film added to directory successfully',
@@ -298,13 +275,6 @@ export const verifyAndGetFilms = async (req, res, next) => {
 
     // Automatically transfer all films to user
     const filmIds = directory.films.map((film) => film._id);
-
-    console.log('🎬 Auto-redeeming films:', {
-      userId,
-      folderName: directory.folderName,
-      filmCount: filmIds.length,
-    });
-
     // Update each video - transfer ownership to user
     await Video.updateMany(
       { _id: { $in: filmIds } },
@@ -322,17 +292,6 @@ export const verifyAndGetFilms = async (req, res, next) => {
     const transferredVideos = await Video.find({
       _id: { $in: filmIds },
     }).select('videoUrl userId isFilm');
-
-    console.log(
-      '✅ Verified transferred videos:',
-      transferredVideos.map((v) => ({
-        id: v._id,
-        hasVideoUrl: !!v.videoUrl,
-        userId: v.userId,
-        isFilm: v.isFilm,
-      }))
-    );
-
     // Mark directory as redeemed
     directory.isRedeemed = true;
     directory.redeemedBy = userId;
@@ -341,17 +300,12 @@ export const verifyAndGetFilms = async (req, res, next) => {
 
     // Delete the directory after redemption
     await FilmDirectory.findByIdAndDelete(directory._id);
-
-    console.log('✅ Films auto-redeemed and transferred successfully');
-
     res.status(200).json({
       success: true,
       message: `Successfully added ${filmIds.length} film(s) to your profile`,
       filmsCount: filmIds.length,
     });
-  } catch (error) {
-    console.error('❌ Auto-redeem error:', error);
-    next(error);
+  } catch (error) {    next(error);
   }
 };
 
@@ -395,28 +349,10 @@ export const redeemFilmDirectory = async (req, res, next) => {
         },
       }
     );
-
-    console.log('✅ Films transferred:', {
-      matched: updateResult.matchedCount,
-      modified: updateResult.modifiedCount,
-      filmIds: filmIds.length,
-    });
-
     // Verify the transfer worked correctly
     const transferredVideos = await Video.find({
       _id: { $in: filmIds },
     }).select('videoUrl userId isFilm');
-    console.log(
-      '✅ Verified transferred videos:',
-      transferredVideos.map((v) => ({
-        id: v._id,
-        hasVideoUrl: !!v.videoUrl,
-        videoUrlType: typeof v.videoUrl,
-        userId: v.userId,
-        isFilm: v.isFilm,
-      }))
-    );
-
     // Mark directory as redeemed
     directory.isRedeemed = true;
     directory.redeemedBy = userId;
@@ -467,9 +403,6 @@ export const syncOrphanedFilms = async (req, res, next) => {
       isFilm: true,
       filmDirectoryId: { $exists: true, $ne: null },
     });
-
-    console.log('🔍 Found films with filmDirectoryId:', orphanedFilms.length);
-
     let syncedCount = 0;
 
     for (const film of orphanedFilms) {
@@ -478,9 +411,7 @@ export const syncOrphanedFilms = async (req, res, next) => {
       if (directory && !directory.films.includes(film._id)) {
         directory.films.push(film._id);
         await directory.save();
-        syncedCount++;
-        console.log('✅ Synced film to directory:', directory.folderName);
-      }
+        syncedCount++;      }
     }
 
     res.status(200).json({

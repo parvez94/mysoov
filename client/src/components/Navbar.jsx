@@ -254,7 +254,7 @@ const Navbar = () => {
           }
         }
       } catch (err) {
-        console.error('Failed to load branding:', err);
+        // Silent fail
       }
     };
 
