@@ -423,6 +423,7 @@ const Upload = () => {
       const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${detectedMediaType}/upload`;
 
       const res = await axios.post(cloudinaryUrl, cloudinaryFormData, {
+        withCredentials: false, // Cloudinary doesn't accept credentials
         signal: controller.signal,
         onUploadProgress: (evt) => {
           if (evt.total) {

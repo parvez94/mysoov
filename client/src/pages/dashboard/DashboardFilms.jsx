@@ -896,6 +896,7 @@ const DashboardFilms = () => {
         `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
         cloudinaryFormData,
         {
+          withCredentials: false, // Cloudinary doesn't accept credentials
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
