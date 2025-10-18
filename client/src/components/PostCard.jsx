@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { VideoCard, VideoText } from '../components/index';
 import { MdLock } from 'react-icons/md';
 
@@ -72,6 +72,30 @@ const ClickableContent = styled.div`
   }
 `;
 
+const BuyButton = styled.button`
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--primary-fonts);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 const PostCard = ({
   channel,
   video,
@@ -82,9 +106,14 @@ const PostCard = ({
   onVideoDelete,
   enableVideoLink = false,
 }) => {
+  const navigate = useNavigate();
   const src = video?.videoUrl?.url;
   const isPrivate = video?.privacy === 'Private';
   const mediaType = video?.mediaType || 'video';
+
+  // Show buy button only for free additions (has filmDirectoryId)
+  // Purchased films won't have filmDirectoryId, so button won't show
+  const showBuyButton = video?.filmDirectoryId;
 
   // Check if video is from YouTube
   const isYouTubeVideo =
@@ -107,6 +136,22 @@ const PostCard = ({
     urlObj.searchParams.set('fs', '1'); // Allow fullscreen
 
     return urlObj.toString();
+  };
+
+  const handleBuyClick = (e) => {
+    // Stop event propagation to prevent Link navigation
+    e.preventDefault();
+    e.stopPropagation();
+
+    const filmId = video?.sourceFilmId || video?._id;
+    const directoryId = video?.filmDirectoryId;
+    const price = 9.99; // Default price, could be fetched from video metadata if available
+
+    navigate(
+      `/payment?type=film&filmId=${filmId}&directoryId=${directoryId}&filmName=${encodeURIComponent(
+        video?.caption || 'Film'
+      )}&price=${price}`
+    );
   };
 
   const videoContent = (
@@ -134,6 +179,11 @@ const PostCard = ({
           )}
         </VideoWrapper>
       ) : null}
+      {showBuyButton && (
+        <BuyButton onClick={handleBuyClick}>
+          Buy Complete Ownership - $9.99
+        </BuyButton>
+      )}
     </>
   );
 

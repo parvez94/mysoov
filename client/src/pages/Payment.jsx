@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { MdCheck, MdArrowBack } from 'react-icons/md';
+import axios from 'axios';
 
 const Container = styled.div`
   padding: 40px 20px;
@@ -266,6 +267,11 @@ const Payment = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const planId = searchParams.get('plan') || 'basic';
+  const type = searchParams.get('type'); // 'film' or undefined
+  const filmId = searchParams.get('filmId');
+  const directoryId = searchParams.get('directoryId');
+  const filmName = searchParams.get('filmName');
+  const filmPrice = parseFloat(searchParams.get('price')) || 9.99;
 
   // Use state to hold pricing data so it can be updated
   const [pricingPlans, setPricingPlans] = useState(defaultPricingPlans);
@@ -277,6 +283,9 @@ const Payment = () => {
     upgradeInstructions:
       "Include your username and desired plan in your message, and we'll upgrade your account within 24 hours.",
   });
+  const [purchasing, setPurchasing] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
   // Load pricing data on mount and when localStorage changes
   useEffect(() => {
@@ -309,6 +318,41 @@ const Payment = () => {
 
   const plan = pricingPlans[planId] || pricingPlans.basic;
 
+  // Handle film purchase (simulate payment completion)
+  const handlePurchaseFilm = async () => {
+    if (!filmId || !directoryId) {
+      setError('Invalid film information');
+      return;
+    }
+
+    try {
+      setPurchasing(true);
+      setError(null);
+
+      // In production, this would happen after payment is completed
+      // For now, we'll simulate the purchase
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/purchase`,
+        { filmId, directoryId },
+        { withCredentials: true }
+      );
+
+      setSuccess(response.data.message || 'Film added to your profile!');
+
+      // Redirect to home after 2 seconds
+      setTimeout(() => {
+        navigate('/');
+      }, 2000);
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          'Failed to purchase film. Please try again.'
+      );
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
   return (
     <Container>
       <BackButton onClick={() => navigate(-1)}>
@@ -316,52 +360,149 @@ const Payment = () => {
         Back
       </BackButton>
 
-      <Title>Complete Your Purchase</Title>
-      <Subtitle>Upgrade your account and unlock premium features</Subtitle>
+      <Title>
+        {type === 'film'
+          ? `Buy Complete Ownership: ${filmName || 'Film'}`
+          : 'Complete Your Purchase'}
+      </Title>
+      <Subtitle>
+        {type === 'film'
+          ? `Purchase full ownership of this film for $${filmPrice.toFixed(
+              2
+            )} - Yours permanently!`
+          : 'Upgrade your account and unlock premium features'}
+      </Subtitle>
 
-      <PlanCard>
-        <PlanHeader>
-          <PlanName>{plan.name} Plan</PlanName>
-          <PlanPrice>
-            ${plan.price}
-            <span>/month</span>
-          </PlanPrice>
-        </PlanHeader>
+      {error && (
+        <div
+          style={{
+            padding: '12px 16px',
+            background: 'rgba(255,0,0,0.1)',
+            border: '1px solid rgba(255,0,0,0.3)',
+            borderRadius: '8px',
+            color: '#ff6b6b',
+            marginBottom: '20px',
+            fontFamily: 'var(--primary-fonts)',
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-        <FeatureList>
-          {plan.features.map((feature, index) => (
-            <Feature key={index}>
+      {success && (
+        <div
+          style={{
+            padding: '12px 16px',
+            background: 'rgba(0,255,0,0.1)',
+            border: '1px solid rgba(0,255,0,0.3)',
+            borderRadius: '8px',
+            color: '#51cf66',
+            marginBottom: '20px',
+            fontFamily: 'var(--primary-fonts)',
+          }}
+        >
+          {success}
+        </div>
+      )}
+
+      {type === 'film' ? (
+        <PlanCard>
+          <PlanHeader>
+            <PlanName>{filmName || 'Film Purchase'}</PlanName>
+            <PlanPrice>
+              $9.99
+              <span>/one-time</span>
+            </PlanPrice>
+          </PlanHeader>
+
+          <FeatureList>
+            <Feature>
               <MdCheck size={20} />
-              {feature}
+              Permanent ownership
             </Feature>
-          ))}
-        </FeatureList>
-      </PlanCard>
+            <Feature>
+              <MdCheck size={20} />
+              Added to your profile
+            </Feature>
+            <Feature>
+              <MdCheck size={20} />
+              HD quality playback
+            </Feature>
+            <Feature>
+              <MdCheck size={20} />
+              Download anytime
+            </Feature>
+          </FeatureList>
+        </PlanCard>
+      ) : (
+        <PlanCard>
+          <PlanHeader>
+            <PlanName>{plan.name} Plan</PlanName>
+            <PlanPrice>
+              ${plan.price}
+              <span>/month</span>
+            </PlanPrice>
+          </PlanHeader>
+
+          <FeatureList>
+            {plan.features.map((feature, index) => (
+              <Feature key={index}>
+                <MdCheck size={20} />
+                {feature}
+              </Feature>
+            ))}
+          </FeatureList>
+        </PlanCard>
+      )}
 
       <PaymentSection>
         <SectionTitle>Payment Method</SectionTitle>
 
-        <ComingSoonBadge>{pricingConfig.comingSoonMessage}</ComingSoonBadge>
-
-        <InfoText>{pricingConfig.comingSoonDescription}</InfoText>
-
-        <InfoText>
-          <strong>Email:</strong> {pricingConfig.supportEmail}
-        </InfoText>
-
-        <InfoText>{pricingConfig.upgradeInstructions}</InfoText>
-
-        <ButtonGroup>
-          <Button onClick={() => navigate(-1)}>Go Back</Button>
-          <Button
-            primary
-            onClick={() => {
-              window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Upgrade Request`;
-            }}
-          >
-            Contact Support
-          </Button>
-        </ButtonGroup>
+        {type === 'film' ? (
+          <>
+            <ComingSoonBadge>🎬 Film Purchase Available!</ComingSoonBadge>
+            <InfoText>
+              Click the button below to complete your purchase and add this film
+              to your profile.
+            </InfoText>
+            <InfoText style={{ fontSize: '12px', opacity: 0.7 }}>
+              Note: This is a demo. In production, payment processing would be
+              integrated here.
+            </InfoText>
+            <ButtonGroup>
+              <Button onClick={() => navigate(-1)}>Cancel</Button>
+              <Button
+                primary
+                onClick={handlePurchaseFilm}
+                disabled={purchasing}
+              >
+                {purchasing
+                  ? 'Processing...'
+                  : `Buy Complete Ownership - $${filmPrice.toFixed(2)}`}
+              </Button>
+            </ButtonGroup>
+          </>
+        ) : (
+          <>
+            <ComingSoonBadge>{pricingConfig.comingSoonMessage}</ComingSoonBadge>
+            <InfoText>{pricingConfig.comingSoonDescription}</InfoText>
+            <InfoText>
+              <strong>Email:</strong> {pricingConfig.supportEmail}
+            </InfoText>
+            <InfoText>{pricingConfig.upgradeInstructions}</InfoText>
+            <ButtonGroup>
+              <Button onClick={() => navigate(-1)}>Go Back</Button>
+              <Button
+                primary
+                onClick={() => {
+                  window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Upgrade Request`;
+                }}
+              >
+                Contact Support
+              </Button>
+            </ButtonGroup>
+          </>
+        )}
       </PaymentSection>
     </Container>
   );

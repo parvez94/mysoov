@@ -695,6 +695,7 @@ const DashboardFilms = () => {
   const [formData, setFormData] = useState({
     folderName: '',
     description: '',
+    price: 9.99,
   });
 
   // Upload modal state
@@ -722,9 +723,11 @@ const DashboardFilms = () => {
         {
           withCredentials: true,
         }
-      );      response.data.directories?.forEach((dir, index) => {      });
+      );
+      response.data.directories?.forEach((dir, index) => {});
       setDirectories(response.data.directories || []);
-    } catch (err) {      setError(
+    } catch (err) {
+      setError(
         err.response?.data?.message || 'Failed to load film directories'
       );
     } finally {
@@ -741,7 +744,7 @@ const DashboardFilms = () => {
         }
       );
       setStats(response.data.stats || {});
-    } catch (err) {    }
+    } catch (err) {}
   };
 
   const handleCreateFolder = async (e) => {
@@ -757,11 +760,12 @@ const DashboardFilms = () => {
       );
       setSuccess('Film directory created successfully!');
       setShowCreateModal(false);
-      setFormData({ folderName: '', description: '' });
+      setFormData({ folderName: '', description: '', price: 9.99 });
       fetchDirectories();
       fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {      setError(err.response?.data?.message || 'Failed to create directory');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create directory');
     }
   };
 
@@ -788,7 +792,8 @@ const DashboardFilms = () => {
       fetchDirectories();
       fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {      setError(err.response?.data?.message || 'Failed to delete directory');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete directory');
     }
   };
 
@@ -800,8 +805,10 @@ const DashboardFilms = () => {
           directory._id
         }`,
         { withCredentials: true }
-      );      setSelectedDirectory(response.data.directory);
-    } catch (err) {      // Fallback to the directory from the list
+      );
+      setSelectedDirectory(response.data.directory);
+    } catch (err) {
+      // Fallback to the directory from the list
       setSelectedDirectory(directory);
     }
 
@@ -933,7 +940,8 @@ const DashboardFilms = () => {
 
       fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {      setError(
+    } catch (err) {
+      setError(
         err.response?.data?.message ||
           err.response?.data?.error?.message ||
           'Failed to upload film'
@@ -951,11 +959,12 @@ const DashboardFilms = () => {
         {},
         { withCredentials: true }
       );
-      setSuccess(response.data.message);      // Refresh directories after sync
+      setSuccess(response.data.message); // Refresh directories after sync
       await fetchDirectories();
       await fetchStats();
       setTimeout(() => setSuccess(null), 5000);
-    } catch (err) {      setError(err.response?.data?.message || 'Failed to sync films');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to sync films');
     }
   };
 
@@ -986,7 +995,8 @@ const DashboardFilms = () => {
       await fetchDirectories();
       await fetchStats();
       setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {      setError(err.response?.data?.message || 'Failed to delete video');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete video');
     }
   };
 
@@ -1074,6 +1084,7 @@ const DashboardFilms = () => {
             <Tr>
               <Th>Folder Name (Access Code)</Th>
               <Th>Films</Th>
+              <Th>Price</Th>
               <Th>Status</Th>
               <Th>Created</Th>
               <Th>Actions</Th>
@@ -1082,7 +1093,7 @@ const DashboardFilms = () => {
           <Tbody>
             {directories.length === 0 ? (
               <tr>
-                <td colSpan='5'>
+                <td colSpan='6'>
                   <EmptyState>
                     <EmptyIcon>
                       <FaFolder />
@@ -1111,6 +1122,11 @@ const DashboardFilms = () => {
                   <Td>
                     <span style={{ color: '#667eea' }}>
                       {directory.films?.length || 0} film(s)
+                    </span>
+                  </Td>
+                  <Td>
+                    <span style={{ color: '#4caf50', fontWeight: '600' }}>
+                      ${(directory.price || 9.99).toFixed(2)}
                     </span>
                   </Td>
                   <Td>
@@ -1167,6 +1183,23 @@ const DashboardFilms = () => {
                 />
               </FormGroup>
               <FormGroup>
+                <Label>Price per Film (USD) *</Label>
+                <Input
+                  type='number'
+                  step='0.01'
+                  min='0'
+                  placeholder='e.g., 9.99'
+                  value={formData.price}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      price: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  required
+                />
+              </FormGroup>
+              <FormGroup>
                 <Label>Description (Optional)</Label>
                 <TextArea
                   placeholder='Add a description for this directory...'
@@ -1174,6 +1207,7 @@ const DashboardFilms = () => {
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
                   }
+                  rows='3'
                 />
               </FormGroup>
               <ModalButtons>

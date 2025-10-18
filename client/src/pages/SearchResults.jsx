@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 import styled from 'styled-components';
 import { Card, HomeSidebar } from '../components';
@@ -291,18 +292,99 @@ const Button = styled.button`
   }
 `;
 
+const FilmsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 10px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const FilmItem = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+const FilmThumbnail = styled.div`
+  width: 100%;
+  height: 180px;
+  background: rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+`;
+
+const FilmInfo = styled.div`
+  padding: 15px;
+`;
+
+const FilmTitle = styled.h4`
+  font-family: var(--secondary-fonts);
+  color: var(--primary-color);
+  font-size: 16px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const FilmMeta = styled.p`
+  font-family: var(--primary-fonts);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  margin-bottom: 12px;
+`;
+
+const OwnButton = styled.button`
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-family: var(--primary-fonts);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    transform: scale(1.02);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { currentUser } = useSelector((state) => state.user);
   const query = searchParams.get('q');
   const [videos, setVideos] = useState([]);
   const [filmDirectory, setFilmDirectory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-  const [verifyCode, setVerifyCode] = useState('');
-  const [verifying, setVerifying] = useState(false);
+  const [showFilmsModal, setShowFilmsModal] = useState(false);
+  const [directoryFilms, setDirectoryFilms] = useState([]);
+  const [loadingFilms, setLoadingFilms] = useState(false);
+  const [selectedFilm, setSelectedFilm] = useState(null);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -320,7 +402,9 @@ const SearchResults = () => {
         // First, try to search for film directory
         try {
           const filmResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/v1/films/search/${query}`,
+            `${
+              import.meta.env.VITE_API_URL
+            }/api/v1/films/search/${encodeURIComponent(query)}`,
             {
               withCredentials: true,
             }
@@ -355,43 +439,73 @@ const SearchResults = () => {
     fetchResults();
   }, [query]);
 
-  const handleViewFilms = () => {
-    setShowVerifyModal(true);
-    setVerifyCode('');
-    setError(null);
-  };
-
-  const handleVerify = async () => {
-    if (!verifyCode) {
-      setError('Please enter the access code');
-      return;
-    }
+  const handleViewFilms = async () => {
+    if (!filmDirectory) return;
 
     try {
-      setVerifying(true);
+      setLoadingFilms(true);
       setError(null);
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/verify`,
-        { code: verifyCode },
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/details/${
+          filmDirectory._id
+        }`,
         { withCredentials: true }
       );
 
-      // Films are automatically transferred to user's profile
-      setShowVerifyModal(false);
-      setSuccess(response.data.message || 'Films added to your profile!');
-
-      // Redirect to profile after 1.5 seconds
-      setTimeout(() => {
-        navigate('/');
-      }, 1500);
+      // Update film directory with full data including price
+      setFilmDirectory(response.data.directory);
+      setDirectoryFilms(response.data.directory.films || []);
+      setShowFilmsModal(true);
     } catch (err) {
       setError(
-        err.response?.data?.message || 'Invalid access code. Please try again.'
+        err.response?.data?.message || 'Failed to load films. Please try again.'
       );
     } finally {
-      setVerifying(false);
+      setLoadingFilms(false);
     }
+  };
+
+  const handleWatchFilm = (film) => {
+    setSelectedFilm(film);
+  };
+
+  const handleAddToProfile = async (film) => {
+    try {
+      setLoadingFilms(true);
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/add-to-profile`,
+        {
+          filmId: film._id,
+          directoryId: filmDirectory._id,
+        },
+        { withCredentials: true }
+      );
+
+      if (response.data.success) {
+        // Redirect to profile page
+        navigate(`/${currentUser?.username || 'profile'}`);
+      }
+    } catch (err) {
+      alert(
+        err.response?.data?.message ||
+          'Failed to add film to profile. Please try again.'
+      );
+    } finally {
+      setLoadingFilms(false);
+    }
+  };
+
+  const handleBuyCompletely = (film) => {
+    // Navigate to payment page with film details including price
+    const price = filmDirectory?.price || 9.99;
+    navigate(
+      `/payment?type=film&filmId=${film._id}&directoryId=${
+        filmDirectory._id
+      }&filmName=${encodeURIComponent(
+        film.caption || 'Untitled Film'
+      )}&price=${price}`
+    );
   };
 
   if (!query) {
@@ -451,15 +565,21 @@ const SearchResults = () => {
                     : ' available'}
                 </DirectoryMeta>
               </DirectoryInfo>
+              {!filmDirectory.isRedeemed && (
+                <RedeemButton onClick={handleViewFilms} disabled={loadingFilms}>
+                  <FaFilm />
+                  {loadingFilms ? 'Loading...' : 'View Films'}
+                </RedeemButton>
+              )}
             </DirectoryHeader>
             {filmDirectory.description && (
               <DirectoryDescription>
                 {filmDirectory.description}
               </DirectoryDescription>
             )}
-            {filmDirectory.isRedeemed ? (
+            {filmDirectory.isRedeemed && (
               <DirectoryDescription
-                style={{ color: '#ff9800', marginTop: '12px' }}
+                style={{ color: '#ff9800', marginTop: '0' }}
               >
                 ⚠️ This folder has already been redeemed
                 {filmDirectory.redeemedBy && (
@@ -478,11 +598,6 @@ const SearchResults = () => {
                 )}
                 .
               </DirectoryDescription>
-            ) : (
-              <RedeemButton onClick={handleViewFilms}>
-                <FaFilm />
-                View Films
-              </RedeemButton>
             )}
           </FilmDirectoryCard>
         )}
@@ -505,33 +620,219 @@ const SearchResults = () => {
       </Wrapper>
       <HomeSidebar />
 
-      {/* Verify Code Modal */}
-      {showVerifyModal && (
-        <Modal onClick={() => setShowVerifyModal(false)}>
-          <ModalBox onClick={(e) => e.stopPropagation()}>
+      {/* Films Display Modal */}
+      {showFilmsModal && (
+        <Modal onClick={() => setShowFilmsModal(false)}>
+          <ModalBox
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '800px' }}
+          >
             <ModalHeader>
-              <ModalTitle>Verify Access Code</ModalTitle>
-              <CloseButton onClick={() => setShowVerifyModal(false)}>
+              <ModalTitle>
+                <FaFolder style={{ marginRight: '8px' }} />
+                {filmDirectory?.folderName} - Available Films
+              </ModalTitle>
+              <CloseButton
+                onClick={() => {
+                  setShowFilmsModal(false);
+                  setSelectedFilm(null);
+                }}
+              >
                 <FaTimes />
               </CloseButton>
             </ModalHeader>
-            <ModalText>
-              Enter the access code to verify and automatically add all films to
-              your profile.
-            </ModalText>
-            <Input
-              type='text'
-              placeholder='Enter access code'
-              value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleVerify()}
-            />
-            <ModalButtons>
-              <Button onClick={() => setShowVerifyModal(false)}>Cancel</Button>
-              <Button $primary onClick={handleVerify} disabled={verifying}>
-                {verifying ? 'Adding to Profile...' : 'Verify & Add'}
-              </Button>
-            </ModalButtons>
+
+            {!selectedFilm ? (
+              <>
+                <ModalText>
+                  Click on any film to watch it. You can add films to your
+                  profile for permanent ownership.
+                </ModalText>
+
+                <FilmsGrid>
+                  {directoryFilms.length > 0 ? (
+                    directoryFilms.map((film) => (
+                      <FilmItem key={film._id}>
+                        <FilmThumbnail
+                          onClick={() => handleWatchFilm(film)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {film.videoUrl?.url ? (
+                            <video
+                              src={film.videoUrl.url}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                background:
+                                  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <FaFilm size={40} color='rgba(255,255,255,0.5)' />
+                            </div>
+                          )}
+                        </FilmThumbnail>
+                        <FilmInfo>
+                          <FilmTitle>
+                            {film.caption || 'Untitled Film'}
+                          </FilmTitle>
+                          <FilmMeta>
+                            {new Date(film.createdAt).toLocaleDateString()}
+                          </FilmMeta>
+                          <div
+                            style={{
+                              display: 'flex',
+                              gap: '8px',
+                              marginTop: '8px',
+                            }}
+                          >
+                            <OwnButton
+                              onClick={() => handleWatchFilm(film)}
+                              style={{
+                                flex: 1,
+                                background:
+                                  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              }}
+                            >
+                              Watch
+                            </OwnButton>
+                            <OwnButton
+                              onClick={() => handleAddToProfile(film)}
+                              style={{
+                                flex: 1,
+                                background:
+                                  'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                              }}
+                            >
+                              Add to Profile
+                            </OwnButton>
+                            <OwnButton
+                              onClick={() => handleBuyCompletely(film)}
+                              style={{ flex: 1 }}
+                            >
+                              Buy - $
+                              {filmDirectory?.price?.toFixed(2) || '9.99'}
+                            </OwnButton>
+                          </div>
+                        </FilmInfo>
+                      </FilmItem>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        padding: '20px',
+                        color: 'rgba(255,255,255,0.5)',
+                      }}
+                    >
+                      No films available in this directory.
+                    </div>
+                  )}
+                </FilmsGrid>
+              </>
+            ) : (
+              <div style={{ marginTop: '20px' }}>
+                <button
+                  onClick={() => setSelectedFilm(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--primary-color)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    marginBottom: '16px',
+                    fontFamily: 'var(--primary-fonts)',
+                    fontSize: '14px',
+                  }}
+                >
+                  ← Back to films
+                </button>
+
+                <div
+                  style={{
+                    background: '#000',
+                    borderRadius: '8px',
+                    overflow: 'hidden',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <video
+                    src={selectedFilm.videoUrl?.url}
+                    controls
+                    autoPlay
+                    style={{
+                      width: '100%',
+                      maxHeight: '500px',
+                      display: 'block',
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    padding: '16px',
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                  }}
+                >
+                  <h3
+                    style={{
+                      color: 'var(--primary-color)',
+                      fontFamily: 'var(--secondary-fonts)',
+                      fontSize: '20px',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    {selectedFilm.caption || 'Untitled Film'}
+                  </h3>
+                  <p
+                    style={{
+                      color: 'var(--secondary-color)',
+                      fontFamily: 'var(--primary-fonts)',
+                      fontSize: '14px',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    Released:{' '}
+                    {new Date(selectedFilm.createdAt).toLocaleDateString()}
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <OwnButton
+                      onClick={() => handleAddToProfile(selectedFilm)}
+                      style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        background:
+                          'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                      }}
+                    >
+                      Add to Profile (Free)
+                    </OwnButton>
+                    <OwnButton
+                      onClick={() => handleBuyCompletely(selectedFilm)}
+                      style={{ flex: 1, justifyContent: 'center' }}
+                    >
+                      Buy Completely - $
+                      {filmDirectory?.price?.toFixed(2) || '9.99'}
+                    </OwnButton>
+                  </div>
+                </div>
+              </div>
+            )}
           </ModalBox>
         </Modal>
       )}

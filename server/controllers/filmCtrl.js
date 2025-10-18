@@ -10,7 +10,8 @@ export const getAllFilmDirectories = async (req, res, next) => {
       .populate('createdBy', 'username displayName displayImage')
       .populate('redeemedBy', 'username displayName displayImage')
       .populate('films')
-      .sort({ createdAt: -1 });    directories.forEach((dir, index) => {    });
+      .sort({ createdAt: -1 });
+    directories.forEach((dir, index) => {});
 
     res.status(200).json({
       success: true,
@@ -47,7 +48,7 @@ export const getFilmDirectory = async (req, res, next) => {
 // Admin: Create new film directory
 export const createFilmDirectory = async (req, res, next) => {
   try {
-    const { folderName, description } = req.body;
+    const { folderName, description, price } = req.body;
 
     if (!folderName) {
       return next(createError(400, 'Folder name is required'));
@@ -63,6 +64,7 @@ export const createFilmDirectory = async (req, res, next) => {
     const directory = await FilmDirectory.create({
       folderName,
       description: description || '',
+      price: price || 9.99,
       createdBy: req.user.id,
       films: [],
     });
@@ -115,7 +117,9 @@ export const uploadFilmToDirectory = async (req, res, next) => {
     // Add video to directory
     if (!directory.films.includes(videoId)) {
       directory.films.push(videoId);
-      await directory.save();    } else {    }
+      await directory.save();
+    } else {
+    }
 
     await directory.populate('films');
     res.status(200).json({
@@ -211,15 +215,25 @@ export const searchFilmDirectory = async (req, res, next) => {
       return next(createError(400, 'Folder name is required'));
     }
 
-    // Escape special regex characters and search case-insensitive
-    const escapedCode = escapeRegex(code);
+    // Use simple case-insensitive string comparison (more reliable than regex for exact matches)
     const directory = await FilmDirectory.findOne({
-      folderName: { $regex: new RegExp(`^${escapedCode}$`, 'i') },
+      folderName: { $regex: new RegExp(`^${escapeRegex(code)}$`, 'i') },
     })
       .populate('films', 'caption videoUrl mediaType createdAt')
       .populate('redeemedBy', 'username displayName displayImage');
 
     if (!directory) {
+      return next(createError(404, 'Film directory not found'));
+    }
+
+    // Check if user has already added films from this directory to their profile
+    const userHasFilms = await Video.findOne({
+      userId: req.user.id,
+      filmDirectoryId: directory._id,
+    });
+
+    // Don't show directory if user has already added films from it
+    if (userHasFilms) {
       return next(createError(404, 'Film directory not found'));
     }
 
@@ -234,6 +248,44 @@ export const searchFilmDirectory = async (req, res, next) => {
         filmCount: directory.films.length,
         isRedeemed: directory.isRedeemed,
         redeemedBy: directory.isRedeemed ? directory.redeemedBy : null,
+        redeemedAt: directory.redeemedAt,
+        createdAt: directory.createdAt,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// User: Get film directory details with all films (already found via search)
+export const getFilmDirectoryDetails = async (req, res, next) => {
+  try {
+    const { directoryId } = req.params;
+
+    const directory = await FilmDirectory.findById(directoryId)
+      .populate({
+        path: 'films',
+        select: 'caption videoUrl thumbnail mediaType createdAt userId',
+        populate: {
+          path: 'userId',
+          select: 'username displayName displayImage',
+        },
+      })
+      .populate('redeemedBy', 'username displayName displayImage');
+
+    if (!directory) {
+      return next(createError(404, 'Film directory not found'));
+    }
+
+    res.status(200).json({
+      success: true,
+      directory: {
+        _id: directory._id,
+        folderName: directory.folderName,
+        description: directory.description,
+        films: directory.films,
+        isRedeemed: directory.isRedeemed,
+        redeemedBy: directory.redeemedBy,
         redeemedAt: directory.redeemedAt,
         createdAt: directory.createdAt,
       },
@@ -305,7 +357,8 @@ export const verifyAndGetFilms = async (req, res, next) => {
       message: `Successfully added ${filmIds.length} film(s) to your profile`,
       filmsCount: filmIds.length,
     });
-  } catch (error) {    next(error);
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -372,6 +425,114 @@ export const redeemFilmDirectory = async (req, res, next) => {
   }
 };
 
+// User: Purchase/Own individual film from directory
+// User: Add film to profile for FREE (no payment required)
+export const addFilmToProfile = async (req, res, next) => {
+  try {
+    const { filmId, directoryId } = req.body;
+    const userId = req.user.id;
+
+    if (!filmId || !directoryId) {
+      return next(createError(400, 'Film ID and Directory ID are required'));
+    }
+
+    // Verify directory exists
+    const directory = await FilmDirectory.findById(directoryId);
+    if (!directory) {
+      return next(createError(404, 'Film directory not found'));
+    }
+
+    // Verify film exists and belongs to this directory
+    const film = await Video.findById(filmId);
+    if (!film) {
+      return next(createError(404, 'Film not found'));
+    }
+
+    if (film.filmDirectoryId?.toString() !== directoryId) {
+      return next(createError(400, 'Film does not belong to this directory'));
+    }
+
+    // Create a copy of the film for the user (not removing from directory)
+    const filmCopy = new Video({
+      caption: film.caption,
+      videoUrl: film.videoUrl,
+      thumbnail: film.thumbnail,
+      userId: userId,
+      privacy: 'Public',
+      isFilm: false,
+      mediaType: film.mediaType,
+      storageProvider: film.storageProvider,
+      sourceFilmId: film._id, // Track the original film
+      filmDirectoryId: directoryId, // Track the directory for buy button
+    });
+
+    await filmCopy.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Film successfully added to your profile!',
+      film: filmCopy,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// User: Purchase film completely (PAID - requires payment)
+export const purchaseFilm = async (req, res, next) => {
+  try {
+    const { filmId, directoryId } = req.body;
+    const userId = req.user.id;
+
+    if (!filmId || !directoryId) {
+      return next(createError(400, 'Film ID and Directory ID are required'));
+    }
+
+    // Verify directory exists
+    const directory = await FilmDirectory.findById(directoryId);
+    if (!directory) {
+      return next(createError(404, 'Film directory not found'));
+    }
+
+    // Verify film exists and belongs to this directory
+    const film = await Video.findById(filmId);
+    if (!film) {
+      return next(createError(404, 'Film not found'));
+    }
+
+    if (film.filmDirectoryId?.toString() !== directoryId) {
+      return next(createError(400, 'Film does not belong to this directory'));
+    }
+
+    // Create a permanent copy of the film for the user (PURCHASED)
+    const purchasedFilm = new Video({
+      caption: film.caption,
+      videoUrl: film.videoUrl,
+      thumbnail: film.thumbnail,
+      userId: userId,
+      privacy: 'Public',
+      isFilm: false,
+      mediaType: film.mediaType,
+      storageProvider: film.storageProvider,
+      sourceFilmId: film._id, // Track the original film
+    });
+
+    await purchasedFilm.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Film purchased successfully! It's now permanently yours.",
+      film: {
+        _id: film._id,
+        caption: film.caption,
+        videoUrl: film.videoUrl,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Admin: Get film directory statistics
 export const getFilmDirectoryStats = async (req, res, next) => {
   try {
@@ -411,7 +572,8 @@ export const syncOrphanedFilms = async (req, res, next) => {
       if (directory && !directory.films.includes(film._id)) {
         directory.films.push(film._id);
         await directory.save();
-        syncedCount++;      }
+        syncedCount++;
+      }
     }
 
     res.status(200).json({

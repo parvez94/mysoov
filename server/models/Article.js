@@ -63,7 +63,6 @@ const ArticleSchema = new mongoose.Schema(
 );
 
 // Index for faster queries
-ArticleSchema.index({ slug: 1 });
 ArticleSchema.index({ published: 1, createdAt: -1 });
 ArticleSchema.index({ isPaused: 1 });
 
