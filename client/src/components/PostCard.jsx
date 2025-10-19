@@ -111,9 +111,9 @@ const PostCard = ({
   const isPrivate = video?.privacy === 'Private';
   const mediaType = video?.mediaType || 'video';
 
-  // Show buy button only for free additions (has filmDirectoryId)
-  // Purchased films won't have filmDirectoryId, so button won't show
-  const showBuyButton = video?.filmDirectoryId;
+  // Show buy button for films that still have filmDirectoryId (free copies)
+  // Purchased films have filmDirectoryId removed, so no buy button
+  const showBuyButton = !!video?.filmDirectoryId;
 
   // Check if video is from YouTube
   const isYouTubeVideo =

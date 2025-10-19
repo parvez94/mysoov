@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { MdCheck, MdArrowBack } from 'react-icons/md';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 
 const Container = styled.div`
@@ -287,6 +288,8 @@ const Payment = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  const { currentUser } = useSelector((state) => state.user);
+
   // Load pricing data on mount and when localStorage changes
   useEffect(() => {
     setPricingPlans(loadPricingPlans());
@@ -337,11 +340,22 @@ const Payment = () => {
         { withCredentials: true }
       );
 
-      setSuccess(response.data.message || 'Film added to your profile!');
+      setSuccess(response.data.message || 'Film purchased successfully!');
 
-      // Redirect to home after 2 seconds
+      // Trigger download if downloadUrl is provided
+      if (response.data.downloadUrl) {
+        const link = document.createElement('a');
+        link.href = response.data.downloadUrl;
+        link.download = filmName || 'film.mp4';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Redirect to profile after 2 seconds
       setTimeout(() => {
-        navigate('/');
+        navigate(`/${currentUser?.username || 'profile'}`);
       }, 2000);
     } catch (err) {
       setError(

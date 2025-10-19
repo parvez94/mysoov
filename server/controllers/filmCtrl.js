@@ -168,10 +168,16 @@ export const deleteFilmDirectory = async (req, res, next) => {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Update all films in this directory
+    // Delete ORIGINAL films in the folder (isFilm: true)
+    await Video.deleteMany({
+      filmDirectoryId: directoryId,
+      isFilm: true,
+    });
+
+    // Keep user COPIES but remove filmDirectoryId reference (removes buy button)
     await Video.updateMany(
-      { filmDirectoryId: directoryId },
-      { $set: { isFilm: false, filmDirectoryId: null } }
+      { filmDirectoryId: directoryId, isFilm: false },
+      { $set: { filmDirectoryId: null } }
     );
 
     // Delete directory
@@ -342,39 +348,33 @@ export const purchaseFilm = async (req, res, next) => {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Verify film exists and belongs to this directory
-    const film = await Video.findById(filmId);
-    if (!film) {
-      return next(createError(404, 'Film not found'));
-    }
-
-    if (film.filmDirectoryId?.toString() !== directoryId) {
-      return next(createError(400, 'Film does not belong to this directory'));
-    }
-
-    // Create a permanent copy of the film for the user (PURCHASED)
-    const purchasedFilm = new Video({
-      caption: film.caption,
-      videoUrl: film.videoUrl,
-      thumbnail: film.thumbnail,
+    // Find the user's free copy of the film
+    const userFilm = await Video.findOne({
       userId: userId,
-      privacy: 'Public',
+      sourceFilmId: filmId,
+      filmDirectoryId: directoryId,
       isFilm: false,
-      mediaType: film.mediaType,
-      storageProvider: film.storageProvider,
-      sourceFilmId: film._id, // Track the original film
     });
 
-    await purchasedFilm.save();
+    if (!userFilm) {
+      return next(
+        createError(
+          404,
+          'Film not found in your profile. Please add it to profile first.'
+        )
+      );
+    }
+
+    // Remove filmDirectoryId to remove buy button (marks as purchased)
+    userFilm.filmDirectoryId = null;
+    await userFilm.save();
 
     res.status(200).json({
       success: true,
-      message: "Film purchased successfully! It's now permanently yours.",
-      film: {
-        _id: film._id,
-        caption: film.caption,
-        videoUrl: film.videoUrl,
-      },
+      message:
+        'Film purchased successfully! Download will start automatically.',
+      film: userFilm,
+      downloadUrl: userFilm.videoUrl?.url || userFilm.videoUrl,
     });
   } catch (error) {
     next(error);

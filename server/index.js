@@ -273,10 +273,12 @@ const connectDB = async () => {
       await mongoose.connect(mongoUrl, connectionOptions);
 
       isConnected = true;
-      connectionPromise = null;      return;
+      connectionPromise = null;
+      return;
     } catch (err) {
       isConnected = false;
-      connectionPromise = null;      throw new Error(`Failed to connect to database: ${err.message}`);
+      connectionPromise = null;
+      throw new Error(`Failed to connect to database: ${err.message}`);
     }
   })();
 
@@ -320,19 +322,50 @@ app.get('/video/:id', async (req, res) => {
     const videoUrl =
       typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
 
-    const thumbnailUrl =
-      user?.displayImage ||
-      video.thumbnail ||
-      'https://via.placeholder.com/1200x630?text=Mysoov';
+    // Generate thumbnail based on storage provider
+    let thumbnailUrl = 'https://via.placeholder.com/1200x630?text=Mysoov';
+
+    if (video.storageProvider === 'cloudinary' && videoUrl) {
+      // Extract Cloudinary public ID and generate thumbnail
+      // Convert video URL to thumbnail URL by replacing upload with upload/so_0/f_jpg
+      thumbnailUrl = videoUrl.replace(
+        '/upload/',
+        '/upload/so_0,w_1200,h_630,c_fill/'
+      );
+      // If it's a video, ensure we get a frame as jpg
+      if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
+        thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+      }
+    } else if (video.storageProvider === 'youtube' && videoUrl) {
+      // Extract YouTube video ID and use YouTube thumbnail
+      const youtubeIdMatch = videoUrl.match(
+        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+      );
+      if (youtubeIdMatch && youtubeIdMatch[1]) {
+        thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
 
     const videoTitle = video.caption || 'Check out this video on Mysoov!';
     const videoDescription =
       video.caption ||
       'Amazing content on Mysoov - Connect, share, and discover videos!';
 
-    const shareUrl = `${
-      process.env.FRONTEND_URL || 'https://mysoov.tv'
-    }/video/${video._id}`;
+    // Dynamically determine the frontend URL based on the request
+    let frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
+
+    // Check if there's a Referer header (indicates where the share was initiated from)
+    const referer = req.get('Referer') || req.get('Origin');
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        frontendUrl = `${refererUrl.protocol}//${refererUrl.host}`;
+      } catch (e) {
+        // Invalid referer, use default
+      }
+    }
+
+    const shareUrl = `${frontendUrl}/video/${video._id}`;
 
     // Generate HTML with Open Graph meta tags
     const htmlContent = `<!DOCTYPE html>
@@ -352,6 +385,10 @@ app.get('/video/:id', async (req, res) => {
       '&quot;'
     )}" />
     <meta property="og:image" content="${thumbnailUrl}" />
+    <meta property="og:image:secure_url" content="${thumbnailUrl}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:url" content="${shareUrl}" />
     <meta property="og:type" content="video.other" />
     <meta property="og:site_name" content="Mysoov" />
@@ -385,7 +422,8 @@ app.get('/video/:id', async (req, res) => {
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(htmlContent);
-  } catch (error) {    res.status(500).send('Error loading video');
+  } catch (error) {
+    res.status(500).send('Error loading video');
   }
 });
 
@@ -426,8 +464,9 @@ if (process.env.NODE_ENV !== 'production') {
       // Connect to database BEFORE starting the server
       await connectDB();
       // Start listening only after DB is connected
-      app.listen(port, () => {      });
-    } catch (error) {      process.exit(1);
+      app.listen(port, () => {});
+    } catch (error) {
+      process.exit(1);
     }
   };
 
@@ -436,8 +475,9 @@ if (process.env.NODE_ENV !== 'production') {
   // For production (Vercel), attempt initial connection but don't fail
   // The middleware will handle connection on first request if needed
   connectDB()
-    .then(() => {    })
-    .catch((error) => {      // Don't exit - let the middleware handle connection on first request
+    .then(() => {})
+    .catch((error) => {
+      // Don't exit - let the middleware handle connection on first request
     });
 }
 

@@ -197,8 +197,10 @@ const ModalBox = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 30px;
-  max-width: 500px;
+  max-width: 600px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
 `;
 
 const ModalHeader = styled.div`
@@ -455,6 +457,7 @@ const SearchResults = () => {
     try {
       setLoadingFilms(true);
       setError(null);
+      setSelectedFilm(null); // Reset selected film when opening modal
 
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/api/v1/films/details/${
@@ -608,7 +611,7 @@ const SearchResults = () => {
         <Modal onClick={() => setShowFilmsModal(false)}>
           <ModalBox
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '800px' }}
+            style={{ maxWidth: '600px' }}
           >
             <ModalHeader>
               <ModalTitle>
@@ -757,7 +760,7 @@ const SearchResults = () => {
                     autoPlay
                     style={{
                       width: '100%',
-                      maxHeight: '500px',
+                      maxHeight: '300px',
                       display: 'block',
                     }}
                   />
