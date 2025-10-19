@@ -394,9 +394,8 @@ const Video = () => {
 
   const handleShare = () =>
     guardOr(() => {
-      // Generate the video URL to share - use backend URL so Facebook can crawl meta tags
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5100';
-      const shareUrl = `${apiUrl}/video/${currentVideo._id}`;
+      // Generate the video URL to share - use frontend URL
+      const shareUrl = `${window.location.origin}/video/${currentVideo._id}`;
 
       // If Facebook SDK is available, use the Share Dialog
       if (window.FB) {

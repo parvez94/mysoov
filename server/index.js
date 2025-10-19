@@ -367,7 +367,7 @@ app.get('/video/:id', async (req, res) => {
 
     const shareUrl = `${frontendUrl}/video/${video._id}`;
 
-    // Generate HTML with Open Graph meta tags
+    // Generate HTML with Open Graph meta tags (no redirect - handled by frontend serverless function)
     const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -410,13 +410,9 @@ app.get('/video/:id', async (req, res) => {
     <meta name="twitter:card" content="summary_large_image" />
     
     <title>${videoTitle} - Mysoov</title>
-    <script>
-        // Redirect to the actual app after meta tags are read
-        window.location.href = '${shareUrl}';
-    </script>
 </head>
 <body>
-    <p>Redirecting to video...</p>
+    <p>Loading video...</p>
 </body>
 </html>`;
 
