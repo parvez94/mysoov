@@ -220,21 +220,37 @@ export const searchFilmDirectory = async (req, res, next) => {
       folderName: { $regex: new RegExp(`^${escapeRegex(code)}$`, 'i') },
     })
       .populate('films', 'caption videoUrl mediaType createdAt')
-      .populate('redeemedBy', 'username displayName displayImage');
+      .populate('redeemedBy', 'username displayName displayImage')
+      .populate('createdBy', 'username displayName displayImage');
 
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Check if user has already added films from this directory to their profile
-    const userHasFilms = await Video.findOne({
-      userId: req.user.id,
-      filmDirectoryId: directory._id,
-    });
+    // Check if directory is already redeemed (has been used by someone)
+    if (directory.isRedeemed) {
+      return next(
+        createError(
+          400,
+          'This folder has already been redeemed by another user'
+        )
+      );
+    }
 
-    // Don't show directory if user has already added films from it
-    if (userHasFilms) {
-      return next(createError(404, 'Film directory not found'));
+    // Check if user has already added films from this directory to their profile
+    // BUT: Skip this check if the user is the creator of the directory
+    const isCreator = directory.createdBy._id.toString() === req.user.id;
+
+    if (!isCreator) {
+      const userHasFilms = await Video.findOne({
+        userId: req.user.id,
+        filmDirectoryId: directory._id,
+      });
+
+      // Don't show directory if user has already added films from it
+      if (userHasFilms) {
+        return next(createError(400, 'You have already redeemed this folder'));
+      }
     }
 
     // Return limited info (don't expose full film details until code is verified)

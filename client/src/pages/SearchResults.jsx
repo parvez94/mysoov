@@ -400,6 +400,7 @@ const SearchResults = () => {
         setVideos([]);
 
         // First, try to search for film directory
+        let filmError = null;
         try {
           const filmResponse = await axios.get(
             `${
@@ -411,21 +412,30 @@ const SearchResults = () => {
           );
           setFilmDirectory(filmResponse.data.directory);
         } catch (filmErr) {
-          // If no film directory found, search for regular videos
+          // Only show error if it's not a 404 (not found)
+          // For 400 errors (like already redeemed), show the message to user
+          if (filmErr.response?.status === 400) {
+            filmError =
+              filmErr.response?.data?.message || 'Film directory error';
+            setError(filmError);
+          }
+          // For 404 or other errors, continue to search for regular videos
         }
 
-        // Also search for regular videos
-        try {
-          const videoResponse = await axios.get(
-            `${import.meta.env.VITE_API_URL}/api/v1/videos/search`,
-            {
-              params: { code: query },
-              withCredentials: true,
-            }
-          );
-          setVideos(videoResponse.data);
-        } catch (videoErr) {
-          // No videos found
+        // Also search for regular videos (only if no film error was set)
+        if (!filmError) {
+          try {
+            const videoResponse = await axios.get(
+              `${import.meta.env.VITE_API_URL}/api/v1/videos/search`,
+              {
+                params: { code: query },
+                withCredentials: true,
+              }
+            );
+            setVideos(videoResponse.data);
+          } catch (videoErr) {
+            // No videos found - this is okay
+          }
         }
       } catch (err) {
         setError(
