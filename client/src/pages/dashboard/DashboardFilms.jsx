@@ -681,8 +681,6 @@ const DashboardFilms = () => {
   const [directories, setDirectories] = useState([]);
   const [stats, setStats] = useState({
     totalDirectories: 0,
-    redeemedDirectories: 0,
-    activeDirectories: 0,
     totalFilms: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -1065,14 +1063,6 @@ const DashboardFilms = () => {
           <StatValue>{stats.totalDirectories || 0}</StatValue>
         </StatCard>
         <StatCard>
-          <StatLabel>Active Directories</StatLabel>
-          <StatValue>{stats.activeDirectories || 0}</StatValue>
-        </StatCard>
-        <StatCard>
-          <StatLabel>Redeemed</StatLabel>
-          <StatValue>{stats.redeemedDirectories || 0}</StatValue>
-        </StatCard>
-        <StatCard>
           <StatLabel>Total Films</StatLabel>
           <StatValue>{stats.totalFilms || 0}</StatValue>
         </StatCard>
@@ -1085,7 +1075,6 @@ const DashboardFilms = () => {
               <Th>Folder Name (Access Code)</Th>
               <Th>Films</Th>
               <Th>Price</Th>
-              <Th>Status</Th>
               <Th>Created</Th>
               <Th>Actions</Th>
             </Tr>
@@ -1093,7 +1082,7 @@ const DashboardFilms = () => {
           <Tbody>
             {directories.length === 0 ? (
               <tr>
-                <td colSpan='6'>
+                <td colSpan='5'>
                   <EmptyState>
                     <EmptyIcon>
                       <FaFolder />
@@ -1114,7 +1103,7 @@ const DashboardFilms = () => {
                   <Td>
                     <FolderInfo>
                       <FolderIcon>
-                        {directory.isRedeemed ? <FaFolderOpen /> : <FaFolder />}
+                        <FaFolder />
                       </FolderIcon>
                       <FolderName>{directory.folderName}</FolderName>
                     </FolderInfo>
@@ -1128,11 +1117,6 @@ const DashboardFilms = () => {
                     <span style={{ color: '#4caf50', fontWeight: '600' }}>
                       ${(directory.price || 9.99).toFixed(2)}
                     </span>
-                  </Td>
-                  <Td>
-                    <StatusBadge $redeemed={directory.isRedeemed}>
-                      {directory.isRedeemed ? 'Redeemed' : 'Active'}
-                    </StatusBadge>
                   </Td>
                   <Td>{formatDate(directory.createdAt)}</Td>
                   <Td onClick={(e) => e.stopPropagation()}>

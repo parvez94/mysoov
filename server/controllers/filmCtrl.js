@@ -8,10 +8,8 @@ export const getAllFilmDirectories = async (req, res, next) => {
   try {
     const directories = await FilmDirectory.find()
       .populate('createdBy', 'username displayName displayImage')
-      .populate('redeemedBy', 'username displayName displayImage')
       .populate('films')
       .sort({ createdAt: -1 });
-    directories.forEach((dir, index) => {});
 
     res.status(200).json({
       success: true,
@@ -30,7 +28,6 @@ export const getFilmDirectory = async (req, res, next) => {
 
     const directory = await FilmDirectory.findById(directoryId)
       .populate('createdBy', 'username displayName displayImage')
-      .populate('redeemedBy', 'username displayName displayImage')
       .populate('films');
 
     if (!directory) {
@@ -97,11 +94,6 @@ export const uploadFilmToDirectory = async (req, res, next) => {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Check if directory is already redeemed
-    if (directory.isRedeemed) {
-      return next(createError(400, 'Cannot add films to a redeemed directory'));
-    }
-
     // Find video
     const video = await Video.findById(videoId);
     if (!video) {
@@ -140,13 +132,6 @@ export const removeFilmFromDirectory = async (req, res, next) => {
     const directory = await FilmDirectory.findById(directoryId);
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
-    }
-
-    // Check if directory is already redeemed
-    if (directory.isRedeemed) {
-      return next(
-        createError(400, 'Cannot remove films from a redeemed directory')
-      );
     }
 
     // Remove film from directory
@@ -218,29 +203,18 @@ export const searchFilmDirectory = async (req, res, next) => {
     // Use simple case-insensitive string comparison (more reliable than regex for exact matches)
     const directory = await FilmDirectory.findOne({
       folderName: { $regex: new RegExp(`^${escapeRegex(code)}$`, 'i') },
-    })
-      .populate('films', 'caption videoUrl mediaType createdAt')
-      .populate('redeemedBy', 'username displayName displayImage');
+    }).populate('films', 'caption videoUrl mediaType createdAt');
 
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Check if directory is already redeemed (has been used by someone)
-    if (directory.isRedeemed) {
-      return next(
-        createError(
-          400,
-          'This folder has already been redeemed by another user'
-        )
-      );
-    }
-
     // Check if user has already added films from this directory to their profile
-    // This applies to everyone (including admins) - admins can manage folders from dashboard
+    // Only check for COPIED films (isFilm: false), not original films in the folder
     const userHasFilms = await Video.findOne({
       userId: req.user.id,
       filmDirectoryId: directory._id,
+      isFilm: false, // Only check for copies, not originals
     });
 
     // Don't show directory if user has already added films from it
@@ -250,8 +224,7 @@ export const searchFilmDirectory = async (req, res, next) => {
       );
     }
 
-    // Return limited info (don't expose full film details until code is verified)
-    // Include redemption status so users know if it's already been redeemed
+    // Return limited info (don't expose full film details until added to profile)
     res.status(200).json({
       success: true,
       directory: {
@@ -259,9 +232,6 @@ export const searchFilmDirectory = async (req, res, next) => {
         folderName: directory.folderName,
         description: directory.description,
         filmCount: directory.films.length,
-        isRedeemed: directory.isRedeemed,
-        redeemedBy: directory.isRedeemed ? directory.redeemedBy : null,
-        redeemedAt: directory.redeemedAt,
         createdAt: directory.createdAt,
       },
     });
@@ -275,16 +245,14 @@ export const getFilmDirectoryDetails = async (req, res, next) => {
   try {
     const { directoryId } = req.params;
 
-    const directory = await FilmDirectory.findById(directoryId)
-      .populate({
-        path: 'films',
-        select: 'caption videoUrl thumbnail mediaType createdAt userId',
-        populate: {
-          path: 'userId',
-          select: 'username displayName displayImage',
-        },
-      })
-      .populate('redeemedBy', 'username displayName displayImage');
+    const directory = await FilmDirectory.findById(directoryId).populate({
+      path: 'films',
+      select: 'caption videoUrl thumbnail mediaType createdAt userId',
+      populate: {
+        path: 'userId',
+        select: 'username displayName displayImage',
+      },
+    });
 
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
@@ -297,141 +265,8 @@ export const getFilmDirectoryDetails = async (req, res, next) => {
         folderName: directory.folderName,
         description: directory.description,
         films: directory.films,
-        isRedeemed: directory.isRedeemed,
-        redeemedBy: directory.redeemedBy,
-        redeemedAt: directory.redeemedAt,
         createdAt: directory.createdAt,
       },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// User: Verify code and automatically redeem films to user's profile
-export const verifyAndGetFilms = async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    const userId = req.user.id;
-
-    if (!code) {
-      return next(createError(400, 'Folder name is required'));
-    }
-
-    // Escape special regex characters and search case-insensitive
-    const escapedCode = escapeRegex(code);
-    const directory = await FilmDirectory.findOne({
-      folderName: { $regex: new RegExp(`^${escapedCode}$`, 'i') },
-    }).populate('films');
-
-    if (!directory) {
-      return next(createError(404, 'Invalid folder name'));
-    }
-
-    // Check if already redeemed by someone
-    if (directory.isRedeemed) {
-      return next(
-        createError(
-          400,
-          'This folder has already been redeemed by another user'
-        )
-      );
-    }
-
-    // Automatically transfer all films to user
-    const filmIds = directory.films.map((film) => film._id);
-    // Update each video - transfer ownership to user
-    await Video.updateMany(
-      { _id: { $in: filmIds } },
-      {
-        $set: {
-          userId: userId,
-          privacy: 'Public',
-          isFilm: false,
-          filmDirectoryId: null,
-        },
-      }
-    );
-
-    // Verify the transfer
-    const transferredVideos = await Video.find({
-      _id: { $in: filmIds },
-    }).select('videoUrl userId isFilm');
-    // Mark directory as redeemed
-    directory.isRedeemed = true;
-    directory.redeemedBy = userId;
-    directory.redeemedAt = new Date();
-    await directory.save();
-
-    // Delete the directory after redemption
-    await FilmDirectory.findByIdAndDelete(directory._id);
-    res.status(200).json({
-      success: true,
-      message: `Successfully added ${filmIds.length} film(s) to your profile`,
-      filmsCount: filmIds.length,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// User: Redeem film directory with folder name (code verification)
-export const redeemFilmDirectory = async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    const userId = req.user.id;
-
-    if (!code) {
-      return next(createError(400, 'Folder name is required'));
-    }
-
-    // Escape special regex characters and search case-insensitive
-    const escapedCode = escapeRegex(code);
-    const directory = await FilmDirectory.findOne({
-      folderName: { $regex: new RegExp(`^${escapedCode}$`, 'i') },
-    }).populate('films');
-
-    if (!directory) {
-      return next(createError(404, 'Invalid folder name'));
-    }
-
-    // Check if already redeemed
-    if (directory.isRedeemed) {
-      return next(createError(400, 'This folder has already been redeemed'));
-    }
-
-    // Transfer all films to user
-    const filmIds = directory.films.map((film) => film._id);
-
-    // Update each video individually to ensure videoUrl is preserved
-    const updateResult = await Video.updateMany(
-      { _id: { $in: filmIds } },
-      {
-        $set: {
-          userId: userId,
-          privacy: 'Public', // Make films public in user's profile
-          isFilm: false, // No longer a film, now a regular video
-          filmDirectoryId: null,
-        },
-      }
-    );
-    // Verify the transfer worked correctly
-    const transferredVideos = await Video.find({
-      _id: { $in: filmIds },
-    }).select('videoUrl userId isFilm');
-    // Mark directory as redeemed
-    directory.isRedeemed = true;
-    directory.redeemedBy = userId;
-    directory.redeemedAt = new Date();
-    await directory.save();
-
-    // Delete the directory after redemption
-    await FilmDirectory.findByIdAndDelete(directory._id);
-
-    res.status(200).json({
-      success: true,
-      message: `Successfully redeemed ${filmIds.length} film(s)! They are now in your profile.`,
-      filmsCount: filmIds.length,
     });
   } catch (error) {
     next(error);
@@ -550,17 +385,12 @@ export const purchaseFilm = async (req, res, next) => {
 export const getFilmDirectoryStats = async (req, res, next) => {
   try {
     const totalDirectories = await FilmDirectory.countDocuments();
-    const redeemedDirectories = await FilmDirectory.countDocuments({
-      isRedeemed: true,
-    });
     const totalFilms = await Video.countDocuments({ isFilm: true });
 
     res.status(200).json({
       success: true,
       stats: {
         totalDirectories,
-        redeemedDirectories,
-        activeDirectories: totalDirectories - redeemedDirectories,
         totalFilms,
       },
     });

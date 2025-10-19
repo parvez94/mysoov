@@ -8,8 +8,6 @@ import {
   deleteFilmDirectory,
   searchFilmDirectory,
   getFilmDirectoryDetails,
-  verifyAndGetFilms,
-  redeemFilmDirectory,
   addFilmToProfile,
   purchaseFilm,
   getFilmDirectoryStats,
@@ -75,7 +73,5 @@ router.get('/search/:code', verifyToken, searchFilmDirectory);
 router.get('/details/:directoryId', verifyToken, getFilmDirectoryDetails);
 router.post('/add-to-profile', verifyToken, addFilmToProfile);
 router.post('/purchase', verifyToken, purchaseFilm);
-router.post('/verify', verifyToken, verifyAndGetFilms);
-router.post('/redeem', verifyToken, redeemFilmDirectory);
 
 export default router;

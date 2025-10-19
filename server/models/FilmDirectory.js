@@ -20,6 +20,7 @@ const filmDirectorySchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    // DEPRECATED: Legacy fields from old redeem workflow (no longer used)
     isRedeemed: {
       type: Boolean,
       default: false,

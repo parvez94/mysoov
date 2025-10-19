@@ -569,44 +569,17 @@ const SearchResults = () => {
                 <DirectoryMeta>
                   <FaFilm style={{ marginRight: '4px' }} />
                   {filmDirectory.filmCount} film
-                  {filmDirectory.filmCount !== 1 ? 's' : ''}
-                  {filmDirectory.isRedeemed
-                    ? ' (Already Redeemed)'
-                    : ' available'}
+                  {filmDirectory.filmCount !== 1 ? 's' : ''} available
                 </DirectoryMeta>
               </DirectoryInfo>
-              {!filmDirectory.isRedeemed && (
-                <RedeemButton onClick={handleViewFilms} disabled={loadingFilms}>
-                  <FaFilm />
-                  {loadingFilms ? 'Loading...' : 'View Films'}
-                </RedeemButton>
-              )}
+              <RedeemButton onClick={handleViewFilms} disabled={loadingFilms}>
+                <FaFilm />
+                {loadingFilms ? 'Loading...' : 'View Films'}
+              </RedeemButton>
             </DirectoryHeader>
             {filmDirectory.description && (
               <DirectoryDescription>
                 {filmDirectory.description}
-              </DirectoryDescription>
-            )}
-            {filmDirectory.isRedeemed && (
-              <DirectoryDescription
-                style={{ color: '#ff9800', marginTop: '0' }}
-              >
-                ⚠️ This folder has already been redeemed
-                {filmDirectory.redeemedBy && (
-                  <>
-                    {' '}
-                    by{' '}
-                    {filmDirectory.redeemedBy.username ||
-                      filmDirectory.redeemedBy.displayName}
-                  </>
-                )}
-                {filmDirectory.redeemedAt && (
-                  <>
-                    {' '}
-                    on {new Date(filmDirectory.redeemedAt).toLocaleDateString()}
-                  </>
-                )}
-                .
               </DirectoryDescription>
             )}
           </FilmDirectoryCard>
