@@ -1,7 +1,7 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const { id } = req.query;
   const userAgent = req.headers['user-agent'] || '';
 
@@ -91,4 +91,4 @@ module.exports = async function handler(req, res) {
       res.status(500).send('Error loading page');
     }
   }
-};
+}
