@@ -116,6 +116,7 @@ app.get('/', (req, res) => {
     success: true,
     message: 'API is running successfully!',
     timestamp: new Date().toISOString(),
+    version: '1.0.1',
   });
 });
 
