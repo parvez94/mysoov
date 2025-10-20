@@ -392,6 +392,7 @@ app.get('/video/:id', async (req, res) => {
     <meta property="og:url" content="${shareUrl}" />
     <meta property="og:type" content="video.other" />
     <meta property="og:site_name" content="Mysoov" />
+    <meta property="fb:app_id" content="324758342758749" />
     ${videoUrl ? `<meta property="og:video" content="${videoUrl}" />` : ''}
     <meta property="og:video:type" content="video/mp4" />
     <meta property="og:video:width" content="1280" />
