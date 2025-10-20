@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 export default async function handler(req, res) {
   const { id } = req.query;
   const userAgent = req.headers['user-agent'] || '';
@@ -79,16 +76,9 @@ export default async function handler(req, res) {
       res.status(500).send(errorHtml);
     }
   } else {
-    // Serve the React app for regular users
-    try {
-      const indexPath = path.join(process.cwd(), 'dist', 'index.html');
-      const indexHtml = fs.readFileSync(indexPath, 'utf-8');
-
-      res.setHeader('Content-Type', 'text/html');
-      res.status(200).send(indexHtml);
-    } catch (error) {
-      console.error('Error serving index:', error);
-      res.status(500).send('Error loading page');
-    }
+    // Redirect regular users to the main app
+    console.log('Non-crawler detected, redirecting to main app');
+    const redirectUrl = `https://mysoov-frontend.vercel.app/video/${id}`;
+    res.redirect(302, redirectUrl);
   }
 }
