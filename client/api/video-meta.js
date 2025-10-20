@@ -76,9 +76,22 @@ export default async function handler(req, res) {
       res.status(500).send(errorHtml);
     }
   } else {
-    // Redirect regular users to the main app
-    console.log('Non-crawler detected, redirecting to main app');
-    const redirectUrl = `https://mysoov-frontend.vercel.app/video/${id}`;
-    res.redirect(302, redirectUrl);
+    // Serve a minimal HTML page that redirects to the main app
+    console.log('Non-crawler detected, serving redirect page');
+    const redirectHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="refresh" content="0;url=/" />
+  <title>Mysoov</title>
+  <script>window.location.href = '/';</script>
+</head>
+<body>
+  <p>Redirecting...</p>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html');
+    res.status(200).send(redirectHtml);
   }
 }
