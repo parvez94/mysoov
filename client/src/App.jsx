@@ -1,5 +1,10 @@
 import { useEffect } from 'react';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
+import {
+  RouterProvider,
+  createBrowserRouter,
+  Navigate,
+  useParams,
+} from 'react-router-dom';
 import {
   Following,
   Home,
@@ -23,6 +28,12 @@ import BlogPost from './pages/BlogPost';
 import ArticleEditor from './pages/ArticleEditor';
 import RefreshUser from './pages/RefreshUser';
 import SearchResults from './pages/SearchResults';
+
+// Helper component to handle video redirects from social media
+const VideoRedirect = () => {
+  const { id } = useParams();
+  return <Navigate to={`/video/${id}`} replace />;
+};
 
 const router = createBrowserRouter([
   {
@@ -114,6 +125,10 @@ const router = createBrowserRouter([
       {
         path: 'video/:id',
         element: <Video />,
+      },
+      {
+        path: 'video-redirect/:id',
+        element: <VideoRedirect />,
       },
     ],
   },

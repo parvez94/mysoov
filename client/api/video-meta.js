@@ -76,18 +76,23 @@ export default async function handler(req, res) {
       res.status(500).send(errorHtml);
     }
   } else {
-    // Serve a minimal HTML page that redirects to the main app
-    console.log('Non-crawler detected, serving redirect page');
+    // For real users: redirect to a route that won't trigger serverless function
+    console.log('Non-crawler detected, redirecting to app');
     const redirectHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0;url=/" />
   <title>Mysoov</title>
-  <script>window.location.href = '/';</script>
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #000; color: #fff; }
+  </style>
 </head>
 <body>
-  <p>Redirecting...</p>
+  <p>Loading video...</p>
+  <script>
+    // Redirect to video-redirect route (won't be intercepted by serverless function)
+    window.location.replace('/video-redirect/${id}');
+  </script>
 </body>
 </html>`;
 
