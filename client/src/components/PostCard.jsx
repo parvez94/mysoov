@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
-import { VideoCard, VideoText } from '../components/index';
+import { VideoCard, VideoText, ImageSlider } from '../components/index';
 import { MdLock } from 'react-icons/md';
 
 const Card = styled.div`
@@ -16,7 +16,6 @@ const VideoWrapper = styled.div`
 
 const Video = styled.video`
   width: 100%;
-  aspect-ratio: 9 / 16;
   max-height: 300px;
   height: auto;
   border-radius: 8px;
@@ -27,7 +26,6 @@ const Video = styled.video`
 
 const YouTubeEmbed = styled.iframe`
   width: 100%;
-  aspect-ratio: 9 / 16;
   max-height: 300px;
   height: auto;
   border-radius: 8px;
@@ -37,7 +35,6 @@ const YouTubeEmbed = styled.iframe`
 
 const Image = styled.img`
   width: 100%;
-  aspect-ratio: 9 / 16;
   max-height: 300px;
   height: auto;
   border-radius: 8px;
@@ -108,6 +105,7 @@ const PostCard = ({
 }) => {
   const navigate = useNavigate();
   const src = video?.videoUrl?.url;
+  const images = video?.images || [];
   const isPrivate = video?.privacy === 'Private';
   const mediaType = video?.mediaType || 'video';
 
@@ -166,7 +164,11 @@ const PostCard = ({
             </PrivacyBadge>
           )}
           {mediaType === 'image' ? (
-            <Image src={src} alt={video?.caption || 'Post image'} />
+            images && images.length > 0 ? (
+              <ImageSlider images={images} caption={video?.caption} />
+            ) : (
+              <Image src={src} alt={video?.caption || 'Post image'} />
+            )
           ) : isYouTubeVideo ? (
             <YouTubeEmbed
               src={getCleanYouTubeUrl(src)}
@@ -199,7 +201,7 @@ const PostCard = ({
       />
       {enableVideoLink ? (
         <Link
-          to={`/video/${video._id}`}
+          to={`/post/${video._id}`}
           style={{ textDecoration: 'none', color: 'inherit' }}
         >
           <ClickableContent>{videoContent}</ClickableContent>

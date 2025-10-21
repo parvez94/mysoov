@@ -19,3 +19,4 @@ export { default as UserMenu } from './modal/UserMenu';
 export { default as Spinner } from './Spinner';
 export { default as ProgressBar } from './ProgressBar';
 export { default as VerifiedBadge } from './VerifiedBadge';
+export { default as ImageSlider } from './ImageSlider';

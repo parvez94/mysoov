@@ -94,7 +94,7 @@ const Stats = ({ variant, video }) => {
         )}
         <StatsWrapper>{likes?.length}</StatsWrapper>
       </Icon>
-      <Link to={`/video/`}>
+      <Link to={`/post/${_id}`}>
         <Icon variant={variant}>
           <MdOutlineInsertComment />
           <StatsWrapper>{video?.commentsCount ?? 0}</StatsWrapper>
@@ -102,7 +102,7 @@ const Stats = ({ variant, video }) => {
       </Link>
       <Icon variant={variant}>
         <IoIosShareAlt />
-        <StatsWrapper>2K</StatsWrapper>
+        <StatsWrapper>{video?.share || 0}</StatsWrapper>
       </Icon>
       <Icon variant={variant}>
         <HiOutlineBookmark />

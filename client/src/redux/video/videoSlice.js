@@ -49,6 +49,9 @@ const videoSlice = createSlice({
         (id) => id !== action.payload
       );
     },
+    incrementShare: (state) => {
+      state.currentVideo.share = (state.currentVideo.share || 0) + 1;
+    },
   },
 });
 
@@ -60,6 +63,7 @@ export const {
   unlike,
   save,
   unSave,
+  incrementShare,
 } = videoSlice.actions;
 
 export default videoSlice.reducer;

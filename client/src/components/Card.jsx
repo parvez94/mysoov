@@ -8,6 +8,7 @@ import { IoIosShareAlt } from 'react-icons/io';
 import { HiOutlineBookmark } from 'react-icons/hi';
 import { HiBookmark } from 'react-icons/hi2';
 import { HomeCard, HomeText, Stats } from '../components/index';
+import ImageSlider from './ImageSlider';
 import { like, unlike } from '../redux/video/videoSlice';
 import {
   likeVideo,
@@ -15,6 +16,7 @@ import {
   saveVideo,
   unSaveVideo,
 } from '../redux/video/actions';
+import { incrementShareInFeed } from '../redux/video/feedSlice';
 import { openModal } from '../redux/modal/modalSlice';
 
 const Container = styled.div`
@@ -66,17 +68,17 @@ const VideoContainer = styled.div`
   position: relative;
   display: flex;
   justify-content: center;
+  width: 100%;
 
   @media (max-width: 768px) {
-    width: 100%;
     justify-content: start;
   }
 `;
 
 const Video = styled.video`
-  max-width: 500px;
-  max-height: 600px;
-  width: auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: 400px;
   height: auto;
   border-radius: 10px;
   object-fit: contain;
@@ -84,16 +86,14 @@ const Video = styled.video`
   background: #000;
 
   @media (max-width: 768px) {
-    max-width: 100%;
-    width: 100%;
     max-height: 70vh;
   }
 `;
 
 const Image = styled.img`
-  max-width: 500px;
-  max-height: 600px;
-  width: auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: 400px;
   height: auto;
   border-radius: 10px;
   object-fit: contain;
@@ -101,23 +101,18 @@ const Image = styled.img`
   background: #000;
 
   @media (max-width: 768px) {
-    max-width: 100%;
-    width: 100%;
     max-height: 70vh;
   }
 `;
 
 const YouTubeEmbed = styled.iframe`
-  width: 500px;
+  width: 100%;
+  max-width: 100%;
   aspect-ratio: 16 / 9;
+  max-height: 400px;
   border-radius: 10px;
   border: none;
   background: #000;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    max-width: 100%;
-  }
 `;
 
 const VideoStats = styled.div`
@@ -179,14 +174,40 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
     caption,
     userId,
     videoUrl,
+    images,
     likes,
     saved,
     mediaType,
     storageProvider,
   } = video;
   const { currentUser } = useSelector((state) => state.user);
+  const [aspectRatio, setAspectRatio] = useState(null);
 
   const dispatch = useDispatch();
+
+  // Handle video metadata loading to detect aspect ratio
+  const handleVideoLoadedMetadata = (e) => {
+    const video = e.target;
+    const { videoWidth, videoHeight } = video;
+    if (videoWidth && videoHeight) {
+      const ratio = videoWidth / videoHeight;
+      setAspectRatio(
+        ratio < 1 ? 'portrait' : ratio > 1 ? 'landscape' : 'square'
+      );
+    }
+  };
+
+  // Handle image loading to detect aspect ratio
+  const handleImageLoad = (e) => {
+    const img = e.target;
+    const { naturalWidth, naturalHeight } = img;
+    if (naturalWidth && naturalHeight) {
+      const ratio = naturalWidth / naturalHeight;
+      setAspectRatio(
+        ratio < 1 ? 'portrait' : ratio > 1 ? 'landscape' : 'square'
+      );
+    }
+  };
 
   // Check if video is from YouTube
   const isYouTubeVideo =
@@ -231,16 +252,33 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
     });
 
   const handleShare = () =>
-    guardOr(() => {
-      // Generate the video URL to share - use frontend URL
-      const videoUrl = `${window.location.origin}/video/${_id}`;
+    guardOr(async () => {
+      // Generate the post URL to share - use frontend URL
+      const postUrl = `${window.location.origin}/post/${_id}`;
+
+      // Track share count in backend
+      try {
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/api/v1/videos/share/${_id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        // Update share count in Redux (for feed)
+        dispatch(incrementShareInFeed({ videoId: _id }));
+      } catch (error) {
+        console.error('Failed to track share:', error);
+      }
 
       // If Facebook SDK is available, use the Share Dialog
       if (window.FB) {
         FB.ui(
           {
             method: 'share',
-            href: videoUrl,
+            href: postUrl,
             hashtag: '#Mysoov',
             quote: caption || 'Check out this amazing content on Mysoov!',
           },
@@ -251,7 +289,7 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
       } else {
         // Fallback: Open Facebook share dialog in a new window
         const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
-          videoUrl
+          postUrl
         )}&quote=${encodeURIComponent(
           caption || 'Check out this amazing content on Mysoov!'
         )}`;
@@ -307,7 +345,17 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                 <small>Video ID: {_id}</small>
               </div>
             ) : mediaType === 'image' ? (
-              <Image src={videoUrl.url} alt={caption || 'Post image'} />
+              // Check if there are multiple images
+              images && images.length > 0 ? (
+                <ImageSlider images={images} caption={caption} />
+              ) : (
+                <Image
+                  src={videoUrl.url}
+                  alt={caption || 'Post image'}
+                  onLoad={handleImageLoad}
+                  data-aspect-ratio={aspectRatio}
+                />
+              )
             ) : isYouTubeVideo ? (
               <YouTubeEmbed
                 src={getCleanYouTubeUrl(videoUrl.url)}
@@ -316,7 +364,12 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                 allowFullScreen
               />
             ) : (
-              <Video src={videoUrl.url} controls />
+              <Video
+                src={videoUrl.url}
+                controls
+                onLoadedMetadata={handleVideoLoadedMetadata}
+                data-aspect-ratio={aspectRatio}
+              />
             )}
           </VideoContainer>
           {/* <Stats variant="home" video={video} /> */}
@@ -329,7 +382,7 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
               )}
               <StatsWrapper>{likes?.length}</StatsWrapper>
             </Icon>
-            <Link to={`/video/${_id}`}>
+            <Link to={`/post/${_id}`}>
               <Icon>
                 <MdOutlineInsertComment />
                 <StatsWrapper>{video?.commentsCount ?? 0}</StatsWrapper>

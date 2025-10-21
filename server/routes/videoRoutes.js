@@ -6,6 +6,7 @@ import {
   updateVideo,
   deleteVideo,
   addView,
+  addShare,
   randomVideos,
   trend,
   videoFeeds,
@@ -51,6 +52,7 @@ router.put('/:id', verifyToken, updateVideo);
 router.delete('/:id', verifyToken, deleteVideo);
 
 router.get('/find/:id', optionalAuth, getVideo);
+router.put('/share/:id', addShare);
 router.get('/random', randomVideos);
 router.get('/feeds', verifyToken, videoFeeds);
 router.get('/search', searchByAccessCode);

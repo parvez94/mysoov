@@ -29,10 +29,10 @@ import ArticleEditor from './pages/ArticleEditor';
 import RefreshUser from './pages/RefreshUser';
 import SearchResults from './pages/SearchResults';
 
-// Helper component to handle video redirects from social media
+// Helper component to handle post redirects from social media and old video links
 const VideoRedirect = () => {
   const { id } = useParams();
-  return <Navigate to={`/video/${id}`} replace />;
+  return <Navigate to={`/post/${id}`} replace />;
 };
 
 const router = createBrowserRouter([
@@ -123,8 +123,12 @@ const router = createBrowserRouter([
         element: <Upload />,
       },
       {
-        path: 'video/:id',
+        path: 'post/:id',
         element: <Video />,
+      },
+      {
+        path: 'video/:id',
+        element: <VideoRedirect />,
       },
       {
         path: 'video-redirect/:id',

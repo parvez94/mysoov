@@ -325,6 +325,7 @@ const Upload = () => {
   const currentUser = useSelector((state) => state.user.currentUser);
 
   const [videoFile, setVideoFile] = useState(null); // server-returned {public_id, url}
+  const [images, setImages] = useState([]); // Array of uploaded images for multi-image posts
   const [fileName, setFileName] = useState('');
   const [caption, setCaption] = useState('');
   const [privacy, setPrivacy] = useState('');
@@ -354,6 +355,7 @@ const Upload = () => {
   const resetForm = () => {
     abortIfRunning();
     setVideoFile(null);
+    setImages([]);
     setCaption('');
     setPrivacy('');
     setFileName('');
@@ -366,24 +368,47 @@ const Upload = () => {
   // Remove current uploaded video and allow choosing another
   const removeUploadedVideo = () => {
     setVideoFile(null);
+    setImages([]);
     setFileName('');
     setUploadProgress(0);
     setStatus('idle');
   };
 
+  // Remove a specific image from the array
+  const removeImage = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+    if (images.length === 1) {
+      setVideoFile(null);
+      setStatus('idle');
+    }
+  };
+
   const handleUpload = async (e) => {
     try {
-      const file = e.target.files?.[0];
-      if (!file) return;
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
 
-      // Detect media type from file
-      const isImage = file.type.startsWith('image/');
-      const isVideo = file.type.startsWith('video/');
+      const firstFile = files[0];
+      const isImage = firstFile.type.startsWith('image/');
+      const isVideo = firstFile.type.startsWith('video/');
 
       if (!isImage && !isVideo) {
         return alert('Please select a valid image or video file');
       }
 
+      // Videos can only be uploaded one at a time
+      if (isVideo && files.length > 1) {
+        return alert('You can only upload one video at a time');
+      }
+
+      // Handle multiple image uploads
+      if (isImage && files.length > 1) {
+        await uploadMultipleImages(files);
+        return;
+      }
+
+      // Handle single file upload (video or single image)
+      const file = firstFile;
       const detectedMediaType = isImage ? 'image' : 'video';
       setMediaType(detectedMediaType);
       setFileName(file.name);
@@ -477,13 +502,74 @@ const Upload = () => {
     }
   };
 
+  // Upload multiple images
+  const uploadMultipleImages = async (files) => {
+    try {
+      setMediaType('image');
+      setFileName(`${files.length} images selected`);
+      setUploading(true);
+      setUploadProgress(0);
+      setStatus('uploading');
+
+      const formData = new FormData();
+      files.forEach((file) => {
+        formData.append('images', file);
+      });
+
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload/images`,
+        formData,
+        {
+          withCredentials: true,
+          onUploadProgress: (evt) => {
+            if (evt.total) {
+              const percent = Math.round((evt.loaded / evt.total) * 100);
+              setUploadProgress(Math.min(95, percent));
+            } else {
+              setStatus('indeterminate');
+            }
+          },
+        }
+      );
+
+      setImages(res.data.images);
+      // Set first image as videoFile for backward compatibility
+      if (res.data.images.length > 0) {
+        setVideoFile(res.data.images[0]);
+      }
+      setStatus('success');
+      setUploadProgress(100);
+      setUploading(false);
+    } catch (err) {
+      if (err?.response?.status === 403 && err?.response?.data?.exceedsLimit) {
+        setPricingError({
+          fileSize: err.response.data.fileSize,
+          maxSize: err.response.data.maxSize,
+          currentPlan: err.response.data.currentPlan,
+        });
+        setShowPricingModal(true);
+        setStatus('error');
+      } else {
+        setStatus('error');
+        alert(
+          err?.response?.data?.msg ||
+            err?.response?.data?.error?.message ||
+            'Upload failed. Please try again.'
+        );
+      }
+      setUploading(false);
+    }
+  };
+
   const handleCancel = () => {
     abortIfRunning();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!videoFile) return alert('Please upload a media file first.');
+    if (!videoFile && images.length === 0) {
+      return alert('Please upload a media file first.');
+    }
 
     const addUrl = `${import.meta.env.VITE_API_URL}/api/v1/videos`;
 
@@ -493,8 +579,13 @@ const Upload = () => {
         videoUrl: videoFile,
         mediaType: mediaType,
         privacy: privacy || 'Public',
-        storageProvider: videoFile?.provider || 'cloudinary', // Include storage provider
+        storageProvider: videoFile?.provider || 'cloudinary',
       };
+
+      // If multiple images, include them
+      if (images.length > 0) {
+        requestBody.images = images;
+      }
 
       const response = await fetch(addUrl, {
         method: 'POST',
@@ -815,29 +906,74 @@ const Upload = () => {
             />
           )}
 
-          {videoFile?.url ? (
-            <PreviewBox>
-              {mediaType === 'video' ? (
-                <VideoPreview src={videoFile.url} controls playsInline />
+          {videoFile?.url || images.length > 0 ? (
+            <>
+              {/* Show multiple image previews */}
+              {images.length > 1 ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns:
+                      'repeat(auto-fill, minmax(150px, 1fr))',
+                    gap: '10px',
+                    marginBottom: '10px',
+                  }}
+                >
+                  {images.map((img, index) => (
+                    <div key={index} style={{ position: 'relative' }}>
+                      <ImagePreview
+                        src={img.url}
+                        alt={`Preview ${index + 1}`}
+                        style={{
+                          maxHeight: '150px',
+                          width: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                      <RemoveButton
+                        onClick={() => removeImage(index)}
+                        aria-label={`Remove image ${index + 1}`}
+                        style={{
+                          top: '5px',
+                          right: '5px',
+                          width: '24px',
+                          height: '24px',
+                          fontSize: '16px',
+                        }}
+                      >
+                        ×
+                      </RemoveButton>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <ImagePreview src={videoFile.url} alt='Preview' />
+                /* Single file preview */
+                <PreviewBox>
+                  {mediaType === 'video' ? (
+                    <VideoPreview src={videoFile.url} controls playsInline />
+                  ) : (
+                    <ImagePreview src={videoFile.url} alt='Preview' />
+                  )}
+                  <RemoveButton
+                    onClick={removeUploadedVideo}
+                    aria-label='Remove media'
+                  >
+                    ×
+                  </RemoveButton>
+                </PreviewBox>
               )}
-              <RemoveButton
-                onClick={removeUploadedVideo}
-                aria-label='Remove media'
-              >
-                ×
-              </RemoveButton>
-            </PreviewBox>
+            </>
           ) : (
             <DragVideo htmlFor='media-input'>
               <Helper>
-                {fileName || 'Click to select a video or image file'}
+                {fileName ||
+                  'Click to select a video or image file (multiple images allowed)'}
               </Helper>
               <DragInput
                 id='media-input'
                 type='file'
                 accept='video/*,image/*'
+                multiple
                 onChange={handleUpload}
               />
             </DragVideo>
@@ -894,7 +1030,10 @@ const Upload = () => {
                 Cancel upload
               </CancelBtn>
             )}
-            <PostBtn onClick={handleSubmit} disabled={uploading || !videoFile}>
+            <PostBtn
+              onClick={handleSubmit}
+              disabled={uploading || (!videoFile && images.length === 0)}
+            >
               Post Now
             </PostBtn>
           </ButtonsWrapper>

@@ -115,7 +115,8 @@ router.post('/upload', verifyToken, async (req, res) => {
           videoId: youtubeResult.videoId,
           thumbnailUrl: youtubeResult.thumbnailUrl,
         };
-      } catch (youtubeError) {        // Fallback to Cloudinary if YouTube fails
+      } catch (youtubeError) {
+        // Fallback to Cloudinary if YouTube fails
         provider = 'cloudinary';
       }
     }
@@ -142,7 +143,8 @@ router.post('/upload', verifyToken, async (req, res) => {
 
     // Send response
     res.json(result);
-  } catch (err) {    return res
+  } catch (err) {
+    return res
       .status(500)
       .json({ msg: err.message || 'Internal server error' });
   }
@@ -195,7 +197,8 @@ router.post('/upload/signature', verifyToken, async (req, res) => {
       apiKey: process.env.CLOUD_API,
       folder,
     });
-  } catch (err) {    return res.status(500).json({ msg: 'Internal server error' });
+  } catch (err) {
+    return res.status(500).json({ msg: 'Internal server error' });
   }
 });
 
@@ -225,6 +228,70 @@ router.post('/upload/image', verifyToken, async (req, res) => {
     return res.json({ public_id: result.public_id, url: result.secure_url });
   } catch (err) {
     return res.status(500).json({ msg: 'Internal server error' });
+  }
+});
+
+// Upload multiple images
+router.post('/upload/images', verifyToken, async (req, res) => {
+  try {
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).json({ msg: 'No files were uploaded.' });
+    }
+
+    // Get user's upload limit based on subscription
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    const userMaxUploadSize = getMaxUploadSize(user);
+    const maxSizeBytes = userMaxUploadSize * 1024 * 1024;
+
+    // Handle both single and multiple file uploads
+    const files = req.files.images;
+    const fileArray = Array.isArray(files) ? files : [files];
+
+    // Validate file sizes
+    for (const file of fileArray) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      if (file.size > maxSizeBytes) {
+        // Clean up temp files
+        fileArray.forEach((f) => removeTmp(f.tempFilePath));
+        return res.status(403).json({
+          msg: `File size (${fileSizeMB}MB) exceeds your plan limit of ${userMaxUploadSize}MB`,
+          exceedsLimit: true,
+          fileSize: fileSizeMB,
+          maxSize: userMaxUploadSize,
+          currentPlan: user.subscription?.plan || 'free',
+        });
+      }
+    }
+
+    // Upload all images to Cloudinary
+    const uploadPromises = fileArray.map((file) =>
+      cloudinary.uploader.upload(file.tempFilePath, {
+        folder: 'images',
+        resource_type: 'image',
+      })
+    );
+
+    const results = await Promise.all(uploadPromises);
+
+    // Clean up temporary files
+    fileArray.forEach((file) => removeTmp(file.tempFilePath));
+
+    // Format results
+    const uploadedImages = results.map((result) => ({
+      public_id: result.public_id,
+      url: result.secure_url,
+      provider: 'cloudinary',
+    }));
+
+    res.json({ images: uploadedImages });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ msg: err.message || 'Internal server error' });
   }
 });
 

@@ -133,6 +133,26 @@ export const addView = async (req, res, next) => {
   }
 };
 
+export const addShare = async (req, res, next) => {
+  try {
+    const video = await Video.findByIdAndUpdate(
+      req.params.id,
+      {
+        $inc: { share: 1 },
+      },
+      { new: true }
+    );
+
+    if (!video) {
+      return next(createError(404, 'Video not found'));
+    }
+
+    res.status(200).json({ share: video.share });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // export const randomVideos = async (req, res, next) => {
 //   try {
 //     const currentUser = req.user.id

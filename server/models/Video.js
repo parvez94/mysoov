@@ -12,6 +12,10 @@ const videoSchema = new mongoose.Schema(
     videoUrl: {
       type: Object,
     },
+    images: {
+      type: [Object],
+      default: [],
+    },
     storageProvider: {
       type: String,
       enum: ['cloudinary', 'youtube'],

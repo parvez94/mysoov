@@ -8,13 +8,19 @@ import { MdOutlineInsertComment } from 'react-icons/md';
 import { IoIosShareAlt } from 'react-icons/io';
 import { HiOutlineBookmark, HiBookmark } from 'react-icons/hi';
 import { MdLock } from 'react-icons/md';
-import { PostCard, VideoSidebar, Comments } from '../components/index';
+import {
+  PostCard,
+  VideoSidebar,
+  Comments,
+  ImageSlider,
+} from '../components/index';
 import {
   getVideo,
   getVideoSuccess,
   getVideoFailed,
   like,
   unlike,
+  incrementShare,
 } from '../redux/video/videoSlice';
 
 import {
@@ -81,11 +87,22 @@ const YouTubePlayer = styled.iframe`
 
 const ImagePlayer = styled.img`
   width: 100%;
+  max-height: 400px;
+  height: auto;
   border-radius: 4px;
   object-fit: contain;
 
   @media (max-width: 768px) {
     border-radius: 8px;
+    max-height: 70vh;
+  }
+`;
+
+const SliderWrapper = styled.div`
+  width: 100%;
+
+  @media (max-width: 768px) {
+    max-height: 70vh;
   }
 `;
 
@@ -311,7 +328,7 @@ const Video = () => {
       const videoDescription =
         currentVideo?.caption ||
         'Amazing content on Mysoov - Connect, share, and discover videos!';
-      const shareUrl = `${window.location.origin}/video/${currentVideo._id}`;
+      const shareUrl = `${window.location.origin}/post/${currentVideo._id}`;
 
       // Helper function to set or update meta tag
       const setMetaTag = (property, content) => {
@@ -393,9 +410,28 @@ const Video = () => {
     });
 
   const handleShare = () =>
-    guardOr(() => {
-      // Generate the video URL to share - use frontend URL
-      const shareUrl = `${window.location.origin}/video/${currentVideo._id}`;
+    guardOr(async () => {
+      // Generate the post URL to share - use frontend URL
+      const shareUrl = `${window.location.origin}/post/${currentVideo._id}`;
+
+      // Track share count in backend
+      try {
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/api/v1/videos/share/${
+            currentVideo._id
+          }`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        // Update share count in Redux (for detail page)
+        dispatch(incrementShare());
+      } catch (error) {
+        console.error('Failed to track share:', error);
+      }
 
       // If Facebook SDK is available, use the Share Dialog
       if (window.FB) {
@@ -557,10 +593,20 @@ const Video = () => {
               Video URL not found
             </div>
           ) : currentVideo?.mediaType === 'image' ? (
-            <ImagePlayer
-              src={videoUrl}
-              alt={currentVideo?.caption || 'Post image'}
-            />
+            // Check if there are multiple images, use slider or single image
+            currentVideo?.images && currentVideo.images.length > 0 ? (
+              <SliderWrapper>
+                <ImageSlider
+                  images={currentVideo.images}
+                  caption={currentVideo?.caption}
+                />
+              </SliderWrapper>
+            ) : (
+              <ImagePlayer
+                src={videoUrl}
+                alt={currentVideo?.caption || 'Post image'}
+              />
+            )
           ) : isYouTubeVideo ? (
             <YouTubePlayer
               src={getCleanYouTubeUrl(videoUrl)}
@@ -617,7 +663,7 @@ const Video = () => {
             )}
             <Icon onClick={handleShare}>
               <IoIosShareAlt />
-              <StatsWrapper>2K</StatsWrapper>
+              <StatsWrapper>{currentVideo?.share || 0}</StatsWrapper>
             </Icon>
           </CardStats>
           {/* Desktop stats */}
@@ -658,7 +704,7 @@ const Video = () => {
             )}
             <Icon onClick={handleShare}>
               <IoIosShareAlt />
-              <StatsWrapper>2K</StatsWrapper>
+              <StatsWrapper>{currentVideo?.share || 0}</StatsWrapper>
             </Icon>
           </CardStats>
           <Comments />

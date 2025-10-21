@@ -90,6 +90,15 @@ const feedSlice = createSlice({
         v.saved = v.saved.filter((id) => id !== userId);
       }
     },
+    incrementShareInFeed: (state, action) => {
+      const { videoId } = action.payload || {};
+      const v = state.videos.find(
+        (x) => String(x._id || x.id) === String(videoId)
+      );
+      if (v) {
+        v.share = (v.share || 0) + 1;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchVideos.pending, (state) => {
@@ -120,6 +129,11 @@ const feedSlice = createSlice({
   },
 });
 
-export const { likeInFeed, unlikeInFeed, saveInFeed, unSaveInFeed } =
-  feedSlice.actions;
+export const {
+  likeInFeed,
+  unlikeInFeed,
+  saveInFeed,
+  unSaveInFeed,
+  incrementShareInFeed,
+} = feedSlice.actions;
 export default feedSlice.reducer;

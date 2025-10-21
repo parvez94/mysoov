@@ -299,7 +299,8 @@ mongoose.connection.on('disconnected', () => {
   isConnected = false;
 });
 
-// Route to serve video page with Open Graph meta tags (for social media crawlers like Facebook)
+// Route to serve post page with Open Graph meta tags (for social media crawlers like Facebook)
+// Keep /video/:id for backward compatibility, redirect to /post/:id
 app.get('/video/:id', async (req, res) => {
   try {
     // Ensure DB is connected
@@ -366,7 +367,7 @@ app.get('/video/:id', async (req, res) => {
       }
     }
 
-    const shareUrl = `${frontendUrl}/video/${video._id}`;
+    const shareUrl = `${frontendUrl}/post/${video._id}`;
 
     // Generate HTML with Open Graph meta tags (no redirect - handled by frontend serverless function)
     const htmlContent = `<!DOCTYPE html>
@@ -422,6 +423,150 @@ app.get('/video/:id', async (req, res) => {
     res.send(htmlContent);
   } catch (error) {
     res.status(500).send('Error loading video');
+  }
+});
+
+// New post route - same as video but with updated URL structure
+app.get('/post/:id', async (req, res) => {
+  try {
+    // Ensure DB is connected
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
+    const Video = (await import('./models/Video.js')).default;
+    const User = (await import('./models/User.js')).default;
+
+    const video = await Video.findById(req.params.id);
+
+    if (!video || video.privacy === 'Private') {
+      return res.status(404).send('Post not found');
+    }
+
+    // Fetch user info for channel avatar
+    const user = await User.findById(video.userId);
+
+    // Extract video data
+    const videoUrl =
+      typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
+
+    // Generate thumbnail based on storage provider
+    let thumbnailUrl = 'https://via.placeholder.com/1200x630?text=Mysoov';
+
+    if (video.storageProvider === 'cloudinary' && videoUrl) {
+      // Extract Cloudinary public ID and generate thumbnail
+      // Convert video URL to thumbnail URL by replacing upload with upload/so_0/f_jpg
+      thumbnailUrl = videoUrl.replace(
+        '/upload/',
+        '/upload/so_0,w_1200,h_630,c_fill/'
+      );
+      // If it's a video, ensure we get a frame as jpg
+      if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
+        thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+      }
+    } else if (video.storageProvider === 'youtube' && videoUrl) {
+      // Extract YouTube video ID and use YouTube thumbnail
+      const youtubeIdMatch = videoUrl.match(
+        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+      );
+      if (youtubeIdMatch && youtubeIdMatch[1]) {
+        thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
+      }
+    }
+
+    const videoTitle = video.caption || 'Check out this post on Mysoov!';
+    const videoDescription =
+      video.caption ||
+      'Amazing content on Mysoov - Connect, share, and discover!';
+
+    // Dynamically determine the frontend URL based on the request
+    let frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
+
+    // Check if there's a Referer header (indicates where the share was initiated from)
+    const referer = req.get('Referer') || req.get('Origin');
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        frontendUrl = `${refererUrl.protocol}//${refererUrl.host}`;
+      } catch (e) {
+        // Invalid referer, use default
+      }
+    }
+
+    const shareUrl = `${frontendUrl}/post/${video._id}`;
+
+    // Generate HTML with Open Graph meta tags
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="${videoDescription.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    
+    <!-- Open Graph tags for social sharing -->
+    <meta property="og:title" content="${videoTitle.replace(/"/g, '&quot;')}" />
+    <meta property="og:description" content="${videoDescription.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    <meta property="og:image" content="${thumbnailUrl}" />
+    <meta property="og:image:secure_url" content="${thumbnailUrl}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:url" content="${shareUrl}" />
+    <meta property="og:type" content="${
+      video.mediaType === 'image' ? 'article' : 'video.other'
+    }" />
+    <meta property="og:site_name" content="Mysoov" />
+    <meta property="fb:app_id" content="324758342758749" />
+    ${
+      videoUrl && video.mediaType !== 'image'
+        ? `<meta property="og:video" content="${videoUrl}" />`
+        : ''
+    }
+    ${
+      video.mediaType !== 'image'
+        ? `<meta property="og:video:type" content="video/mp4" />`
+        : ''
+    }
+    ${
+      video.mediaType !== 'image'
+        ? `<meta property="og:video:width" content="1280" />`
+        : ''
+    }
+    ${
+      video.mediaType !== 'image'
+        ? `<meta property="og:video:height" content="720" />`
+        : ''
+    }
+    
+    <!-- Twitter Card tags -->
+    <meta name="twitter:title" content="${videoTitle.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    <meta name="twitter:description" content="${videoDescription.replace(
+      /"/g,
+      '&quot;'
+    )}" />
+    <meta name="twitter:image" content="${thumbnailUrl}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    
+    <title>${videoTitle} - Mysoov</title>
+</head>
+<body>
+    <p>Loading post...</p>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlContent);
+  } catch (error) {
+    res.status(500).send('Error loading post');
   }
 });
 
