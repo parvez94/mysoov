@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       // Use API_URL for serverless function (VITE_ vars are build-time only)
       const backendUrl =
         process.env.API_URL || 'https://mysoov-backend.vercel.app';
-      const videoUrl = `${backendUrl}/video/${id}`;
+      const videoUrl = `${backendUrl}/post/${id}`;
 
       console.log('Fetching from backend:', videoUrl);
 
