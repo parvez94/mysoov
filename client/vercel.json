@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/post/:id",
+      "destination": "/api/video-meta?id=:id"
+    },
+    {
       "source": "/video/:id",
       "destination": "/api/video-meta?id=:id"
     },
