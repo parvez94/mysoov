@@ -509,14 +509,16 @@ const SearchResults = () => {
     }
   };
 
-  const handleBuyCompletely = (film) => {
-    // Navigate to payment page with film details including price
+  const handleBuyCompleteFolder = () => {
+    // Navigate to payment page with folder details
+    // We'll use the first film's ID as reference
     const price = filmDirectory?.price || 9.99;
+    const firstFilm = directoryFilms[0];
     navigate(
-      `/payment?type=film&filmId=${film._id}&directoryId=${
+      `/payment?type=film&filmId=${firstFilm._id}&directoryId=${
         filmDirectory._id
       }&filmName=${encodeURIComponent(
-        film.caption || 'Untitled Film'
+        filmDirectory.folderName || 'Film Collection'
       )}&price=${price}`
     );
   };
@@ -632,7 +634,8 @@ const SearchResults = () => {
               <>
                 <ModalText>
                   Click on any film to watch it. You can add films to your
-                  profile for permanent ownership.
+                  profile for free, or purchase the entire collection to own it
+                  permanently and download all videos.
                 </ModalText>
 
                 <FilmsGrid>
@@ -702,13 +705,6 @@ const SearchResults = () => {
                             >
                               Add to Profile
                             </OwnButton>
-                            <OwnButton
-                              onClick={() => handleBuyCompletely(film)}
-                              style={{ flex: 1 }}
-                            >
-                              Buy - $
-                              {filmDirectory?.price?.toFixed(2) || '9.99'}
-                            </OwnButton>
                           </div>
                         </FilmInfo>
                       </FilmItem>
@@ -725,6 +721,48 @@ const SearchResults = () => {
                     </div>
                   )}
                 </FilmsGrid>
+
+                {/* Single Purchase Button for Entire Collection */}
+                {directoryFilms.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: '24px',
+                      padding: '20px',
+                      background: 'rgba(102, 126, 234, 0.1)',
+                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <ModalText
+                      style={{
+                        marginBottom: '16px',
+                        fontSize: '15px',
+                        fontWeight: '500',
+                      }}
+                    >
+                      💎 Purchase entire collection ({directoryFilms.length}{' '}
+                      {directoryFilms.length === 1 ? 'film' : 'films'}) for
+                      permanent ownership and download access
+                    </ModalText>
+                    <OwnButton
+                      onClick={handleBuyCompleteFolder}
+                      style={{
+                        width: '100%',
+                        maxWidth: '400px',
+                        padding: '14px 24px',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        background:
+                          'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                      }}
+                    >
+                      🛒 Purchase All Films - $
+                      {filmDirectory?.price?.toFixed(2) || '9.99'}
+                    </OwnButton>
+                  </div>
+                )}
               </>
             ) : (
               <div style={{ marginTop: '20px' }}>
@@ -796,26 +834,28 @@ const SearchResults = () => {
                     {new Date(selectedFilm.createdAt).toLocaleDateString()}
                   </p>
 
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <OwnButton
-                      onClick={() => handleAddToProfile(selectedFilm)}
-                      style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        background:
-                          'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                      }}
-                    >
-                      Add to Profile (Free)
-                    </OwnButton>
-                    <OwnButton
-                      onClick={() => handleBuyCompletely(selectedFilm)}
-                      style={{ flex: 1, justifyContent: 'center' }}
-                    >
-                      Buy Completely - $
-                      {filmDirectory?.price?.toFixed(2) || '9.99'}
-                    </OwnButton>
-                  </div>
+                  <OwnButton
+                    onClick={() => handleAddToProfile(selectedFilm)}
+                    style={{
+                      width: '100%',
+                      justifyContent: 'center',
+                      background:
+                        'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                    }}
+                  >
+                    Add to Profile (Free)
+                  </OwnButton>
+                  <ModalText
+                    style={{
+                      marginTop: '12px',
+                      fontSize: '13px',
+                      textAlign: 'center',
+                      opacity: 0.7,
+                    }}
+                  >
+                    💡 To purchase and download all films, go back and use the
+                    "Purchase All Films" button
+                  </ModalText>
                 </div>
               </div>
             )}

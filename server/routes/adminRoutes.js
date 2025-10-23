@@ -19,6 +19,8 @@ import {
   updatePricingPlans,
   getStorageSettings,
   updateStorageSettings,
+  getStripeSettings,
+  updateStripeSettings,
   getPendingReviews,
   approveReview,
   rejectReview,
@@ -64,6 +66,10 @@ router.put('/pricing-plans', updatePricingPlans);
 // Storage settings management
 router.get('/storage-settings', getStorageSettings);
 router.put('/storage-settings', updateStorageSettings);
+
+// Stripe settings management
+router.get('/stripe-settings', getStripeSettings);
+router.put('/stripe-settings', updateStripeSettings);
 
 // Content review management
 router.get('/reviews/pending', getPendingReviews);

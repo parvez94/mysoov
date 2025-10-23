@@ -32,6 +32,28 @@ const SettingsSchema = new mongoose.Schema(
       },
     },
 
+    // Stripe configuration
+    stripeConfig: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      mode: {
+        type: String,
+        enum: ['test', 'live'],
+        default: 'test',
+      },
+      testPublishableKey: String,
+      testSecretKey: String,
+      livePublishableKey: String,
+      liveSecretKey: String,
+      webhookSecret: String,
+      currency: {
+        type: String,
+        default: 'usd',
+      },
+    },
+
     // Branding settings (for future use)
     branding: {
       logo: String,

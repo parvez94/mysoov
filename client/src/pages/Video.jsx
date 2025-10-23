@@ -21,6 +21,7 @@ import {
   like,
   unlike,
   incrementShare,
+  updateShare,
 } from '../redux/video/videoSlice';
 
 import {
@@ -416,7 +417,7 @@ const Video = () => {
 
       // Track share count in backend
       try {
-        await fetch(
+        const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/v1/videos/share/${
             currentVideo._id
           }`,
@@ -427,8 +428,13 @@ const Video = () => {
             },
           }
         );
-        // Update share count in Redux (for detail page)
-        dispatch(incrementShare());
+        if (response.ok) {
+          const data = await response.json();
+          // Update share count in Redux (for detail page) with the exact value from DB
+          dispatch(updateShare(data.share));
+        } else {
+          console.error('Failed to increment share');
+        }
       } catch (error) {
         console.error('Failed to track share:', error);
       }

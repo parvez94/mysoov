@@ -99,6 +99,15 @@ const feedSlice = createSlice({
         v.share = (v.share || 0) + 1;
       }
     },
+    updateShareInFeed: (state, action) => {
+      const { videoId, share } = action.payload || {};
+      const v = state.videos.find(
+        (x) => String(x._id || x.id) === String(videoId)
+      );
+      if (v) {
+        v.share = share;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(fetchVideos.pending, (state) => {
@@ -135,5 +144,6 @@ export const {
   saveInFeed,
   unSaveInFeed,
   incrementShareInFeed,
+  updateShareInFeed,
 } = feedSlice.actions;
 export default feedSlice.reducer;

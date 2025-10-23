@@ -707,6 +707,115 @@ export const updateStorageSettings = async (req, res, next) => {
   }
 };
 
+// Get Stripe settings
+export const getStripeSettings = async (req, res, next) => {
+  try {
+    let settings = await Settings.findOne();
+
+    // Create default settings if none exist
+    if (!settings) {
+      settings = await Settings.create({
+        stripeConfig: {
+          enabled: false,
+          mode: 'test',
+          currency: 'usd',
+        },
+      });
+    }
+
+    // Don't send secret keys to frontend, only indicate if they're set
+    const stripeConfig = {
+      enabled: settings.stripeConfig?.enabled || false,
+      mode: settings.stripeConfig?.mode || 'test',
+      currency: settings.stripeConfig?.currency || 'usd',
+      testPublishableKey: settings.stripeConfig?.testPublishableKey || '',
+      livePublishableKey: settings.stripeConfig?.livePublishableKey || '',
+      webhookSecret: settings.stripeConfig?.webhookSecret || '',
+      hasTestSecretKey: !!settings.stripeConfig?.testSecretKey,
+      hasLiveSecretKey: !!settings.stripeConfig?.liveSecretKey,
+    };
+
+    res.status(200).json({
+      success: true,
+      stripeConfig,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update Stripe settings
+export const updateStripeSettings = async (req, res, next) => {
+  try {
+    const { stripeConfig } = req.body;
+
+    if (!stripeConfig) {
+      return next(createError(400, 'Stripe configuration is required'));
+    }
+
+    let settings = await Settings.findOne();
+
+    if (!settings) {
+      settings = await Settings.create({
+        stripeConfig: {
+          enabled: stripeConfig.enabled || false,
+          mode: stripeConfig.mode || 'test',
+          currency: stripeConfig.currency || 'usd',
+          testPublishableKey: stripeConfig.testPublishableKey || '',
+          testSecretKey: stripeConfig.testSecretKey || '',
+          livePublishableKey: stripeConfig.livePublishableKey || '',
+          liveSecretKey: stripeConfig.liveSecretKey || '',
+          webhookSecret: stripeConfig.webhookSecret || '',
+        },
+      });
+    } else {
+      // Update only provided fields, preserve existing secret keys if not provided
+      settings.stripeConfig = {
+        enabled:
+          stripeConfig.enabled ?? settings.stripeConfig?.enabled ?? false,
+        mode: stripeConfig.mode || settings.stripeConfig?.mode || 'test',
+        currency:
+          stripeConfig.currency || settings.stripeConfig?.currency || 'usd',
+        testPublishableKey:
+          stripeConfig.testPublishableKey ??
+          settings.stripeConfig?.testPublishableKey ??
+          '',
+        testSecretKey:
+          stripeConfig.testSecretKey ||
+          settings.stripeConfig?.testSecretKey ||
+          '',
+        livePublishableKey:
+          stripeConfig.livePublishableKey ??
+          settings.stripeConfig?.livePublishableKey ??
+          '',
+        liveSecretKey:
+          stripeConfig.liveSecretKey ||
+          settings.stripeConfig?.liveSecretKey ||
+          '',
+        webhookSecret:
+          stripeConfig.webhookSecret ??
+          settings.stripeConfig?.webhookSecret ??
+          '',
+      };
+      await settings.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Stripe settings updated successfully',
+      stripeConfig: {
+        enabled: settings.stripeConfig.enabled,
+        mode: settings.stripeConfig.mode,
+        currency: settings.stripeConfig.currency,
+        hasTestSecretKey: !!settings.stripeConfig.testSecretKey,
+        hasLiveSecretKey: !!settings.stripeConfig.liveSecretKey,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get pending reviews (videos and articles)
 export const getPendingReviews = async (req, res, next) => {
   try {

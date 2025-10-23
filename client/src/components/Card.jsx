@@ -16,7 +16,10 @@ import {
   saveVideo,
   unSaveVideo,
 } from '../redux/video/actions';
-import { incrementShareInFeed } from '../redux/video/feedSlice';
+import {
+  incrementShareInFeed,
+  updateShareInFeed,
+} from '../redux/video/feedSlice';
 import { openModal } from '../redux/modal/modalSlice';
 
 const Container = styled.div`
@@ -119,8 +122,9 @@ const VideoStats = styled.div`
   @media (max-width: 768px) {
     display: flex;
     flex-direction: row;
-    justify-content: start;
-    gap: 15px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
     width: 100%;
     margin-top: 10px;
     padding: 0 10px;
@@ -136,10 +140,11 @@ const Icon = styled.div`
   font-family: var(--primary-fonts);
   color: var(--secondary-color);
   cursor: pointer;
+  position: relative;
 
   svg {
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     padding: 8px;
     border-radius: 50%;
     background-color: rgba(255, 255, 255, 0.12);
@@ -148,23 +153,58 @@ const Icon = styled.div`
   @media (max-width: 768px) {
     margin-bottom: 0;
     flex: 1;
-    max-width: 60px;
+    flex-direction: row;
+    gap: 5px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 8px 12px;
+    max-width: none;
+    width: auto;
+    height: auto;
+    position: relative;
 
     svg {
-      width: 40px;
-      height: 40px;
-      padding: 8px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border-radius: 0;
+      background-color: transparent;
     }
   }
 `;
 
 const StatsWrapper = styled.span`
   font-size: 13px;
+  font-weight: 500;
   margin-top: 5px;
 
   @media (max-width: 768px) {
-    font-size: 11px;
-    margin-top: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 0;
+  }
+`;
+
+const MobileOnlyStats = styled.span`
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 2px;
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 0;
+  }
+`;
+
+const StatsLink = styled(Link)`
+  text-decoration: none;
+  color: inherit;
+
+  @media (max-width: 768px) {
+    flex: 1;
   }
 `;
 
@@ -258,7 +298,7 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
 
       // Track share count in backend
       try {
-        await fetch(
+        const response = await fetch(
           `${import.meta.env.VITE_API_URL}/api/v1/videos/share/${_id}`,
           {
             method: 'PUT',
@@ -267,8 +307,13 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
             },
           }
         );
-        // Update share count in Redux (for feed)
-        dispatch(incrementShareInFeed({ videoId: _id }));
+        if (response.ok) {
+          const data = await response.json();
+          // Update share count in Redux (for feed) with the exact value from DB
+          dispatch(updateShareInFeed({ videoId: _id, share: data.share }));
+        } else {
+          console.error('Failed to increment share');
+        }
       } catch (error) {
         console.error('Failed to track share:', error);
       }
@@ -382,15 +427,15 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
               )}
               <StatsWrapper>{likes?.length}</StatsWrapper>
             </Icon>
-            <Link to={`/post/${_id}`}>
+            <StatsLink to={`/post/${_id}`}>
               <Icon>
                 <MdOutlineInsertComment />
                 <StatsWrapper>{video?.commentsCount ?? 0}</StatsWrapper>
               </Icon>
-            </Link>
+            </StatsLink>
             <Icon onClick={handleShare}>
               <IoIosShareAlt />
-              <StatsWrapper>2K</StatsWrapper>
+              <StatsWrapper>{video?.share ?? 0}</StatsWrapper>
             </Icon>
             {!isOwnVideo && (
               <Icon onClick={handleBookmark}>
@@ -399,6 +444,7 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                 ) : (
                   <HiOutlineBookmark />
                 )}
+                <MobileOnlyStats>{saved?.length ?? 0}</MobileOnlyStats>
               </Icon>
             )}
           </VideoStats>

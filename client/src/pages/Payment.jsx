@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { MdCheck, MdArrowBack } from 'react-icons/md';
+import { MdCheck, MdArrowBack, MdLock, MdClose } from 'react-icons/md';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements,
+} from '@stripe/react-stripe-js';
 
 const Container = styled.div`
   padding: 40px 20px;
@@ -49,6 +56,121 @@ const Subtitle = styled.p`
   color: var(--secondary-color);
   font-size: 16px;
   margin-bottom: 40px;
+`;
+
+// Success Modal Styles
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+`;
+
+const ModalContent = styled.div`
+  background: #1a1a1a;
+  border: 2px solid var(--primary-color);
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  position: relative;
+  animation: slideUp 0.3s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 30px 20px;
+  }
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--secondary-color);
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+`;
+
+const SuccessIcon = styled.div`
+  width: 80px;
+  height: 80px;
+  background: rgba(81, 207, 102, 0.15);
+  border: 3px solid #51cf66;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  animation: scaleIn 0.4s ease-out;
+
+  @keyframes scaleIn {
+    from {
+      transform: scale(0);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+
+  svg {
+    color: #51cf66;
+  }
+`;
+
+const ModalTitle = styled.h2`
+  font-family: var(--primary-fonts);
+  color: #fff;
+  font-size: 28px;
+  text-align: center;
+  margin-bottom: 12px;
+`;
+
+const ModalMessage = styled.p`
+  font-family: var(--secondary-fonts);
+  color: var(--secondary-color);
+  font-size: 16px;
+  text-align: center;
+  margin-bottom: 32px;
+  line-height: 1.6;
+`;
+
+const ModalButtonGroup = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+
+  @media (min-width: 480px) {
+    flex-direction: row;
+  }
 `;
 
 const PlanCard = styled.div`
@@ -175,6 +297,11 @@ const Button = styled.button`
     &:hover {
       background: #cc0000;
     }
+    &:disabled {
+      background: #666;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
   `
       : `
     background: rgba(255, 255, 255, 0.1);
@@ -183,6 +310,33 @@ const Button = styled.button`
       background: rgba(255, 255, 255, 0.15);
     }
   `}
+`;
+
+const CardElementWrapper = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+`;
+
+const SecurePaymentBadge = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  color: #22c55e;
+  font-family: var(--secondary-fonts);
+  font-size: 14px;
+  margin-bottom: 20px;
+
+  svg {
+    flex-shrink: 0;
+  }
 `;
 
 // Default pricing plans (fallback if admin hasn't configured)
@@ -264,6 +418,321 @@ const loadPricingPlans = () => {
   return defaultPricingPlans;
 };
 
+// Stripe Card Element styling
+const CARD_ELEMENT_OPTIONS = {
+  hidePostalCode: true, // No postal code needed for digital products
+  style: {
+    base: {
+      color: '#fff',
+      fontFamily: 'var(--secondary-fonts)',
+      fontSize: '16px',
+      '::placeholder': {
+        color: '#aaa',
+      },
+      iconColor: '#fff',
+    },
+    invalid: {
+      color: '#ff6b6b',
+      iconColor: '#ff6b6b',
+    },
+  },
+};
+
+// Success Modal Component
+const SuccessModal = ({
+  filmName,
+  onClose,
+  onViewProfile,
+  onViewFilm,
+  downloadStatus,
+}) => {
+  const [canClose, setCanClose] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    // Start countdown
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          setCanClose(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
+  }, []);
+
+  const handleClose = () => {
+    if (canClose) {
+      onClose();
+    }
+  };
+
+  return (
+    <ModalOverlay onClick={handleClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        {canClose && (
+          <CloseButton onClick={onClose}>
+            <MdClose size={24} />
+          </CloseButton>
+        )}
+
+        <SuccessIcon>
+          <MdCheck size={48} />
+        </SuccessIcon>
+
+        <ModalTitle>Payment Successful! 🎉</ModalTitle>
+        <ModalMessage>
+          Your purchase of <strong>{filmName}</strong> is complete!
+          <br />
+          The film has been added to your profile.
+        </ModalMessage>
+
+        {/* Download Status */}
+        <div
+          style={{
+            padding: '12px 16px',
+            background: 'rgba(81, 207, 102, 0.1)',
+            border: '1px solid rgba(81, 207, 102, 0.3)',
+            borderRadius: '8px',
+            color: '#51cf66',
+            marginBottom: '20px',
+            fontFamily: 'var(--secondary-fonts)',
+            fontSize: '14px',
+            textAlign: 'center',
+          }}
+        >
+          {downloadStatus === 'downloading' && '📥 Downloading video...'}
+          {downloadStatus === 'complete' && '✅ Download complete!'}
+          {downloadStatus === 'error' &&
+            '⚠️ Download started (check your browser downloads)'}
+        </div>
+
+        {!canClose && (
+          <InfoText
+            style={{ fontSize: '12px', opacity: 0.6, marginBottom: '20px' }}
+          >
+            Closing in {countdown} seconds...
+          </InfoText>
+        )}
+
+        <ModalButtonGroup>
+          <Button type='button' onClick={onViewProfile} disabled={!canClose}>
+            View My Profile
+          </Button>
+          <Button
+            type='button'
+            primary
+            onClick={onViewFilm}
+            disabled={!canClose}
+          >
+            Watch Film Now
+          </Button>
+        </ModalButtonGroup>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+// Stripe Checkout Form Component
+const CheckoutForm = ({
+  filmId,
+  directoryId,
+  filmName,
+  filmPrice,
+  onSuccess,
+  onError,
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [purchasedFilmUrl, setPurchasedFilmUrl] = useState('');
+  const [downloadStatus, setDownloadStatus] = useState('downloading');
+  const navigate = useNavigate();
+  const { currentUser } = useSelector((state) => state.user);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      onError(null);
+
+      // Step 1: Create payment intent
+      const { data: paymentData } = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/payment/create-payment-intent`,
+        {
+          filmId,
+          directoryId,
+          amount: filmPrice,
+          filmName,
+        },
+        { withCredentials: true }
+      );
+
+      // Step 2: Confirm card payment
+      const cardElement = elements.getElement(CardElement);
+      const { error, paymentIntent } = await stripe.confirmCardPayment(
+        paymentData.clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+          },
+        }
+      );
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (paymentIntent.status === 'succeeded') {
+        // Step 3: Complete purchase (add to profile and get download link)
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/v1/films/purchase`,
+          { filmId, directoryId },
+          { withCredentials: true }
+        );
+
+        // Store the video URL for "Watch Now" button
+        if (response.data.film) {
+          setPurchasedFilmUrl(`/post/${response.data.film._id}`);
+        }
+
+        // Show success modal immediately
+        setDownloadStatus('downloading');
+        setShowSuccessModal(true);
+        onSuccess(response.data.message || 'Payment successful!');
+
+        // Trigger download as file (force download, not open in browser)
+        if (response.data.downloadUrl) {
+          // Use async download to ensure it downloads as file
+          (async () => {
+            try {
+              // Try to fetch as blob for better download control
+              const videoResponse = await fetch(response.data.downloadUrl);
+
+              if (videoResponse.ok) {
+                // Download as blob to force file download
+                const blob = await videoResponse.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = `${filmName || 'film'}.mp4`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Clean up blob URL
+                setTimeout(() => {
+                  window.URL.revokeObjectURL(blobUrl);
+                  setDownloadStatus('complete');
+                }, 2000);
+              } else {
+                // Fallback to direct download if fetch fails (CORS issue)
+                const link = document.createElement('a');
+                link.href = response.data.downloadUrl;
+                link.download = `${filmName || 'film'}.mp4`;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                setTimeout(() => {
+                  setDownloadStatus('error'); // Shows "check your browser downloads"
+                }, 2000);
+              }
+            } catch (downloadError) {
+              console.error('Download error:', downloadError);
+
+              // Fallback to direct link method
+              const link = document.createElement('a');
+              link.href = response.data.downloadUrl;
+              link.download = `${filmName || 'film'}.mp4`;
+              link.target = '_blank';
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+
+              // Show error status with instruction
+              setTimeout(() => {
+                setDownloadStatus('error');
+              }, 2000);
+            }
+          })();
+        } else {
+          setDownloadStatus('error');
+        }
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      onError(
+        err.response?.data?.message ||
+          err.message ||
+          'Payment failed. Please try again.'
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <>
+      <form onSubmit={handleSubmit}>
+        <SecurePaymentBadge>
+          <MdLock size={18} />
+          Secure payment powered by Stripe
+        </SecurePaymentBadge>
+
+        <InfoText style={{ marginBottom: '16px' }}>
+          Enter your card details below to complete the purchase:
+        </InfoText>
+
+        <CardElementWrapper>
+          <CardElement options={CARD_ELEMENT_OPTIONS} />
+        </CardElementWrapper>
+
+        <InfoText
+          style={{ fontSize: '12px', opacity: 0.7, marginBottom: '20px' }}
+        >
+          Your payment is secure and encrypted. We never store your card
+          details.
+        </InfoText>
+
+        <ButtonGroup>
+          <Button type='button' onClick={() => window.history.back()}>
+            Cancel
+          </Button>
+          <Button type='submit' primary disabled={!stripe || processing}>
+            {processing ? 'Processing...' : `Pay $${filmPrice.toFixed(2)}`}
+          </Button>
+        </ButtonGroup>
+      </form>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <SuccessModal
+          filmName={filmName}
+          downloadStatus={downloadStatus}
+          onClose={() => setShowSuccessModal(false)}
+          onViewProfile={() =>
+            navigate(`/${currentUser?.username || 'profile'}`)
+          }
+          onViewFilm={() => navigate(purchasedFilmUrl)}
+        />
+      )}
+    </>
+  );
+};
+
 const Payment = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -287,8 +756,47 @@ const Payment = () => {
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [stripePromise, setStripePromise] = useState(null);
+  const [paymentEnabled, setPaymentEnabled] = useState(false);
+  const [loadingStripe, setLoadingStripe] = useState(true);
 
   const { currentUser } = useSelector((state) => state.user);
+
+  // Load Stripe configuration
+  useEffect(() => {
+    const initStripe = async () => {
+      try {
+        // Fetch Stripe config from backend
+        const { data } = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/v1/admin/stripe-settings`,
+          { withCredentials: true }
+        );
+
+        if (data.stripeConfig && data.stripeConfig.enabled) {
+          const publishableKey =
+            data.stripeConfig.mode === 'test'
+              ? data.stripeConfig.testPublishableKey
+              : data.stripeConfig.livePublishableKey;
+
+          if (publishableKey) {
+            const stripe = await loadStripe(publishableKey);
+            setStripePromise(stripe);
+            setPaymentEnabled(true);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load Stripe:', err);
+      } finally {
+        setLoadingStripe(false);
+      }
+    };
+
+    if (type === 'film') {
+      initStripe();
+    } else {
+      setLoadingStripe(false);
+    }
+  }, [type]);
 
   // Load pricing data on mount and when localStorage changes
   useEffect(() => {
@@ -320,52 +828,6 @@ const Payment = () => {
   }, []);
 
   const plan = pricingPlans[planId] || pricingPlans.basic;
-
-  // Handle film purchase (simulate payment completion)
-  const handlePurchaseFilm = async () => {
-    if (!filmId || !directoryId) {
-      setError('Invalid film information');
-      return;
-    }
-
-    try {
-      setPurchasing(true);
-      setError(null);
-
-      // In production, this would happen after payment is completed
-      // For now, we'll simulate the purchase
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/purchase`,
-        { filmId, directoryId },
-        { withCredentials: true }
-      );
-
-      setSuccess(response.data.message || 'Film purchased successfully!');
-
-      // Trigger download if downloadUrl is provided
-      if (response.data.downloadUrl) {
-        const link = document.createElement('a');
-        link.href = response.data.downloadUrl;
-        link.download = filmName || 'film.mp4';
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-
-      // Redirect to profile after 2 seconds
-      setTimeout(() => {
-        navigate(`/${currentUser?.username || 'profile'}`);
-      }, 2000);
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          'Failed to purchase film. Please try again.'
-      );
-    } finally {
-      setPurchasing(false);
-    }
-  };
 
   return (
     <Container>
@@ -474,27 +936,44 @@ const Payment = () => {
 
         {type === 'film' ? (
           <>
-            <ComingSoonBadge>🎬 Film Purchase Available!</ComingSoonBadge>
-            <InfoText>
-              Click the button below to complete your purchase and add this film
-              to your profile.
-            </InfoText>
-            <InfoText style={{ fontSize: '12px', opacity: 0.7 }}>
-              Note: This is a demo. In production, payment processing would be
-              integrated here.
-            </InfoText>
-            <ButtonGroup>
-              <Button onClick={() => navigate(-1)}>Cancel</Button>
-              <Button
-                primary
-                onClick={handlePurchaseFilm}
-                disabled={purchasing}
-              >
-                {purchasing
-                  ? 'Processing...'
-                  : `Buy Complete Ownership - $${filmPrice.toFixed(2)}`}
-              </Button>
-            </ButtonGroup>
+            {loadingStripe ? (
+              <ComingSoonBadge>Loading payment system...</ComingSoonBadge>
+            ) : !paymentEnabled ? (
+              <>
+                <ComingSoonBadge>
+                  💳 Payment System Not Configured
+                </ComingSoonBadge>
+                <InfoText>
+                  Payment processing is not currently available. Please contact
+                  support to complete your purchase.
+                </InfoText>
+                <InfoText>
+                  <strong>Email:</strong> {pricingConfig.supportEmail}
+                </InfoText>
+                <ButtonGroup>
+                  <Button onClick={() => navigate(-1)}>Go Back</Button>
+                  <Button
+                    primary
+                    onClick={() => {
+                      window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Film Purchase Request&body=Film: ${filmName}%0APrice: $${filmPrice}`;
+                    }}
+                  >
+                    Contact Support
+                  </Button>
+                </ButtonGroup>
+              </>
+            ) : (
+              <Elements stripe={stripePromise}>
+                <CheckoutForm
+                  filmId={filmId}
+                  directoryId={directoryId}
+                  filmName={filmName}
+                  filmPrice={filmPrice}
+                  onSuccess={setSuccess}
+                  onError={setError}
+                />
+              </Elements>
+            )}
           </>
         ) : (
           <>

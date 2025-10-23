@@ -788,6 +788,23 @@ const DashboardSettings = () => {
   });
   const [savingStorage, setSavingStorage] = useState(false);
 
+  // Stripe Settings state
+  const [stripeSettings, setStripeSettings] = useState({
+    enabled: false,
+    mode: 'test',
+    testPublishableKey: '',
+    testSecretKey: '',
+    livePublishableKey: '',
+    liveSecretKey: '',
+    webhookSecret: '',
+    currency: 'usd',
+    hasTestSecretKey: false,
+    hasLiveSecretKey: false,
+  });
+  const [savingStripe, setSavingStripe] = useState(false);
+  const [showTestSecretKey, setShowTestSecretKey] = useState(false);
+  const [showLiveSecretKey, setShowLiveSecretKey] = useState(false);
+
   // Redirect if not admin (role 'admin' = admin)
   if (!currentUser || currentUser.role !== 'admin') {
     return <Navigate to='/' />;
@@ -798,6 +815,7 @@ const DashboardSettings = () => {
     fetchPricingPlans();
     fetchBranding();
     fetchStorageSettings();
+    fetchStripeSettings();
   }, []);
 
   useEffect(() => {
@@ -1149,6 +1167,63 @@ const DashboardSettings = () => {
       setTimeout(() => setError(''), 3000);
     } finally {
       setSavingStorage(false);
+    }
+  };
+
+  // Stripe Settings functions
+  const fetchStripeSettings = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/v1/admin/stripe-settings`,
+        { withCredentials: true }
+      );
+      setStripeSettings(response.data.stripeConfig);
+    } catch (err) {
+      console.error('Failed to fetch Stripe settings:', err);
+    }
+  };
+
+  const handleSaveStripeSettings = async () => {
+    try {
+      setSavingStripe(true);
+
+      const payload = {
+        stripeConfig: {
+          enabled: stripeSettings.enabled,
+          mode: stripeSettings.mode,
+          currency: stripeSettings.currency,
+          testPublishableKey: stripeSettings.testPublishableKey,
+          livePublishableKey: stripeSettings.livePublishableKey,
+          webhookSecret: stripeSettings.webhookSecret,
+        },
+      };
+
+      // Only include secret keys if they were entered (not empty)
+      if (stripeSettings.testSecretKey) {
+        payload.stripeConfig.testSecretKey = stripeSettings.testSecretKey;
+      }
+      if (stripeSettings.liveSecretKey) {
+        payload.stripeConfig.liveSecretKey = stripeSettings.liveSecretKey;
+      }
+
+      await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/v1/admin/stripe-settings`,
+        payload,
+        {
+          withCredentials: true,
+        }
+      );
+
+      setSuccess('Stripe settings saved successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+
+      // Refresh to get updated hasSecretKey flags
+      fetchStripeSettings();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save Stripe settings');
+      setTimeout(() => setError(''), 3000);
+    } finally {
+      setSavingStripe(false);
     }
   };
 
@@ -1818,6 +1893,454 @@ const DashboardSettings = () => {
               <>
                 <MdSave size={18} />
                 Save Storage Settings
+              </>
+            )}
+          </SaveButton>
+        </StorageProviderBox>
+      </Section>
+
+      {/* Stripe Settings Section */}
+      <Section>
+        <SectionTitle>💳 Stripe Payment Settings</SectionTitle>
+        <p
+          style={{
+            color: '#999',
+            marginBottom: '24px',
+            fontFamily: 'var(--secondary-fonts)',
+          }}
+        >
+          Configure Stripe to accept payments for films and premium content. Get
+          your API keys from the{' '}
+          <a
+            href='https://dashboard.stripe.com/apikeys'
+            target='_blank'
+            rel='noopener noreferrer'
+            style={{ color: '#667eea', textDecoration: 'underline' }}
+          >
+            Stripe Dashboard
+          </a>
+          .
+        </p>
+
+        <StorageProviderBox>
+          {/* Enable/Disable Stripe */}
+          <div
+            style={{
+              marginBottom: '24px',
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <h4
+                style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: 'var(--secondary-color)',
+                  marginBottom: '4px',
+                  fontFamily: 'var(--primary-fonts)',
+                }}
+              >
+                Enable Stripe Payments
+              </h4>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: '#999',
+                  fontFamily: 'var(--secondary-fonts)',
+                }}
+              >
+                Allow users to purchase films and premium content
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '50px',
+                height: '26px',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type='checkbox'
+                checked={stripeSettings.enabled}
+                onChange={(e) =>
+                  setStripeSettings((prev) => ({
+                    ...prev,
+                    enabled: e.target.checked,
+                  }))
+                }
+                style={{ opacity: 0, width: 0, height: 0 }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: stripeSettings.enabled
+                    ? '#4caf50'
+                    : 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '26px',
+                  transition: '0.3s',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: stripeSettings.enabled ? '28px' : '4px',
+                    bottom: '4px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%',
+                    transition: '0.3s',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+
+          {/* Payment Mode */}
+          <FormGroup>
+            <Label>Payment Mode</Label>
+            <Input
+              as='select'
+              value={stripeSettings.mode}
+              onChange={(e) =>
+                setStripeSettings((prev) => ({
+                  ...prev,
+                  mode: e.target.value,
+                }))
+              }
+            >
+              <option value='test'>Test Mode</option>
+              <option value='live'>Live Mode</option>
+            </Input>
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '8px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              {stripeSettings.mode === 'test'
+                ? '⚠️ Test mode - Use test cards for testing payments'
+                : '🔴 Live mode - Real payments will be processed'}
+            </p>
+          </FormGroup>
+
+          {/* Currency */}
+          <FormGroup>
+            <Label>Currency</Label>
+            <Input
+              as='select'
+              value={stripeSettings.currency}
+              onChange={(e) =>
+                setStripeSettings((prev) => ({
+                  ...prev,
+                  currency: e.target.value,
+                }))
+              }
+            >
+              <option value='usd'>USD - US Dollar</option>
+              <option value='eur'>EUR - Euro</option>
+              <option value='gbp'>GBP - British Pound</option>
+              <option value='cad'>CAD - Canadian Dollar</option>
+              <option value='aud'>AUD - Australian Dollar</option>
+              <option value='inr'>INR - Indian Rupee</option>
+              <option value='jpy'>JPY - Japanese Yen</option>
+            </Input>
+          </FormGroup>
+
+          {/* Test Mode API Keys */}
+          <div
+            style={{
+              marginTop: '24px',
+              padding: '16px',
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '8px',
+            }}
+          >
+            <h4
+              style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: 'var(--secondary-color)',
+                marginBottom: '16px',
+                fontFamily: 'var(--primary-fonts)',
+              }}
+            >
+              🧪 Test Mode API Keys
+            </h4>
+
+            <FormGroup>
+              <Label>Test Publishable Key</Label>
+              <Input
+                type='text'
+                value={stripeSettings.testPublishableKey}
+                onChange={(e) =>
+                  setStripeSettings((prev) => ({
+                    ...prev,
+                    testPublishableKey: e.target.value,
+                  }))
+                }
+                placeholder='pk_test_...'
+              />
+              <p
+                style={{
+                  color: '#999',
+                  fontSize: '12px',
+                  marginTop: '8px',
+                  fontFamily: 'var(--secondary-fonts)',
+                }}
+              >
+                This key is public and can be safely shared
+              </p>
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Test Secret Key</Label>
+              <div style={{ position: 'relative' }}>
+                <Input
+                  type={showTestSecretKey ? 'text' : 'password'}
+                  value={stripeSettings.testSecretKey}
+                  onChange={(e) =>
+                    setStripeSettings((prev) => ({
+                      ...prev,
+                      testSecretKey: e.target.value,
+                    }))
+                  }
+                  placeholder={
+                    stripeSettings.hasTestSecretKey
+                      ? '••••••••••••••••••••••••'
+                      : 'sk_test_...'
+                  }
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowTestSecretKey(!showTestSecretKey)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#999',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontFamily: 'var(--secondary-fonts)',
+                  }}
+                >
+                  {showTestSecretKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <p
+                style={{
+                  color: '#999',
+                  fontSize: '12px',
+                  marginTop: '8px',
+                  fontFamily: 'var(--secondary-fonts)',
+                }}
+              >
+                {stripeSettings.hasTestSecretKey
+                  ? '✓ Secret key is set. Leave empty to keep current key.'
+                  : '⚠️ Keep this key secure and never share it publicly'}
+              </p>
+            </FormGroup>
+          </div>
+
+          {/* Live Mode API Keys */}
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '16px',
+              background: 'rgba(244, 67, 54, 0.1)',
+              border: '1px solid rgba(244, 67, 54, 0.3)',
+              borderRadius: '8px',
+            }}
+          >
+            <h4
+              style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: 'var(--secondary-color)',
+                marginBottom: '16px',
+                fontFamily: 'var(--primary-fonts)',
+              }}
+            >
+              🔴 Live Mode API Keys
+            </h4>
+
+            <FormGroup>
+              <Label>Live Publishable Key</Label>
+              <Input
+                type='text'
+                value={stripeSettings.livePublishableKey}
+                onChange={(e) =>
+                  setStripeSettings((prev) => ({
+                    ...prev,
+                    livePublishableKey: e.target.value,
+                  }))
+                }
+                placeholder='pk_live_...'
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Live Secret Key</Label>
+              <div style={{ position: 'relative' }}>
+                <Input
+                  type={showLiveSecretKey ? 'text' : 'password'}
+                  value={stripeSettings.liveSecretKey}
+                  onChange={(e) =>
+                    setStripeSettings((prev) => ({
+                      ...prev,
+                      liveSecretKey: e.target.value,
+                    }))
+                  }
+                  placeholder={
+                    stripeSettings.hasLiveSecretKey
+                      ? '••••••••••••••••••••••••'
+                      : 'sk_live_...'
+                  }
+                />
+                <button
+                  type='button'
+                  onClick={() => setShowLiveSecretKey(!showLiveSecretKey)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#999',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontFamily: 'var(--secondary-fonts)',
+                  }}
+                >
+                  {showLiveSecretKey ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <p
+                style={{
+                  color: '#999',
+                  fontSize: '12px',
+                  marginTop: '8px',
+                  fontFamily: 'var(--secondary-fonts)',
+                }}
+              >
+                {stripeSettings.hasLiveSecretKey
+                  ? '✓ Secret key is set. Leave empty to keep current key.'
+                  : '⚠️ CRITICAL: This processes real payments. Keep secure!'}
+              </p>
+            </FormGroup>
+          </div>
+
+          {/* Webhook Secret */}
+          <FormGroup style={{ marginTop: '16px' }}>
+            <Label>Webhook Signing Secret</Label>
+            <Input
+              type='password'
+              value={stripeSettings.webhookSecret}
+              onChange={(e) =>
+                setStripeSettings((prev) => ({
+                  ...prev,
+                  webhookSecret: e.target.value,
+                }))
+              }
+              placeholder='whsec_...'
+            />
+            <p
+              style={{
+                color: '#999',
+                fontSize: '12px',
+                marginTop: '8px',
+                fontFamily: 'var(--secondary-fonts)',
+              }}
+            >
+              Optional: Used to verify webhook events from Stripe. Get this from
+              your Stripe webhook settings.
+            </p>
+          </FormGroup>
+
+          {/* Setup Instructions */}
+          <SetupInstructions style={{ marginTop: '16px' }}>
+            <InstructionsTitle>📝 Setup Instructions</InstructionsTitle>
+            <InstructionsList>
+              <li>
+                Create a Stripe account at{' '}
+                <a
+                  href='https://dashboard.stripe.com/register'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                >
+                  stripe.com
+                </a>
+              </li>
+              <li>
+                Get your API keys from the{' '}
+                <a
+                  href='https://dashboard.stripe.com/apikeys'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                >
+                  API Keys page
+                </a>
+              </li>
+              <li>
+                Start with <strong>Test Mode</strong> to test payments without
+                real money
+              </li>
+              <li>
+                Use test card <code>4242 4242 4242 4242</code> with any future
+                expiry and CVC
+              </li>
+              <li>
+                Set up webhooks (optional but recommended) from{' '}
+                <a
+                  href='https://dashboard.stripe.com/webhooks'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  style={{ color: '#667eea', textDecoration: 'underline' }}
+                >
+                  Stripe Webhooks
+                </a>
+              </li>
+              <li>
+                Switch to <strong>Live Mode</strong> when you're ready to accept
+                real payments
+              </li>
+            </InstructionsList>
+          </SetupInstructions>
+
+          <SaveButton
+            onClick={handleSaveStripeSettings}
+            disabled={savingStripe}
+            style={{ marginTop: '20px' }}
+          >
+            {savingStripe ? (
+              <ButtonLoader>
+                <ThreeDotsLoader />
+              </ButtonLoader>
+            ) : (
+              <>
+                <MdSave size={18} />
+                Save Stripe Settings
               </>
             )}
           </SaveButton>

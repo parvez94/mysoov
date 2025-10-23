@@ -109,6 +109,7 @@ import adminRouter from './routes/adminRoutes.js';
 import publicRouter from './routes/publicRoutes.js';
 import blogRouter from './routes/blogRoutes.js';
 import filmRouter from './routes/filmRoutes.js';
+import paymentRouter from './routes/paymentRoutes.js';
 
 // Health check route
 app.get('/', (req, res) => {
@@ -235,6 +236,7 @@ app.use('/api/admin', adminRouter); // Keep backward compatibility
 app.use('/api/public', publicRouter);
 app.use('/api/v1/blog', blogRouter);
 app.use('/api/v1/films', filmRouter);
+app.use('/api/v1/payment', paymentRouter);
 
 // Database connection
 let isConnected = false;
@@ -349,9 +351,11 @@ app.get('/video/:id', async (req, res) => {
     }
 
     const videoTitle = video.caption || 'Check out this video on Mysoov!';
-    const videoDescription =
-      video.caption ||
-      'Amazing content on Mysoov - Connect, share, and discover videos!';
+    const videoDescription = video.caption
+      ? `${video.caption} (Shared ${video.share || 0} times)`
+      : `Amazing content on Mysoov - Connect, share, and discover videos! (Shared ${
+          video.share || 0
+        } times)`;
 
     // Dynamically determine the frontend URL based on the request
     let frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
@@ -475,9 +479,11 @@ app.get('/post/:id', async (req, res) => {
     }
 
     const videoTitle = video.caption || 'Check out this post on Mysoov!';
-    const videoDescription =
-      video.caption ||
-      'Amazing content on Mysoov - Connect, share, and discover!';
+    const videoDescription = video.caption
+      ? `${video.caption} (Shared ${video.share || 0} times)`
+      : `Amazing content on Mysoov - Connect, share, and discover! (Shared ${
+          video.share || 0
+        } times)`;
 
     // Dynamically determine the frontend URL based on the request
     let frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';

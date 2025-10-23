@@ -14,7 +14,7 @@ const SliderContainer = styled.div`
 const SliderWrapper = styled.div`
   display: flex;
   transition: transform 0.3s ease-in-out;
-  transform: ${(props) => `translateX(-${props.currentIndex * 100}%)`};
+  transform: ${(props) => `translateX(-${props.$currentIndex * 100}%)`};
 `;
 
 const Slide = styled.div`
@@ -85,13 +85,13 @@ const Indicator = styled.div`
   height: 8px;
   border-radius: 50%;
   background: ${(props) =>
-    props.active ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.5)'};
+    props.$active ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.5)'};
   cursor: pointer;
   transition: background 0.2s;
 
   &:hover {
     background: ${(props) =>
-      props.active ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.8)'};
+      props.$active ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.8)'};
   }
 `;
 
@@ -144,7 +144,7 @@ const ImageSlider = ({ images, caption }) => {
         </ImageCounter>
       )}
 
-      <SliderWrapper currentIndex={currentIndex}>
+      <SliderWrapper $currentIndex={currentIndex}>
         {images.map((image, index) => (
           <Slide key={index}>
             <Image
@@ -178,7 +178,7 @@ const ImageSlider = ({ images, caption }) => {
             {images.map((_, index) => (
               <Indicator
                 key={index}
-                active={index === currentIndex}
+                $active={index === currentIndex}
                 onClick={() => setCurrentIndex(index)}
               />
             ))}

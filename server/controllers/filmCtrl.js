@@ -348,26 +348,68 @@ export const purchaseFilm = async (req, res, next) => {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Find the user's free copy of the film
-    const userFilm = await Video.findOne({
+    // Verify the original film exists
+    const originalFilm = await Video.findById(filmId);
+    if (!originalFilm) {
+      return next(createError(404, 'Film not found'));
+    }
+
+    if (originalFilm.filmDirectoryId?.toString() !== directoryId) {
+      return next(createError(400, 'Film does not belong to this directory'));
+    }
+
+    // Check if user already has this film in their profile
+    let userFilm = await Video.findOne({
       userId: userId,
       sourceFilmId: filmId,
-      filmDirectoryId: directoryId,
       isFilm: false,
     });
 
+    // If film not in user's profile, create a copy (auto-add to profile)
     if (!userFilm) {
-      return next(
-        createError(
-          404,
-          'Film not found in your profile. Please add it to profile first.'
-        )
-      );
+      userFilm = new Video({
+        caption: originalFilm.caption,
+        videoUrl: originalFilm.videoUrl,
+        thumbnail: originalFilm.thumbnail,
+        userId: userId,
+        privacy: 'Public',
+        isFilm: false,
+        mediaType: originalFilm.mediaType,
+        storageProvider: originalFilm.storageProvider,
+        sourceFilmId: originalFilm._id,
+        filmDirectoryId: null, // Already purchased, no buy button
+      });
+      await userFilm.save();
+    } else {
+      // Film already in profile, just mark as purchased
+      userFilm.filmDirectoryId = null;
+      await userFilm.save();
     }
 
-    // Remove filmDirectoryId to remove buy button (marks as purchased)
-    userFilm.filmDirectoryId = null;
-    await userFilm.save();
+    // ✅ AUTO-DELETE FOLDER AFTER SUCCESSFUL PURCHASE
+    try {
+      // Delete ORIGINAL films in the folder (isFilm: true)
+      await Video.deleteMany({
+        filmDirectoryId: directoryId,
+        isFilm: true,
+      });
+
+      // Keep user COPIES but remove filmDirectoryId reference
+      await Video.updateMany(
+        { filmDirectoryId: directoryId, isFilm: false },
+        { $set: { filmDirectoryId: null } }
+      );
+
+      // Delete the directory itself
+      await FilmDirectory.findByIdAndDelete(directoryId);
+
+      console.log(
+        `✅ Folder ${directoryId} automatically deleted after purchase`
+      );
+    } catch (deleteError) {
+      // Log error but don't fail the purchase
+      console.error('⚠️ Failed to auto-delete folder:', deleteError);
+    }
 
     res.status(200).json({
       success: true,
