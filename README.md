@@ -1,46 +1,37 @@
 # Mysoov - Social Media Platform
 
-A modern social media platform for sharing videos, images, and connecting with creators.
+A modern MERN stack social media platform for sharing videos, images, and connecting with creators.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
 - Node.js 16+ and npm
-- MongoDB Atlas account
+- MongoDB (local or MongoDB Atlas)
 - Cloudinary account (for media storage)
-- Domain pointed to your VPS IP
 
 ### Development Setup
 
 ```bash
-# Install dependencies
-cd server && npm install
-cd ../client && npm install
+# Clone the repository
+git clone https://github.com/parvez94/mysoov.git
+cd mysoov
 
-# Configure environment
-cp server/.env.example server/.env
-# Edit server/.env with your credentials
+# Install server dependencies
+cd server
+npm install
 
-# Start development servers
-cd server && npm start  # Backend on port 5100
-cd client && npm run dev  # Frontend on port 5173
-```
+# Configure server environment
+cp .env.example .env
+# Edit .env with your credentials
 
-## 📦 VPS Deployment
+# Start backend server (runs on port 5100)
+npm start
 
-For detailed VPS deployment instructions, see:
-
-1. **[QUICK_DEPLOY_CHECKLIST.md](./QUICK_DEPLOY_CHECKLIST.md)** - Step-by-step deployment checklist
-2. **[VPS_COMPLETE_SETUP.md](./VPS_COMPLETE_SETUP.md)** - Detailed setup guide with troubleshooting
-3. **[README_VPS_MIGRATION.md](./README_VPS_MIGRATION.md)** - Complete VPS migration overview
-
-### Quick Deploy
-
-```bash
-# On your VPS
-cd /var/www/mysoov
-./deploy.sh
+# In a new terminal, install and start frontend
+cd ../client
+npm install
+npm run dev  # Frontend runs on port 5173
 ```
 
 ## 🛠 Technology Stack
@@ -61,13 +52,6 @@ cd /var/www/mysoov
 - Styled Components
 - Axios
 
-### Infrastructure
-
-- Nginx (reverse proxy)
-- PM2 (process manager)
-- Let's Encrypt (SSL)
-- OVH VPS hosting
-
 ## 📁 Project Structure
 
 ```
@@ -80,18 +64,14 @@ mysoov/
 │   ├── utils/            # Helper functions
 │   └── index.js          # Server entry point
 │
-├── client/               # Frontend React app
-│   ├── src/
-│   │   ├── components/  # Reusable components
-│   │   ├── pages/       # Page components
-│   │   ├── redux/       # State management
-│   │   ├── contexts/    # React contexts
-│   │   └── utils/       # Helper functions
-│   └── dist/            # Production build
-│
-├── nginx-vps.conf        # Nginx configuration
-├── ecosystem.config.js   # PM2 configuration
-└── deploy.sh            # Deployment script
+└── client/               # Frontend React app
+    ├── src/
+    │   ├── components/  # Reusable components
+    │   ├── pages/       # Page components
+    │   ├── redux/       # State management
+    │   ├── contexts/    # React contexts
+    │   └── utils/       # Helper functions
+    └── dist/            # Production build
 ```
 
 ## 🔑 Key Features
@@ -162,8 +142,8 @@ SECRET_KEY=your_jwt_secret_key
 
 # Server
 PORT=5100
-NODE_ENV=production
-FRONTEND_URL=https://mysoov.tv
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
 
 # Cloudinary
 CLOUD_NAME=your_cloudinary_name
@@ -180,98 +160,28 @@ STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 ```
 
-## 🚨 Important Notes
+## 🏗 Build for Production
 
-### MongoDB Atlas
-
-Add your VPS IP address to MongoDB Atlas Network Access, otherwise connection will fail.
-
-### SSL Certificate
-
-Modern browsers require HTTPS. Use Let's Encrypt for free SSL:
+### Backend
 
 ```bash
-sudo certbot --nginx -d mysoov.tv -d www.mysoov.tv
+cd server
+npm start
 ```
 
-### PM2 Process Manager
-
-Manage your Node.js application:
+### Frontend
 
 ```bash
-pm2 status              # Check status
-pm2 logs mysoov-api     # View logs
-pm2 restart mysoov-api  # Restart app
-pm2 monit              # Monitor resources
+cd client
+npm run build
+# Production files will be in client/dist/
 ```
-
-### Nginx
-
-Restart nginx after configuration changes:
-
-```bash
-sudo nginx -t           # Test configuration
-sudo systemctl reload nginx
-```
-
-## 📊 Monitoring
-
-```bash
-# PM2 Monitoring
-pm2 monit                    # Real-time monitoring
-pm2 logs --lines 100         # View recent logs
-
-# System Resources
-df -h                        # Check disk space
-free -h                      # Check memory
-top                          # Process monitor
-```
-
-## 🐛 Troubleshooting
-
-### 502 Bad Gateway
-
-```bash
-pm2 restart mysoov-api
-pm2 logs mysoov-api --err
-```
-
-### Database Connection Failed
-
-1. Check MongoDB Atlas IP whitelist
-2. Verify MONGO_URL in `.env`
-3. Test: `curl https://mysoov.tv/api`
-
-### Upload Fails
-
-```bash
-mkdir -p /var/www/mysoov/server/tmp
-chmod 755 /var/www/mysoov/server/tmp
-pm2 restart mysoov-api
-```
-
-### CORS Errors
-
-Check allowed origins in:
-
-- `server/index.js`
-- `server/routes/uploadRoutes.js`
-- `server/routes/videoRoutes.js`
 
 ## 📝 License
 
 This project is proprietary software for Mysoov.
 
-## 🤝 Support
-
-For deployment issues, refer to the VPS documentation:
-
-- `QUICK_DEPLOY_CHECKLIST.md` - Deployment steps
-- `VPS_COMPLETE_SETUP.md` - Detailed setup guide
-- `README_VPS_MIGRATION.md` - Migration overview
-
 ---
 
-**Server Status**: Check at `https://mysoov.tv/api`
-
-**Last Updated**: $(date)
+**Development Server**: `http://localhost:5100/api`  
+**Frontend**: `http://localhost:5173`

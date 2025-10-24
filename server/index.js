@@ -21,7 +21,6 @@ if (!fs.existsSync(tempDir)) {
 
 // Middleware
 app.use(express.static('public'));
-app.use(express.json());
 app.use(cookieParser());
 
 // CORS configuration
@@ -68,7 +67,7 @@ app.use(
   })
 );
 
-// File upload configuration
+// File upload configuration - MUST come before express.json()
 app.use(
   fileUpload({
     useTempFiles: true,
@@ -78,9 +77,12 @@ app.use(
       fileSize: 100 * 1024 * 1024, // 100MB max
     },
     abortOnLimit: true,
-    debug: process.env.NODE_ENV !== 'production',
+    debug: false, // Disable debug to avoid logging non-file requests
   })
 );
+
+// JSON parser - comes after file upload
+app.use(express.json());
 
 // Import routes
 import authRouter from './routes/authRoutes.js';
