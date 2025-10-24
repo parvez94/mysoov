@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'mysoov-api',
       script: './server/index.js',
-      cwd: '/var/www/mysoov', // IMPORTANT: Update this to your actual VPS path
+      cwd: '/home/ubuntu/mysoov', // IMPORTANT: Update this to your actual VPS path
       instances: 2, // Use 2 instances for load balancing (adjust based on CPU cores)
       exec_mode: 'cluster',
       env: {

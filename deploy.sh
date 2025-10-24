@@ -15,7 +15,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_DIR="/var/www/mysoov"
+PROJECT_DIR="/home/ubuntu/mysoov"
 BACKEND_DIR="$PROJECT_DIR/server"
 FRONTEND_DIR="$PROJECT_DIR/client"
 PM2_APP_NAME="mysoov-api"
