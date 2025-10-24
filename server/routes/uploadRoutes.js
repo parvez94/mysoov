@@ -22,11 +22,19 @@ cloudinary.config({
 });
 
 // Handle preflight requests for upload endpoint
+// Note: CORS is handled globally in index.js, but keep this for backward compatibility
 router.options('/upload', (req, res) => {
-  res.header(
-    'Access-Control-Allow-Origin',
-    'https://mysoov-frontend.vercel.app'
-  );
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://mysoov.tv',
+    'https://www.mysoov.tv',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.header(
     'Access-Control-Allow-Headers',
@@ -151,11 +159,19 @@ router.post('/upload', verifyToken, async (req, res) => {
 });
 
 // Handle preflight requests for image upload endpoint
+// Note: CORS is handled globally in index.js, but keep this for backward compatibility
 router.options('/upload/image', (req, res) => {
-  res.header(
-    'Access-Control-Allow-Origin',
-    'https://mysoov-frontend.vercel.app'
-  );
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://mysoov.tv',
+    'https://www.mysoov.tv',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.header(
     'Access-Control-Allow-Headers',

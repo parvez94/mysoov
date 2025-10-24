@@ -17,11 +17,19 @@ import {
 const router = express.Router();
 
 // Handle preflight requests for video creation
+// Note: CORS is handled globally in index.js, but keep this for backward compatibility
 router.options('/', (req, res) => {
-  res.header(
-    'Access-Control-Allow-Origin',
-    'https://mysoov-frontend.vercel.app'
-  );
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://mysoov.tv',
+    'https://www.mysoov.tv',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.header(
     'Access-Control-Allow-Headers',
@@ -35,10 +43,17 @@ router.post('/', verifyToken, addVideo);
 
 // Handle preflight requests for video updates
 router.options('/:id', (req, res) => {
-  res.header(
-    'Access-Control-Allow-Origin',
-    'https://mysoov-frontend.vercel.app'
-  );
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://mysoov.tv',
+    'https://www.mysoov.tv',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ];
+
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
   res.header('Access-Control-Allow-Methods', 'PUT, DELETE, OPTIONS');
   res.header(
     'Access-Control-Allow-Headers',
