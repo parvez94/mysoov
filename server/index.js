@@ -221,26 +221,57 @@ app.get('/video/:id', async (req, res) => {
       return res.status(404).send('Video not found');
     }
 
+    // Check if the request is from a social media crawler
+    const userAgent = req.get('user-agent') || '';
+    const isCrawler =
+      /facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterest|instagram/i.test(
+        userAgent
+      );
+
     const user = await User.findById(video.userId);
     const videoUrl =
       typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
 
     let thumbnailUrl = 'https://via.placeholder.com/1200x630?text=Mysoov';
+    let contentUrl = videoUrl;
 
-    if (video.storageProvider === 'cloudinary' && videoUrl) {
-      thumbnailUrl = videoUrl.replace(
-        '/upload/',
-        '/upload/so_0,w_1200,h_630,c_fill/'
-      );
-      if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
-        thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+    // Handle image posts
+    if (
+      video.mediaType === 'image' &&
+      video.images &&
+      video.images.length > 0
+    ) {
+      // Use the first image as the thumbnail
+      const firstImage = video.images[0];
+      contentUrl =
+        typeof firstImage === 'string' ? firstImage : firstImage?.url;
+      thumbnailUrl = contentUrl;
+
+      // If using Cloudinary, ensure we get a properly sized image
+      if (video.storageProvider === 'cloudinary' && thumbnailUrl) {
+        thumbnailUrl = thumbnailUrl.replace(
+          '/upload/',
+          '/upload/w_1200,h_630,c_fill/'
+        );
       }
-    } else if (video.storageProvider === 'youtube' && videoUrl) {
-      const youtubeIdMatch = videoUrl.match(
-        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-      );
-      if (youtubeIdMatch && youtubeIdMatch[1]) {
-        thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
+    }
+    // Handle video posts
+    else if (video.mediaType === 'video') {
+      if (video.storageProvider === 'cloudinary' && videoUrl) {
+        thumbnailUrl = videoUrl.replace(
+          '/upload/',
+          '/upload/so_0,w_1200,h_630,c_fill/'
+        );
+        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
+          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        }
+      } else if (video.storageProvider === 'youtube' && videoUrl) {
+        const youtubeIdMatch = videoUrl.match(
+          /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+        );
+        if (youtubeIdMatch && youtubeIdMatch[1]) {
+          thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
+        }
       }
     }
 
@@ -262,7 +293,39 @@ app.get('/video/:id', async (req, res) => {
 
     const shareUrl = `${frontendUrl}/post/${video._id}`;
 
-    const htmlContent = `<!DOCTYPE html>
+    // If it's a crawler, serve meta tags without redirect
+    // If it's a regular browser, show a page that redirects via client-side or server config
+    const htmlContent = !isCrawler
+      ? // Regular user - show link to content
+        `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>View Post - Mysoov</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #000; color: #fff; text-align: center; padding: 20px; }
+        .container { max-width: 600px; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        a { display: inline-block; padding: 12px 32px; background: #8B5CF6; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: 600; }
+        a:hover { background: #7C3AED; }
+    </style>
+    <script>
+        // Redirect to main site - let React app handle the routing
+        setTimeout(function() {
+            window.location.href = "${frontendUrl}/post/${video._id}";
+        }, 100);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Redirecting to Mysoov...</h1>
+        <p>If you're not redirected automatically, <a href="${frontendUrl}/post/${video._id}">click here</a>.</p>
+    </div>
+</body>
+</html>`
+      : // Social media crawler - serve full meta tags
+        `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -307,7 +370,8 @@ app.get('/video/:id', async (req, res) => {
     <title>${videoTitle} - Mysoov</title>
 </head>
 <body>
-    <p>Loading video...</p>
+    <h1>${videoTitle}</h1>
+    <p>${videoDescription}</p>
 </body>
 </html>`;
 
@@ -334,26 +398,57 @@ app.get('/post/:id', async (req, res) => {
       return res.status(404).send('Post not found');
     }
 
+    // Check if the request is from a social media crawler
+    const userAgent = req.get('user-agent') || '';
+    const isCrawler =
+      /facebookexternalhit|Twitterbot|LinkedInBot|WhatsApp|TelegramBot|Slackbot|Discordbot|Pinterest|instagram/i.test(
+        userAgent
+      );
+
     const user = await User.findById(video.userId);
     const videoUrl =
       typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
 
     let thumbnailUrl = 'https://via.placeholder.com/1200x630?text=Mysoov';
+    let contentUrl = videoUrl;
 
-    if (video.storageProvider === 'cloudinary' && videoUrl) {
-      thumbnailUrl = videoUrl.replace(
-        '/upload/',
-        '/upload/so_0,w_1200,h_630,c_fill/'
-      );
-      if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
-        thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+    // Handle image posts
+    if (
+      video.mediaType === 'image' &&
+      video.images &&
+      video.images.length > 0
+    ) {
+      // Use the first image as the thumbnail
+      const firstImage = video.images[0];
+      contentUrl =
+        typeof firstImage === 'string' ? firstImage : firstImage?.url;
+      thumbnailUrl = contentUrl;
+
+      // If using Cloudinary, ensure we get a properly sized image
+      if (video.storageProvider === 'cloudinary' && thumbnailUrl) {
+        thumbnailUrl = thumbnailUrl.replace(
+          '/upload/',
+          '/upload/w_1200,h_630,c_fill/'
+        );
       }
-    } else if (video.storageProvider === 'youtube' && videoUrl) {
-      const youtubeIdMatch = videoUrl.match(
-        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
-      );
-      if (youtubeIdMatch && youtubeIdMatch[1]) {
-        thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
+    }
+    // Handle video posts
+    else if (video.mediaType === 'video') {
+      if (video.storageProvider === 'cloudinary' && videoUrl) {
+        thumbnailUrl = videoUrl.replace(
+          '/upload/',
+          '/upload/so_0,w_1200,h_630,c_fill/'
+        );
+        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
+          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        }
+      } else if (video.storageProvider === 'youtube' && videoUrl) {
+        const youtubeIdMatch = videoUrl.match(
+          /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
+        );
+        if (youtubeIdMatch && youtubeIdMatch[1]) {
+          thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
+        }
       }
     }
 
@@ -375,7 +470,39 @@ app.get('/post/:id', async (req, res) => {
 
     const shareUrl = `${frontendUrl}/post/${video._id}`;
 
-    const htmlContent = `<!DOCTYPE html>
+    // If it's a crawler, serve meta tags without redirect
+    // If it's a regular browser, show a page that redirects via client-side or server config
+    const htmlContent = !isCrawler
+      ? // Regular user - show link to content
+        `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>View Post - Mysoov</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #000; color: #fff; text-align: center; padding: 20px; }
+        .container { max-width: 600px; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        a { display: inline-block; padding: 12px 32px; background: #8B5CF6; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: 600; }
+        a:hover { background: #7C3AED; }
+    </style>
+    <script>
+        // Redirect to main site - let React app handle the routing
+        setTimeout(function() {
+            window.location.href = "${frontendUrl}/post/${video._id}";
+        }, 100);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Redirecting to Mysoov...</h1>
+        <p>If you're not redirected automatically, <a href="${frontendUrl}/post/${video._id}">click here</a>.</p>
+    </div>
+</body>
+</html>`
+      : // Social media crawler - serve full meta tags
+        `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -438,7 +565,8 @@ app.get('/post/:id', async (req, res) => {
     <title>${videoTitle} - Mysoov</title>
 </head>
 <body>
-    <p>Loading post...</p>
+    <h1>${videoTitle}</h1>
+    <p>${videoDescription}</p>
 </body>
 </html>`;
 
