@@ -228,6 +228,33 @@ app.get('/video/:id', async (req, res) => {
         userAgent
       );
 
+    // If it's a regular user (not a crawler), serve React's index.html
+    // This lets React Router handle the routing without infinite loops
+    if (!isCrawler) {
+      const reactIndexPath = path.join(__dirname, '../client/dist/index.html');
+
+      // Check if React build exists (production), otherwise show a simple page
+      if (fs.existsSync(reactIndexPath)) {
+        return res.sendFile(reactIndexPath);
+      } else {
+        // Fallback for development - show simple redirect page
+        return res.send(`<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>View Video - Mysoov</title>
+</head>
+<body>
+    <script>
+        // Development fallback - redirect to frontend dev server
+        window.location.href = "http://localhost:5173/video/${req.params.id}";
+    </script>
+</body>
+</html>`);
+      }
+    }
+
     const user = await User.findById(video.userId);
     const videoUrl =
       typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
@@ -286,41 +313,10 @@ app.get('/video/:id', async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
 
     // IMPORTANT: Use absolute URL with https protocol for social media
-    const shareUrl = `${frontendUrl}/post/${video._id}`;
+    const shareUrl = `${frontendUrl}/video/${req.params.id}`;
 
-    // If it's a crawler, serve meta tags without redirect
-    // If it's a regular browser, show a page that redirects via client-side or server config
-    const htmlContent = !isCrawler
-      ? // Regular user - show link to content
-        `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>View Post - Mysoov</title>
-    <style>
-        body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #000; color: #fff; text-align: center; padding: 20px; }
-        .container { max-width: 600px; }
-        h1 { font-size: 24px; margin-bottom: 20px; }
-        a { display: inline-block; padding: 12px 32px; background: #8B5CF6; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: 600; }
-        a:hover { background: #7C3AED; }
-    </style>
-    <script>
-        // Redirect to main site - let React app handle the routing
-        setTimeout(function() {
-            window.location.href = "${frontendUrl}/post/${video._id}";
-        }, 100);
-    </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Redirecting to Mysoov...</h1>
-        <p>If you're not redirected automatically, <a href="${frontendUrl}/post/${video._id}">click here</a>.</p>
-    </div>
-</body>
-</html>`
-      : // Social media crawler - serve full meta tags
-        `<!DOCTYPE html>
+    // Social media crawler - serve full meta tags
+    const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -460,39 +456,35 @@ app.get('/post/:id', async (req, res) => {
     // IMPORTANT: Use absolute URL with https protocol for social media
     const shareUrl = `${frontendUrl}/post/${video._id}`;
 
-    // If it's a crawler, serve meta tags without redirect
-    // If it's a regular browser, show a page that redirects via client-side or server config
-    const htmlContent = !isCrawler
-      ? // Regular user - show link to content
-        `<!DOCTYPE html>
+    // If it's a regular user (not a crawler), serve React's index.html
+    // This lets React Router handle the routing without infinite loops
+    if (!isCrawler) {
+      const reactIndexPath = path.join(__dirname, '../client/dist/index.html');
+
+      // Check if React build exists (production), otherwise show a simple page
+      if (fs.existsSync(reactIndexPath)) {
+        return res.sendFile(reactIndexPath);
+      } else {
+        // Fallback for development - show simple redirect page
+        return res.send(`<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>View Post - Mysoov</title>
-    <style>
-        body { font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #000; color: #fff; text-align: center; padding: 20px; }
-        .container { max-width: 600px; }
-        h1 { font-size: 24px; margin-bottom: 20px; }
-        a { display: inline-block; padding: 12px 32px; background: #8B5CF6; color: white; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: 600; }
-        a:hover { background: #7C3AED; }
-    </style>
-    <script>
-        // Redirect to main site - let React app handle the routing
-        setTimeout(function() {
-            window.location.href = "${frontendUrl}/post/${video._id}";
-        }, 100);
-    </script>
 </head>
 <body>
-    <div class="container">
-        <h1>Redirecting to Mysoov...</h1>
-        <p>If you're not redirected automatically, <a href="${frontendUrl}/post/${video._id}">click here</a>.</p>
-    </div>
+    <script>
+        // Development fallback - redirect to frontend dev server
+        window.location.href = "http://localhost:5173/post/${video._id}";
+    </script>
 </body>
-</html>`
-      : // Social media crawler - serve full meta tags
-        `<!DOCTYPE html>
+</html>`);
+      }
+    }
+
+    // Social media crawler - serve full meta tags
+    const htmlContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
