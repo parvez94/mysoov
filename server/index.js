@@ -275,22 +275,17 @@ app.get('/video/:id', async (req, res) => {
       }
     }
 
-    const videoTitle = video.caption || 'Check out this video on Mysoov!';
+    const videoTitle = video.caption || 'Untitled';
     const videoDescription = video.caption
       ? `${video.caption} (Shared ${video.share || 0} times)`
       : `Amazing content on Mysoov - Connect, share, and discover videos! (Shared ${
           video.share || 0
         } times)`;
 
-    let frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
-    const referer = req.get('Referer') || req.get('Origin');
-    if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        frontendUrl = `${refererUrl.protocol}//${refererUrl.host}`;
-      } catch (e) {}
-    }
+    // Always use the production domain for og:url to prevent Facebook URL issues
+    const frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
 
+    // IMPORTANT: Use absolute URL with https protocol for social media
     const shareUrl = `${frontendUrl}/post/${video._id}`;
 
     // If it's a crawler, serve meta tags without redirect
@@ -452,22 +447,17 @@ app.get('/post/:id', async (req, res) => {
       }
     }
 
-    const videoTitle = video.caption || 'Check out this post on Mysoov!';
+    const videoTitle = video.caption || 'Untitled';
     const videoDescription = video.caption
       ? `${video.caption} (Shared ${video.share || 0} times)`
       : `Amazing content on Mysoov - Connect, share, and discover! (Shared ${
           video.share || 0
         } times)`;
 
-    let frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
-    const referer = req.get('Referer') || req.get('Origin');
-    if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        frontendUrl = `${refererUrl.protocol}//${refererUrl.host}`;
-      } catch (e) {}
-    }
+    // Always use the production domain for og:url to prevent Facebook URL issues
+    const frontendUrl = process.env.FRONTEND_URL || 'https://mysoov.tv';
 
+    // IMPORTANT: Use absolute URL with https protocol for social media
     const shareUrl = `${frontendUrl}/post/${video._id}`;
 
     // If it's a crawler, serve meta tags without redirect
