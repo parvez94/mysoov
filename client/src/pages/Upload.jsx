@@ -344,6 +344,18 @@ const Upload = () => {
   const wrapperRef = useRef(null);
 
   const controllerRef = useRef(null);
+  const isSubmittedRef = useRef(false); // Track if form was successfully submitted
+  const videoFileRef = useRef(null); // Track current uploaded file for cleanup
+  const imagesRef = useRef([]); // Track current uploaded images for cleanup
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    videoFileRef.current = videoFile;
+  }, [videoFile]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
 
   const abortIfRunning = () => {
     try {
@@ -366,7 +378,47 @@ const Upload = () => {
   };
 
   // Remove current uploaded video and allow choosing another
-  const removeUploadedVideo = () => {
+  const removeUploadedVideo = async () => {
+    // Delete file from server before removing from state
+    if (videoFile?.public_id && videoFile?.provider) {
+      try {
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/v1/upload`, {
+          data: {
+            publicId: videoFile.public_id,
+            provider: videoFile.provider,
+          },
+          withCredentials: true,
+        });
+        console.log('✅ File deleted from server:', videoFile.public_id);
+      } catch (err) {
+        console.error('Failed to delete file from server:', err);
+        // Continue with local cleanup even if server delete fails
+      }
+    }
+
+    // Delete all images from server
+    if (images.length > 0) {
+      for (const image of images) {
+        if (image?.public_id && image?.provider) {
+          try {
+            await axios.delete(
+              `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+              {
+                data: {
+                  publicId: image.public_id,
+                  provider: image.provider,
+                },
+                withCredentials: true,
+              }
+            );
+            console.log('✅ Image deleted from server:', image.public_id);
+          } catch (err) {
+            console.error('Failed to delete image from server:', err);
+          }
+        }
+      }
+    }
+
     setVideoFile(null);
     setImages([]);
     setFileName('');
@@ -375,7 +427,26 @@ const Upload = () => {
   };
 
   // Remove a specific image from the array
-  const removeImage = (index) => {
+  const removeImage = async (index) => {
+    const imageToRemove = images[index];
+
+    // Delete image from server before removing from state
+    if (imageToRemove?.public_id && imageToRemove?.provider) {
+      try {
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/v1/upload`, {
+          data: {
+            publicId: imageToRemove.public_id,
+            provider: imageToRemove.provider,
+          },
+          withCredentials: true,
+        });
+        console.log('✅ Image deleted from server:', imageToRemove.public_id);
+      } catch (err) {
+        console.error('Failed to delete image from server:', err);
+        // Continue with local removal even if server delete fails
+      }
+    }
+
     setImages((prev) => prev.filter((_, i) => i !== index));
     if (images.length === 1) {
       setVideoFile(null);
@@ -585,6 +656,9 @@ const Upload = () => {
 
       const result = await response.json();
       const videoId = result.video?._id;
+
+      // Mark as submitted so cleanup won't delete files
+      isSubmittedRef.current = true;
 
       window.location.href = '/';
     } catch (error) {
@@ -863,6 +937,67 @@ const Upload = () => {
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [showEmojis]);
+
+  // Cleanup uploaded files when component unmounts (user navigates away without submitting)
+  useEffect(() => {
+    return () => {
+      // Don't delete if user successfully submitted the form
+      if (isSubmittedRef.current) {
+        console.log('✅ Form submitted - keeping uploaded files');
+        return;
+      }
+
+      // Get current file values from refs
+      const currentVideoFile = videoFileRef.current;
+      const currentImages = imagesRef.current;
+
+      // Delete uploaded files from server if user navigates away without publishing
+      if (currentVideoFile?.public_id && currentVideoFile?.provider) {
+        axios
+          .delete(`${import.meta.env.VITE_API_URL}/api/v1/upload`, {
+            data: {
+              publicId: currentVideoFile.public_id,
+              provider: currentVideoFile.provider,
+            },
+            withCredentials: true,
+          })
+          .then(() => {
+            console.log(
+              '🗑️ Cleaned up orphaned file on unmount:',
+              currentVideoFile.public_id
+            );
+          })
+          .catch(() => {
+            // Silent fail - component is unmounting anyway
+          });
+      }
+
+      // Delete all uploaded images
+      if (currentImages && currentImages.length > 0) {
+        currentImages.forEach((image) => {
+          if (image?.public_id && image?.provider) {
+            axios
+              .delete(`${import.meta.env.VITE_API_URL}/api/v1/upload`, {
+                data: {
+                  publicId: image.public_id,
+                  provider: image.provider,
+                },
+                withCredentials: true,
+              })
+              .then(() => {
+                console.log(
+                  '🗑️ Cleaned up orphaned image on unmount:',
+                  image.public_id
+                );
+              })
+              .catch(() => {
+                // Silent fail - component is unmounting anyway
+              });
+          }
+        });
+      }
+    };
+  }, []); // Only run on mount/unmount
 
   const labelMap = {
     idle: '',

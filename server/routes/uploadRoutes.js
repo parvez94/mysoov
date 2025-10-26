@@ -387,4 +387,69 @@ const removeTmp = (path) => {
   });
 };
 
+// Delete uploaded file (when user cancels)
+router.delete('/upload', verifyToken, async (req, res) => {
+  try {
+    const { publicId, provider } = req.body;
+
+    if (!publicId) {
+      return res.status(400).json({ msg: 'Missing publicId' });
+    }
+
+    let deleted = false;
+
+    // Delete from appropriate provider
+    switch (provider) {
+      case 'cloudinary':
+        try {
+          // Determine if it's video or image based on folder in publicId
+          const resourceType =
+            publicId.includes('videos') || publicId.includes('video')
+              ? 'video'
+              : 'image';
+
+          await cloudinary.uploader.destroy(publicId, {
+            resource_type: resourceType,
+          });
+          deleted = true;
+          console.log(`✅ Deleted from Cloudinary: ${publicId}`);
+        } catch (err) {
+          console.error('Cloudinary delete error:', err.message);
+        }
+        break;
+
+      case 'youtube':
+        // YouTube videos cannot be deleted via API easily
+        // Would require separate implementation
+        console.log('⚠️ YouTube video deletion not implemented');
+        return res.status(200).json({
+          msg: 'YouTube videos cannot be automatically deleted',
+          deleted: false,
+        });
+
+      case 'local':
+      default:
+        deleted = await deleteFromLocal(publicId);
+        if (deleted) {
+          console.log(`✅ Deleted from local storage: ${publicId}`);
+        }
+        break;
+    }
+
+    res.json({
+      success: true,
+      deleted,
+      msg: deleted
+        ? 'File deleted successfully'
+        : 'File not found or already deleted',
+    });
+  } catch (err) {
+    console.error('Error deleting upload:', err);
+    return res.status(500).json({
+      msg: 'Failed to delete file',
+      error: err.message,
+    });
+  }
+});
+
 export default router;

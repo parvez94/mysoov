@@ -76,7 +76,7 @@ app.use(
     tempFileDir: tempDir,
     createParentPath: true,
     limits: {
-      fileSize: 100 * 1024 * 1024, // 100MB max
+      fileSize: 500 * 1024 * 1024, // 500MB max
     },
     abortOnLimit: true,
     debug: false, // Disable debug to avoid logging non-file requests
