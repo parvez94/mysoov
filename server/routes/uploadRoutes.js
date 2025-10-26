@@ -10,6 +10,7 @@ import {
   uploadToYouTube,
   isYouTubeConfigured,
 } from '../utils/youtubeUploader.js';
+import { uploadToLocal, deleteFromLocal } from '../utils/localStorage.js';
 
 dotenv.config();
 
@@ -67,21 +68,22 @@ router.post('/upload', verifyToken, async (req, res) => {
     let settings = await Settings.findOne();
     if (!settings) {
       settings = await Settings.create({
-        storageProvider: 'cloudinary',
+        storageProvider: 'local',
+        localStorageConfig: { enabled: true, maxSizeGB: 75 },
         cloudinaryConfig: { enabled: true },
         youtubeConfig: { enabled: false },
       });
     }
 
-    let provider = settings.storageProvider;
+    let provider = settings.storageProvider || 'local';
+    console.log('🔍 Upload Debug - Storage Provider:', provider);
+    console.log('🔍 Upload Debug - Is Video:', isVideo);
 
-    // Images always go to Cloudinary, so they need size check
-    // Videos going to YouTube bypass the size limit
-    const willUseCloudinary =
-      !isVideo || provider !== 'youtube' || !isYouTubeConfigured();
+    // Check size limits based on provider
+    // YouTube uploads bypass size limits, local/cloudinary have limits
+    const willCheckSize = provider !== 'youtube' || !isYouTubeConfigured();
 
-    // Only check size limits for Cloudinary uploads
-    if (willUseCloudinary) {
+    if (willCheckSize) {
       const userMaxUploadSize = getMaxUploadSize(user);
       const maxSizeBytes = userMaxUploadSize * 1024 * 1024; // Convert MB to bytes
       const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
@@ -99,11 +101,6 @@ router.post('/upload', verifyToken, async (req, res) => {
     }
 
     let result;
-
-    // Images always go to Cloudinary
-    if (!isVideo) {
-      provider = 'cloudinary';
-    }
 
     // For videos, use the configured provider
     if (isVideo && provider === 'youtube' && isYouTubeConfigured()) {
@@ -124,25 +121,50 @@ router.post('/upload', verifyToken, async (req, res) => {
           thumbnailUrl: youtubeResult.thumbnailUrl,
         };
       } catch (youtubeError) {
-        // Fallback to Cloudinary if YouTube fails
-        provider = 'cloudinary';
+        console.error(
+          'YouTube upload failed, falling back to local storage:',
+          youtubeError.message
+        );
+        provider = 'local';
       }
     }
 
-    // Upload to Cloudinary (default or fallback)
-    if (!result || provider === 'cloudinary') {
-      const cloudinaryResult = await cloudinary.uploader.upload(
-        file.tempFilePath,
-        {
-          folder: isVideo ? 'videos' : 'images',
-          resource_type: isVideo ? 'video' : 'image',
-        }
-      );
+    // Upload to Cloudinary
+    if (!result && provider === 'cloudinary') {
+      try {
+        const cloudinaryResult = await cloudinary.uploader.upload(
+          file.tempFilePath,
+          {
+            folder: isVideo ? 'videos' : 'images',
+            resource_type: isVideo ? 'video' : 'image',
+          }
+        );
+
+        result = {
+          public_id: cloudinaryResult.public_id,
+          url: cloudinaryResult.secure_url,
+          provider: 'cloudinary',
+        };
+      } catch (cloudinaryError) {
+        console.error(
+          'Cloudinary upload failed, falling back to local storage:',
+          cloudinaryError.message
+        );
+        provider = 'local';
+      }
+    }
+
+    // Upload to local storage (default or fallback)
+    if (!result) {
+      const localResult = await uploadToLocal(file.tempFilePath, {
+        folder: isVideo ? 'videos' : 'images',
+        originalName: file.name,
+      });
 
       result = {
-        public_id: cloudinaryResult.public_id,
-        url: cloudinaryResult.secure_url,
-        provider: 'cloudinary',
+        public_id: localResult.public_id,
+        url: localResult.url,
+        provider: 'local',
       };
     }
 
@@ -233,15 +255,37 @@ router.post('/upload/image', verifyToken, async (req, res) => {
       return res.status(400).json({ msg: 'Image too large (max 5MB)' });
     }
 
-    const result = await cloudinary.uploader.upload(file.tempFilePath, {
-      folder: 'avatars',
-      resource_type: 'image',
-      transformation: [{ quality: 'auto', fetch_format: 'auto' }],
-    });
+    // Get storage settings
+    let settings = await Settings.findOne();
+    const provider = settings?.storageProvider || 'local';
+
+    let result;
+
+    if (provider === 'cloudinary') {
+      const cloudinaryResult = await cloudinary.uploader.upload(
+        file.tempFilePath,
+        {
+          folder: 'avatars',
+          resource_type: 'image',
+          transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+        }
+      );
+      result = {
+        public_id: cloudinaryResult.public_id,
+        url: cloudinaryResult.secure_url,
+      };
+    } else {
+      // Use local storage
+      const localResult = await uploadToLocal(file.tempFilePath, {
+        folder: 'avatars',
+        originalName: file.name,
+      });
+      result = { public_id: localResult.public_id, url: localResult.url };
+    }
 
     removeTmp(file.tempFilePath);
 
-    return res.json({ public_id: result.public_id, url: result.secure_url });
+    return res.json(result);
   } catch (err) {
     return res.status(500).json({ msg: 'Internal server error' });
   }
@@ -283,25 +327,50 @@ router.post('/upload/images', verifyToken, async (req, res) => {
       }
     }
 
-    // Upload all images to Cloudinary
-    const uploadPromises = fileArray.map((file) =>
-      cloudinary.uploader.upload(file.tempFilePath, {
-        folder: 'images',
-        resource_type: 'image',
-      })
-    );
+    // Get storage settings
+    let settings = await Settings.findOne();
+    const provider = settings?.storageProvider || 'local';
 
-    const results = await Promise.all(uploadPromises);
+    let uploadedImages;
+
+    if (provider === 'cloudinary') {
+      // Upload all images to Cloudinary
+      const uploadPromises = fileArray.map((file) =>
+        cloudinary.uploader.upload(file.tempFilePath, {
+          folder: 'images',
+          resource_type: 'image',
+        })
+      );
+
+      const results = await Promise.all(uploadPromises);
+
+      // Format results
+      uploadedImages = results.map((result) => ({
+        public_id: result.public_id,
+        url: result.secure_url,
+        provider: 'cloudinary',
+      }));
+    } else {
+      // Upload all images to local storage
+      const uploadPromises = fileArray.map((file) =>
+        uploadToLocal(file.tempFilePath, {
+          folder: 'images',
+          originalName: file.name,
+        })
+      );
+
+      const results = await Promise.all(uploadPromises);
+
+      // Format results
+      uploadedImages = results.map((result) => ({
+        public_id: result.public_id,
+        url: result.url,
+        provider: 'local',
+      }));
+    }
 
     // Clean up temporary files
     fileArray.forEach((file) => removeTmp(file.tempFilePath));
-
-    // Format results
-    const uploadedImages = results.map((result) => ({
-      public_id: result.public_id,
-      url: result.secure_url,
-      provider: 'cloudinary',
-    }));
 
     res.json({ images: uploadedImages });
   } catch (err) {

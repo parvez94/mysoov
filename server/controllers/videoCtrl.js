@@ -2,6 +2,7 @@ import Video from '../models/Video.js';
 import User from '../models/User.js';
 import Comment from '../models/Comment.js';
 import { createError } from '../utils/error.js';
+import { deleteFromLocal } from '../utils/localStorage.js';
 
 export const addVideo = async (req, res, next) => {
   const newVideo = new Video({ userId: req.user.id, ...req.body });
@@ -112,6 +113,29 @@ export const deleteVideo = async (req, res, next) => {
     if (!video) return next(createError(404, 'Video not found'));
 
     if (req.user.id === video.userId) {
+      // Delete files from local storage if applicable
+      if (video.storageProvider === 'local') {
+        // Delete video file
+        if (video.videoUrl?.public_id) {
+          await deleteFromLocal(video.videoUrl.public_id).catch((err) =>
+            console.error('Error deleting video file:', err)
+          );
+        }
+
+        // Delete image files
+        if (video.images && video.images.length > 0) {
+          for (const image of video.images) {
+            const publicId =
+              typeof image === 'string' ? image : image.public_id;
+            if (publicId) {
+              await deleteFromLocal(publicId).catch((err) =>
+                console.error('Error deleting image file:', err)
+              );
+            }
+          }
+        }
+      }
+
       await Video.findByIdAndDelete(req.params.id);
       res.status(200).json('Video deleted');
     } else {

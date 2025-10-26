@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { isYouTubeConfigured } from '../utils/youtubeUploader.js';
+import { getDiskSpace, deleteFromLocal } from '../utils/localStorage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -167,11 +168,35 @@ export const deleteVideo = async (req, res, next) => {
   try {
     const { videoId } = req.params;
 
-    const video = await Video.findByIdAndDelete(videoId);
+    const video = await Video.findById(videoId);
 
     if (!video) {
       return next(createError(404, 'Video not found'));
     }
+
+    // Delete files from local storage if applicable
+    if (video.storageProvider === 'local') {
+      // Delete video file
+      if (video.videoUrl?.public_id) {
+        await deleteFromLocal(video.videoUrl.public_id).catch((err) =>
+          console.error('Error deleting video file:', err)
+        );
+      }
+
+      // Delete image files
+      if (video.images && video.images.length > 0) {
+        for (const image of video.images) {
+          const publicId = typeof image === 'string' ? image : image.public_id;
+          if (publicId) {
+            await deleteFromLocal(publicId).catch((err) =>
+              console.error('Error deleting image file:', err)
+            );
+          }
+        }
+      }
+    }
+
+    await Video.findByIdAndDelete(videoId);
 
     res.status(200).json({
       success: true,
@@ -624,7 +649,8 @@ export const getStorageSettings = async (req, res, next) => {
     // Create default settings if none exist
     if (!settings) {
       settings = await Settings.create({
-        storageProvider: 'cloudinary',
+        storageProvider: 'local',
+        localStorageConfig: { enabled: true, maxSizeGB: 75 },
         cloudinaryConfig: { enabled: true },
         youtubeConfig: { enabled: false, defaultPrivacy: 'unlisted' },
       });
@@ -633,9 +659,21 @@ export const getStorageSettings = async (req, res, next) => {
     // Check if YouTube is properly configured in environment
     const youtubeConfigured = isYouTubeConfigured();
 
+    // Get disk space information for local storage
+    let diskSpace = null;
+    try {
+      diskSpace = await getDiskSpace();
+    } catch (error) {
+      console.error('Error getting disk space:', error);
+    }
+
     res.status(200).json({
       success: true,
       storageProvider: settings.storageProvider,
+      localStorageConfig: {
+        ...settings.localStorageConfig,
+        diskSpace: diskSpace,
+      },
       cloudinaryConfig: settings.cloudinaryConfig,
       youtubeConfig: {
         ...settings.youtubeConfig,
@@ -651,12 +689,17 @@ export const getStorageSettings = async (req, res, next) => {
 // Update storage settings
 export const updateStorageSettings = async (req, res, next) => {
   try {
-    const { storageProvider, youtubeConfig, cloudinaryConfig } = req.body;
+    const {
+      storageProvider,
+      youtubeConfig,
+      cloudinaryConfig,
+      localStorageConfig,
+    } = req.body;
 
     // Validate storage provider
     if (
       storageProvider &&
-      !['cloudinary', 'youtube'].includes(storageProvider)
+      !['local', 'cloudinary', 'youtube'].includes(storageProvider)
     ) {
       return next(createError(400, 'Invalid storage provider'));
     }
@@ -675,7 +718,11 @@ export const updateStorageSettings = async (req, res, next) => {
 
     if (!settings) {
       settings = await Settings.create({
-        storageProvider: storageProvider || 'cloudinary',
+        storageProvider: storageProvider || 'local',
+        localStorageConfig: localStorageConfig || {
+          enabled: true,
+          maxSizeGB: 75,
+        },
         cloudinaryConfig: cloudinaryConfig || { enabled: true },
         youtubeConfig: youtubeConfig || {
           enabled: false,
@@ -684,6 +731,11 @@ export const updateStorageSettings = async (req, res, next) => {
       });
     } else {
       if (storageProvider) settings.storageProvider = storageProvider;
+      if (localStorageConfig)
+        settings.localStorageConfig = {
+          ...settings.localStorageConfig,
+          ...localStorageConfig,
+        };
       if (cloudinaryConfig) settings.cloudinaryConfig = cloudinaryConfig;
       if (youtubeConfig)
         settings.youtubeConfig = {
@@ -698,6 +750,7 @@ export const updateStorageSettings = async (req, res, next) => {
       message: 'Storage settings updated successfully',
       settings: {
         storageProvider: settings.storageProvider,
+        localStorageConfig: settings.localStorageConfig,
         cloudinaryConfig: settings.cloudinaryConfig,
         youtubeConfig: settings.youtubeConfig,
       },

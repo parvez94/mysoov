@@ -5,8 +5,20 @@ const SettingsSchema = new mongoose.Schema(
     // Storage provider settings
     storageProvider: {
       type: String,
-      enum: ['cloudinary', 'youtube'],
-      default: 'cloudinary',
+      enum: ['local', 'cloudinary', 'youtube'],
+      default: 'local',
+    },
+
+    // Local storage configuration
+    localStorageConfig: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      maxSizeGB: {
+        type: Number,
+        default: 75,
+      },
     },
 
     // YouTube configuration

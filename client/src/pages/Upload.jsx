@@ -421,51 +421,37 @@ const Upload = () => {
       const controller = new AbortController();
       controllerRef.current = controller;
 
-      // Step 1: Get Cloudinary signature from server
-      const signatureResponse = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/upload/signature`,
-        {
-          folder: detectedMediaType === 'video' ? 'videos' : 'images',
-          resourceType: detectedMediaType,
-        },
+      // Upload via server (respects storage provider settings)
+      const formData = new FormData();
+      if (detectedMediaType === 'video') {
+        formData.append('video', file);
+      } else {
+        formData.append('image', file);
+      }
+
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+        formData,
         {
           withCredentials: true,
           signal: controller.signal,
+          onUploadProgress: (evt) => {
+            if (evt.total) {
+              const percent = Math.round((evt.loaded / evt.total) * 100);
+              // Avoid showing 100% before the request actually completes
+              setUploadProgress(Math.min(95, percent));
+            } else {
+              // Fallback for chunked encoding without total length
+              setStatus('indeterminate');
+            }
+          },
         }
       );
 
-      const { signature, timestamp, cloudName, apiKey, folder } =
-        signatureResponse.data;
-
-      // Step 2: Upload directly to Cloudinary
-      const cloudinaryFormData = new FormData();
-      cloudinaryFormData.append('file', file);
-      cloudinaryFormData.append('signature', signature);
-      cloudinaryFormData.append('timestamp', timestamp);
-      cloudinaryFormData.append('api_key', apiKey);
-      cloudinaryFormData.append('folder', folder);
-
-      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${detectedMediaType}/upload`;
-
-      const res = await axios.post(cloudinaryUrl, cloudinaryFormData, {
-        withCredentials: false, // Cloudinary doesn't accept credentials
-        signal: controller.signal,
-        onUploadProgress: (evt) => {
-          if (evt.total) {
-            const percent = Math.round((evt.loaded / evt.total) * 100);
-            // Avoid showing 100% before the request actually completes
-            setUploadProgress(Math.min(95, percent));
-          } else {
-            // Fallback for chunked encoding without total length
-            setStatus('indeterminate');
-          }
-        },
-      });
-
       const data = {
         public_id: res.data.public_id,
-        url: res.data.secure_url,
-        provider: 'cloudinary',
+        url: res.data.url,
+        provider: res.data.provider || 'local',
       };
 
       setVideoFile(data);

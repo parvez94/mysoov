@@ -18,8 +18,8 @@ const videoSchema = new mongoose.Schema(
     },
     storageProvider: {
       type: String,
-      enum: ['cloudinary', 'youtube'],
-      default: 'cloudinary',
+      enum: ['local', 'cloudinary', 'youtube'],
+      default: 'local',
     },
     mediaType: {
       type: String,

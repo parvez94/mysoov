@@ -21,6 +21,8 @@ if (!fs.existsSync(tempDir)) {
 
 // Middleware
 app.use(express.static('public'));
+// Serve uploaded files from local storage
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cookieParser());
 
 // CORS configuration
@@ -280,6 +282,14 @@ app.get('/video/:id', async (req, res) => {
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
         );
+      } else if (
+        video.storageProvider === 'local' &&
+        thumbnailUrl &&
+        thumbnailUrl.startsWith('/')
+      ) {
+        // Convert relative URL to absolute URL for social media
+        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
       }
     }
     // Handle video posts
@@ -299,6 +309,15 @@ app.get('/video/:id', async (req, res) => {
         if (youtubeIdMatch && youtubeIdMatch[1]) {
           thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
         }
+      } else if (
+        video.storageProvider === 'local' &&
+        videoUrl &&
+        videoUrl.startsWith('/')
+      ) {
+        // For local storage, convert relative URL to absolute URL
+        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        contentUrl = `${baseUrl}${videoUrl}`;
+        thumbnailUrl = contentUrl;
       }
     }
 
@@ -421,6 +440,14 @@ app.get('/post/:id', async (req, res) => {
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
         );
+      } else if (
+        video.storageProvider === 'local' &&
+        thumbnailUrl &&
+        thumbnailUrl.startsWith('/')
+      ) {
+        // Convert relative URL to absolute URL for social media
+        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
       }
     }
     // Handle video posts
@@ -440,6 +467,15 @@ app.get('/post/:id', async (req, res) => {
         if (youtubeIdMatch && youtubeIdMatch[1]) {
           thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
         }
+      } else if (
+        video.storageProvider === 'local' &&
+        videoUrl &&
+        videoUrl.startsWith('/')
+      ) {
+        // For local storage, convert relative URL to absolute URL
+        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        contentUrl = `${baseUrl}${videoUrl}`;
+        thumbnailUrl = contentUrl;
       }
     }
 

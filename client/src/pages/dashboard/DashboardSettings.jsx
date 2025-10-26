@@ -783,8 +783,11 @@ const DashboardSettings = () => {
 
   // Storage Settings state
   const [storageSettings, setStorageSettings] = useState({
-    storageProvider: 'cloudinary',
+    storageProvider: 'local',
     youtubeConfigured: false,
+    localStorageEnabled: true,
+    localStorageUsed: 0,
+    localStorageMax: 75,
   });
   const [savingStorage, setSavingStorage] = useState(false);
 
@@ -1123,8 +1126,12 @@ const DashboardSettings = () => {
         }
       );
       setStorageSettings({
-        storageProvider: response.data.storageProvider || 'cloudinary',
+        storageProvider: response.data.storageProvider || 'local',
         youtubeConfigured: response.data.youtubeConfigured || false,
+        localStorageEnabled: response.data.localStorageConfig?.enabled || true,
+        localStorageUsed:
+          response.data.localStorageConfig?.diskSpace?.usedGB || 0,
+        localStorageMax: response.data.localStorageConfig?.maxSizeGB || 75,
       });
     } catch (err) {}
   };
@@ -1772,7 +1779,7 @@ const DashboardSettings = () => {
       </Section>
 
       <Section>
-        <SectionTitle>Video Storage Provider</SectionTitle>
+        <SectionTitle>Storage Provider</SectionTitle>
         <p
           style={{
             color: '#999',
@@ -1780,12 +1787,46 @@ const DashboardSettings = () => {
             fontFamily: 'var(--secondary-fonts)',
           }}
         >
-          Choose where to store uploaded videos. Images will always use
-          Cloudinary for optimal performance.
+          Choose where to store uploaded videos and images.
         </p>
 
         <StorageProviderBox>
           <RadioGroup>
+            <RadioOption
+              $selected={storageSettings.storageProvider === 'local'}
+              onClick={() => handleStorageProviderChange('local')}
+            >
+              <RadioInput
+                type='radio'
+                name='storageProvider'
+                value='local'
+                checked={storageSettings.storageProvider === 'local'}
+                onChange={() => handleStorageProviderChange('local')}
+              />
+              <RadioContent>
+                <RadioTitle>
+                  Local VPS Storage
+                  <StatusBadge $configured={true}>Default</StatusBadge>
+                </RadioTitle>
+                <RadioDescription>
+                  Store files directly on your VPS server. Fast access, no
+                  external costs, full control.
+                  {storageSettings.localStorageEnabled && (
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        fontSize: '13px',
+                        color: '#4caf50',
+                      }}
+                    >
+                      💾 {storageSettings.localStorageUsed.toFixed(2)} GB /{' '}
+                      {storageSettings.localStorageMax} GB used
+                    </div>
+                  )}
+                </RadioDescription>
+              </RadioContent>
+            </RadioOption>
+
             <RadioOption
               $selected={storageSettings.storageProvider === 'cloudinary'}
               onClick={() => handleStorageProviderChange('cloudinary')}
