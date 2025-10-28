@@ -294,7 +294,7 @@ const fetchPricingPlans = async () => {
         },
       };
     }
-  } catch (err) {  }
+  } catch (err) {}
 
   // Return defaults if API fails
   return {
@@ -334,7 +334,8 @@ const PricingModal = ({ isOpen, onClose, errorInfo }) => {
 
   // Listen for custom event when admin updates pricing (for real-time updates)
   useEffect(() => {
-    const handlePricingUpdate = async () => {      const { plans, config } = await fetchPricingPlans();
+    const handlePricingUpdate = async () => {
+      const { plans, config } = await fetchPricingPlans();
       setPricingPlans(plans);
       setPricingConfig(config);
     };
@@ -349,8 +350,9 @@ const PricingModal = ({ isOpen, onClose, errorInfo }) => {
   if (!isOpen) return null;
 
   const handleSelectPlan = (planId) => {
-    // Navigate to payment page with selected plan
-    navigate(`/payment?plan=${planId}`);
+    // Navigate to payment page with selected plan and return URL
+    // After payment, user should return to upload page to retry their upload
+    navigate(`/payment?plan=${planId}&returnUrl=/upload`);
     onClose();
   };
 

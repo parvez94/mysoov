@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { MdCheck, MdArrowBack, MdLock, MdClose } from 'react-icons/md';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { loginSuccess } from '../redux/user/userSlice';
 import axios from 'axios';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -543,6 +544,10 @@ const CheckoutForm = ({
   directoryId,
   filmName,
   filmPrice,
+  planId,
+  planName,
+  planPrice,
+  type,
   onSuccess,
   onError,
 }) => {
@@ -553,7 +558,9 @@ const CheckoutForm = ({
   const [purchasedFilmUrl, setPurchasedFilmUrl] = useState('');
   const [downloadStatus, setDownloadStatus] = useState('downloading');
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
+  const [searchParams] = useSearchParams();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -566,17 +573,24 @@ const CheckoutForm = ({
       setProcessing(true);
       onError(null);
 
-      // Step 1: Create payment intent
-      const { data: paymentData } = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/payment/create-payment-intent`,
-        {
-          filmId,
-          directoryId,
-          amount: filmPrice,
-          filmName,
-        },
-        { withCredentials: true }
-      );
+      // Step 1: Create payment intent based on type
+      const endpoint =
+        type === 'film'
+          ? `${
+              import.meta.env.VITE_API_URL
+            }/api/v1/payment/create-payment-intent`
+          : `${
+              import.meta.env.VITE_API_URL
+            }/api/v1/payment/create-subscription-payment-intent`;
+
+      const payload =
+        type === 'film'
+          ? { filmId, directoryId, amount: filmPrice, filmName }
+          : { planId, amount: planPrice, planName };
+
+      const { data: paymentData } = await axios.post(endpoint, payload, {
+        withCredentials: true,
+      });
 
       // Step 2: Confirm card payment
       const cardElement = elements.getElement(CardElement);
@@ -594,50 +608,68 @@ const CheckoutForm = ({
       }
 
       if (paymentIntent.status === 'succeeded') {
-        // Step 3: Complete purchase (add to profile and get download link)
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/v1/films/purchase`,
-          { filmId, directoryId },
-          { withCredentials: true }
-        );
+        // Step 3: Complete purchase based on type
+        if (type === 'film') {
+          // Film purchase flow
+          const response = await axios.post(
+            `${import.meta.env.VITE_API_URL}/api/v1/films/purchase`,
+            { filmId, directoryId },
+            { withCredentials: true }
+          );
 
-        // Store the video URL for "Watch Now" button
-        if (response.data.film) {
-          setPurchasedFilmUrl(`/post/${response.data.film._id}`);
-        }
+          // Store the video URL for "Watch Now" button
+          if (response.data.film) {
+            setPurchasedFilmUrl(`/post/${response.data.film._id}`);
+          }
 
-        // Show success modal immediately
-        setDownloadStatus('downloading');
-        setShowSuccessModal(true);
-        onSuccess(response.data.message || 'Payment successful!');
+          // Show success modal immediately
+          setDownloadStatus('downloading');
+          setShowSuccessModal(true);
+          onSuccess(response.data.message || 'Payment successful!');
 
-        // Trigger download as file (force download, not open in browser)
-        if (response.data.downloadUrl) {
-          // Use async download to ensure it downloads as file
-          (async () => {
-            try {
-              // Try to fetch as blob for better download control
-              const videoResponse = await fetch(response.data.downloadUrl);
+          // Trigger download as file (force download, not open in browser)
+          if (response.data.downloadUrl) {
+            // Use async download to ensure it downloads as file
+            (async () => {
+              try {
+                // Try to fetch as blob for better download control
+                const videoResponse = await fetch(response.data.downloadUrl);
 
-              if (videoResponse.ok) {
-                // Download as blob to force file download
-                const blob = await videoResponse.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
+                if (videoResponse.ok) {
+                  // Download as blob to force file download
+                  const blob = await videoResponse.blob();
+                  const blobUrl = window.URL.createObjectURL(blob);
 
-                const link = document.createElement('a');
-                link.href = blobUrl;
-                link.download = `${filmName || 'film'}.mp4`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                  const link = document.createElement('a');
+                  link.href = blobUrl;
+                  link.download = `${filmName || 'film'}.mp4`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
 
-                // Clean up blob URL
-                setTimeout(() => {
-                  window.URL.revokeObjectURL(blobUrl);
-                  setDownloadStatus('complete');
-                }, 2000);
-              } else {
-                // Fallback to direct download if fetch fails (CORS issue)
+                  // Clean up blob URL
+                  setTimeout(() => {
+                    window.URL.revokeObjectURL(blobUrl);
+                    setDownloadStatus('complete');
+                  }, 2000);
+                } else {
+                  // Fallback to direct download if fetch fails (CORS issue)
+                  const link = document.createElement('a');
+                  link.href = response.data.downloadUrl;
+                  link.download = `${filmName || 'film'}.mp4`;
+                  link.target = '_blank';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+
+                  setTimeout(() => {
+                    setDownloadStatus('error'); // Shows "check your browser downloads"
+                  }, 2000);
+                }
+              } catch (downloadError) {
+                console.error('Download error:', downloadError);
+
+                // Fallback to direct link method
                 const link = document.createElement('a');
                 link.href = response.data.downloadUrl;
                 link.download = `${filmName || 'film'}.mp4`;
@@ -646,30 +678,37 @@ const CheckoutForm = ({
                 link.click();
                 document.body.removeChild(link);
 
+                // Show error status with instruction
                 setTimeout(() => {
-                  setDownloadStatus('error'); // Shows "check your browser downloads"
+                  setDownloadStatus('error');
                 }, 2000);
               }
-            } catch (downloadError) {
-              console.error('Download error:', downloadError);
-
-              // Fallback to direct link method
-              const link = document.createElement('a');
-              link.href = response.data.downloadUrl;
-              link.download = `${filmName || 'film'}.mp4`;
-              link.target = '_blank';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-
-              // Show error status with instruction
-              setTimeout(() => {
-                setDownloadStatus('error');
-              }, 2000);
-            }
-          })();
+            })();
+          } else {
+            setDownloadStatus('error');
+          }
         } else {
-          setDownloadStatus('error');
+          // Subscription activation flow
+          const response = await axios.post(
+            `${
+              import.meta.env.VITE_API_URL
+            }/api/v1/payment/activate-subscription`,
+            { planId },
+            { withCredentials: true }
+          );
+
+          // Update user state in Redux
+          if (response.data.user) {
+            dispatch(loginSuccess(response.data.user));
+          }
+
+          onSuccess('Subscription activated successfully! 🎉');
+
+          // Redirect back to where user came from (or upload page by default)
+          setTimeout(() => {
+            const returnUrl = searchParams.get('returnUrl') || '/upload';
+            window.location.href = returnUrl;
+          }, 2000);
         }
       }
     } catch (err) {
@@ -693,7 +732,9 @@ const CheckoutForm = ({
         </SecurePaymentBadge>
 
         <InfoText style={{ marginBottom: '16px' }}>
-          Enter your card details below to complete the purchase:
+          {type === 'film'
+            ? 'Enter your card details below to complete the purchase:'
+            : 'Enter your card details below to activate your subscription:'}
         </InfoText>
 
         <CardElementWrapper>
@@ -712,7 +753,11 @@ const CheckoutForm = ({
             Cancel
           </Button>
           <Button type='submit' primary disabled={!stripe || processing}>
-            {processing ? 'Processing...' : `Pay $${filmPrice.toFixed(2)}`}
+            {processing
+              ? 'Processing...'
+              : `Pay $${
+                  type === 'film' ? filmPrice.toFixed(2) : planPrice.toFixed(2)
+                }`}
           </Button>
         </ButtonGroup>
       </form>
@@ -766,9 +811,9 @@ const Payment = () => {
   useEffect(() => {
     const initStripe = async () => {
       try {
-        // Fetch Stripe config from backend
+        // Fetch Stripe config from backend (public endpoint)
         const { data } = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/v1/admin/stripe-settings`,
+          `${import.meta.env.VITE_API_URL}/api/public/stripe-settings`,
           { withCredentials: true }
         );
 
@@ -791,11 +836,8 @@ const Payment = () => {
       }
     };
 
-    if (type === 'film') {
-      initStripe();
-    } else {
-      setLoadingStripe(false);
-    }
+    // Initialize Stripe for both film and subscription payments
+    initStripe();
   }, [type]);
 
   // Load pricing data on mount and when localStorage changes
@@ -969,6 +1011,7 @@ const Payment = () => {
                   directoryId={directoryId}
                   filmName={filmName}
                   filmPrice={filmPrice}
+                  type='film'
                   onSuccess={setSuccess}
                   onError={setError}
                 />
@@ -977,23 +1020,42 @@ const Payment = () => {
           </>
         ) : (
           <>
-            <ComingSoonBadge>{pricingConfig.comingSoonMessage}</ComingSoonBadge>
-            <InfoText>{pricingConfig.comingSoonDescription}</InfoText>
-            <InfoText>
-              <strong>Email:</strong> {pricingConfig.supportEmail}
-            </InfoText>
-            <InfoText>{pricingConfig.upgradeInstructions}</InfoText>
-            <ButtonGroup>
-              <Button onClick={() => navigate(-1)}>Go Back</Button>
-              <Button
-                primary
-                onClick={() => {
-                  window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Upgrade Request`;
-                }}
-              >
-                Contact Support
-              </Button>
-            </ButtonGroup>
+            {loadingStripe ? (
+              <ComingSoonBadge>Loading payment system...</ComingSoonBadge>
+            ) : !paymentEnabled ? (
+              <>
+                <ComingSoonBadge>
+                  {pricingConfig.comingSoonMessage}
+                </ComingSoonBadge>
+                <InfoText>{pricingConfig.comingSoonDescription}</InfoText>
+                <InfoText>
+                  <strong>Email:</strong> {pricingConfig.supportEmail}
+                </InfoText>
+                <InfoText>{pricingConfig.upgradeInstructions}</InfoText>
+                <ButtonGroup>
+                  <Button onClick={() => navigate(-1)}>Go Back</Button>
+                  <Button
+                    primary
+                    onClick={() => {
+                      window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Upgrade Request&body=Plan: ${plan.name}%0APrice: $${plan.price}`;
+                    }}
+                  >
+                    Contact Support
+                  </Button>
+                </ButtonGroup>
+              </>
+            ) : (
+              <Elements stripe={stripePromise}>
+                <CheckoutForm
+                  planId={planId}
+                  planName={plan.name}
+                  planPrice={plan.price}
+                  type='subscription'
+                  onSuccess={setSuccess}
+                  onError={setError}
+                />
+              </Elements>
+            )}
           </>
         )}
       </PaymentSection>

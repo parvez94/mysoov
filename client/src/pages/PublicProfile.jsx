@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Link,
@@ -8,7 +8,7 @@ import {
 } from 'react-router-dom';
 import styled from 'styled-components';
 import { createPortal } from 'react-dom';
-import { IoClose } from 'react-icons/io5';
+import { IoClose, IoCamera } from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
 import {
   FollowButton,
@@ -31,63 +31,166 @@ const Container = styled.div`
   }
 `;
 
-const InfoWrapper = styled.div``;
+const CoverImageWrapper = styled.div`
+  position: relative;
+  width: calc(100% + 100px);
+  margin-left: -50px;
+  margin-top: -20px;
+  margin-bottom: 20px;
+  height: 250px;
+  background: ${(props) =>
+    props.$src ? `url(${props.$src})` : 'rgba(255, 255, 255, 0.1)'};
+  background-size: cover;
+  background-position: center ${(props) => props.$position || 50}%;
+  border-radius: 0;
+  overflow: hidden;
+  cursor: ${(props) => (props.$isDraggable ? 'grab' : 'default')};
 
-const UserInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  margin-bottom: 40px;
+  &:active {
+    cursor: ${(props) => (props.$isDraggable ? 'grabbing' : 'default')};
+  }
 
   @media (max-width: 768px) {
-    gap: 20px;
-    margin-bottom: 24px;
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-top: -16px;
+    height: 180px;
+  }
+`;
+
+const CoverUploadButton = styled.button`
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.85);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+`;
+
+const SavePositionButton = styled.button`
+  position: absolute;
+  bottom: 16px;
+  right: 180px; // Position to the left of Change Cover button
+  padding: 10px 16px;
+  background: rgba(0, 150, 0, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  border-radius: 6px;
+  color: white;
+  font-family: var(--secondary-fonts);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(0, 180, 0, 0.9);
+    border-color: rgba(0, 255, 0, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    right: 150px; // Adjust for mobile
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
+const InfoWrapper = styled.div`
+  position: relative;
+`;
+
+const ProfileHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  min-height: 70px;
+
+  @media (max-width: 768px) {
+    min-height: 50px;
   }
 `;
 
 const UserImage = styled.img`
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   display: block;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
+  border: 4px solid var(--primary-color);
+  background: var(--primary-color);
+  margin-top: -70px;
+  position: relative;
+  z-index: 10;
 
   @media (max-width: 768px) {
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
+    margin-top: -50px;
+    border-width: 3px;
   }
 `;
 
-const UserNames = styled.div``;
+const Actions = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-top: 12px;
+`;
+
+const UserInfo = styled.div`
+  margin-top: 12px;
+`;
 
 const DisplayName = styled.h3`
   font-family: var(--primary-fonts);
   color: var(--secondary-color);
-  font-size: 26px;
-  margin-bottom: 5px;
+  font-size: 24px;
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: 6px;
 
   @media (max-width: 768px) {
-    font-size: 22px;
+    font-size: 20px;
   }
 `;
 
 const UserName = styled.h5`
   font-family: var(--secondary-fonts);
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 15px;
-  margin-bottom: 12px;
-`;
-
-const Actions = styled.div`
-  margin-top: 8px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
+  margin-bottom: 16px;
 `;
 
 const ActionButton = styled.button`
@@ -109,6 +212,7 @@ const UserStats = styled.div`
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+  margin-bottom: 12px;
   font-family: var(--secondary-fonts);
   color: var(--secondary-color);
   font-size: 14px;
@@ -133,7 +237,7 @@ const Dot = styled.span`
 `;
 
 const UserBio = styled.div`
-  margin-top: 20px;
+  margin-top: 8px;
   font-family: var(--secondary-fonts);
   color: var(--secondary-color);
   font-size: 14px;
@@ -415,6 +519,18 @@ const PublicProfile = () => {
   // Modal states
   const [followersModalOpen, setFollowersModalOpen] = useState(false);
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  // Cover image positioning
+  const [coverPosition, setCoverPosition] = useState(50); // Y-axis position percentage
+  const [isDraggingCover, setIsDraggingCover] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragStartPosition, setDragStartPosition] = useState(50);
+  const [showSavePositionButton, setShowSavePositionButton] = useState(false);
+
+  // Refs
+  const coverInputRef = useRef(null);
+  const coverWrapperRef = useRef(null);
 
   // Username availability check
   const usernameCheck = useUsernameCheck(usernameEdit, currentUser?.username);
@@ -468,6 +584,10 @@ const PublicProfile = () => {
         const u = users.find((x) => x?.username === username);
         if (!cancelled) {
           setChannel(u || null);
+          // Set cover position if available
+          if (u?.coverImagePosition !== undefined) {
+            setCoverPosition(u.coverImagePosition);
+          }
           // Only set loading to false for channel data once we have the user
           if (u) {
             setIsLoading(false);
@@ -636,6 +756,10 @@ const PublicProfile = () => {
     () => resolveImageUrl(channel?.displayImage),
     [channel?.displayImage]
   );
+  const coverUrl = useMemo(
+    () => resolveImageUrl(channel?.coverImage),
+    [channel?.coverImage]
+  );
   const displayName = channel?.displayName || channel?.username || username;
 
   const followersCount = channel?.followers || 0;
@@ -659,6 +783,151 @@ const PublicProfile = () => {
     }
   };
 
+  const handleCoverUploadClick = () => {
+    coverInputRef.current?.click();
+  };
+
+  const handleDirectCoverUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?._id) return;
+
+    setUploadingCover(true);
+    try {
+      // Upload cover image
+      const fd = new FormData();
+      fd.append('image', file);
+      const upRes = await fetch(`${API}/api/v1/upload/image`, {
+        method: 'POST',
+        body: fd,
+        credentials: 'include',
+      });
+      if (!upRes.ok) {
+        const errorData = await upRes.json();
+        throw new Error(errorData.msg || 'Failed to upload cover image');
+      }
+      const upData = await upRes.json();
+
+      // Update user profile with new cover image
+      const payload = {
+        displayName: currentUser.displayName,
+        username: currentUser.username,
+        bio: currentUser.bio,
+        displayImage: currentUser.displayImage,
+        coverImage: upData.url,
+        coverImagePosition: coverPosition, // Keep current position
+      };
+
+      const res = await fetch(`${API}/api/v1/users/${currentUser._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.msg || 'Failed to update profile');
+      }
+      const updated = await res.json();
+
+      // Update global state and local channel
+      dispatch(loginSuccess(updated));
+      setChannel(updated);
+
+      // Show save position button after successful upload
+      setShowSavePositionButton(true);
+    } catch (err) {
+      console.error('Cover upload error:', err);
+      alert('Failed to upload cover image: ' + err.message);
+    } finally {
+      setUploadingCover(false);
+      // Reset file input
+      if (coverInputRef.current) {
+        coverInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Drag handlers for cover positioning
+  const handleCoverMouseDown = (e) => {
+    if (!isOwn || !channel?.coverImage || !showSavePositionButton) return;
+    setIsDraggingCover(true);
+    setDragStartY(e.clientY);
+    setDragStartPosition(coverPosition);
+  };
+
+  const handleCoverMouseMove = (e) => {
+    if (!isDraggingCover || !coverWrapperRef.current) return;
+
+    const wrapper = coverWrapperRef.current;
+    const wrapperHeight = wrapper.offsetHeight;
+    const deltaY = e.clientY - dragStartY;
+    const deltaPercentage = (deltaY / wrapperHeight) * 100;
+
+    // Calculate new position (inverted because dragging down should move image up)
+    const newPosition = Math.max(
+      0,
+      Math.min(100, dragStartPosition - deltaPercentage)
+    );
+    setCoverPosition(newPosition);
+  };
+
+  const handleCoverMouseUp = () => {
+    if (!isDraggingCover) return;
+    setIsDraggingCover(false);
+    // Don't auto-save anymore - user must click Save Position button
+  };
+
+  // Save position handler
+  const handleSavePosition = async () => {
+    if (!currentUser?._id) return;
+
+    try {
+      const payload = {
+        displayName: currentUser.displayName,
+        username: currentUser.username,
+        bio: currentUser.bio,
+        displayImage: currentUser.displayImage,
+        coverImage: currentUser.coverImage,
+        coverImagePosition: coverPosition,
+      };
+
+      const res = await fetch(`${API}/api/v1/users/${currentUser._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Failed to save position');
+      const updated = await res.json();
+      dispatch(loginSuccess(updated));
+      setChannel(updated);
+
+      // Hide the save button after successful save
+      setShowSavePositionButton(false);
+    } catch (err) {
+      console.error('Failed to save cover position:', err);
+      alert('Failed to save position: ' + err.message);
+    }
+  };
+
+  // Add/remove mouse event listeners for dragging
+  useEffect(() => {
+    if (isDraggingCover) {
+      window.addEventListener('mousemove', handleCoverMouseMove);
+      window.addEventListener('mouseup', handleCoverMouseUp);
+      return () => {
+        window.removeEventListener('mousemove', handleCoverMouseMove);
+        window.removeEventListener('mouseup', handleCoverMouseUp);
+      };
+    }
+  }, [isDraggingCover, dragStartY, dragStartPosition, coverPosition]);
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!currentUser?._id) return;
@@ -671,6 +940,7 @@ const PublicProfile = () => {
     setSaving(true);
     try {
       let displayImage = currentUser.displayImage || '';
+      let coverImage = currentUser.coverImage || '';
 
       // 1) Upload avatar if changed
       if (avatarFile) {
@@ -692,6 +962,8 @@ const PublicProfile = () => {
         username: usernameEdit,
         bio: bioEdit,
         displayImage,
+        coverImage,
+        coverImagePosition: currentUser.coverImagePosition || 50,
       };
 
       const res = await fetch(`${API}/api/v1/users/${currentUser._id}`, {
@@ -706,17 +978,17 @@ const PublicProfile = () => {
       if (!res.ok) throw new Error('Failed to update profile');
       const updated = await res.json();
 
-      // 3) Update global auth state + local channel (so UI reflects immediately)
+      // 4) Update global auth state + local channel (so UI reflects immediately)
       dispatch(loginSuccess(updated));
       if (isOwn) setChannel(updated);
 
-      // 4) Close modal and, if username changed, navigate to the new slug
+      // 5) Close modal and, if username changed, navigate to the new slug
       const params = new URLSearchParams(searchParams);
       params.delete('edit');
       const nextUsername = updated?.username || usernameEdit || username;
       navigate({ pathname: `/${nextUsername}`, search: params.toString() });
 
-      // 5) Reset transient avatar state
+      // 6) Reset transient avatar state
       setAvatarPreview('');
       setAvatarFile(null);
     } catch (err) {
@@ -775,50 +1047,85 @@ const PublicProfile = () => {
 
   return (
     <Container>
+      <CoverImageWrapper
+        ref={coverWrapperRef}
+        $src={coverUrl}
+        $position={coverPosition}
+        $isDraggable={isOwn && showSavePositionButton}
+        onMouseDown={handleCoverMouseDown}
+      >
+        {isOwn && (
+          <>
+            <CoverUploadButton
+              onClick={handleCoverUploadClick}
+              disabled={uploadingCover}
+              onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking button
+            >
+              <IoCamera size={18} />
+              {uploadingCover ? 'Uploading...' : 'Change Cover'}
+            </CoverUploadButton>
+            {showSavePositionButton && (
+              <SavePositionButton
+                onClick={handleSavePosition}
+                onMouseDown={(e) => e.stopPropagation()} // Prevent drag when clicking button
+              >
+                Save Position
+              </SavePositionButton>
+            )}
+            <HiddenFileInput
+              ref={coverInputRef}
+              type='file'
+              accept='image/*'
+              onChange={handleDirectCoverUpload}
+            />
+          </>
+        )}
+      </CoverImageWrapper>
       <InfoWrapper>
-        <UserInfo>
+        <ProfileHeader>
           <UserImage src={avatarUrl} />
-          <UserNames>
-            <DisplayName>
-              {displayName}
-              <VerifiedBadge user={channel} size={22} />
-            </DisplayName>
-            <UserName>@{channel?.username}</UserName>
-            <Actions>
-              {isOwn ? (
-                <ActionButton
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams);
-                    params.set('edit', '1');
-                    navigate({
-                      pathname: `/${username}`,
-                      search: params.toString(),
-                    });
+          <Actions>
+            {isOwn ? (
+              <ActionButton
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams);
+                  params.set('edit', '1');
+                  navigate({
+                    pathname: `/${username}`,
+                    search: params.toString(),
+                  });
+                }}
+              >
+                Edit Profile
+              </ActionButton>
+            ) : (
+              <>
+                <FollowButton
+                  user={currentUser}
+                  channel={channel}
+                  onDelta={(d) => {
+                    setChannel((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            followers: Math.max(0, (prev.followers || 0) + d),
+                          }
+                        : prev
+                    );
                   }}
-                >
-                  Edit Profile
-                </ActionButton>
-              ) : (
-                <>
-                  <FollowButton
-                    user={currentUser}
-                    channel={channel}
-                    onDelta={(d) => {
-                      setChannel((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              followers: Math.max(0, (prev.followers || 0) + d),
-                            }
-                          : prev
-                      );
-                    }}
-                  />
-                </>
-              )}
-            </Actions>
-          </UserNames>
+                />
+              </>
+            )}
+          </Actions>
+        </ProfileHeader>
+        <UserInfo>
+          <DisplayName>
+            {displayName}
+            <VerifiedBadge user={channel} size={22} />
+          </DisplayName>
+          <UserName>@{channel?.username}</UserName>
         </UserInfo>
+        <UserBio>{channel?.bio || ''}</UserBio>
         <UserStats>
           <ClickableStat onClick={() => setFollowersModalOpen(true)}>
             <strong>{followersCount}</strong> Followers
@@ -828,7 +1135,6 @@ const PublicProfile = () => {
             <strong>{followingCount}</strong> Following
           </ClickableStat>
         </UserStats>
-        <UserBio>{channel?.bio || ''}</UserBio>
       </InfoWrapper>
 
       <VideosWrapper>
@@ -837,7 +1143,7 @@ const PublicProfile = () => {
             $active={activeTab === 'posts'}
             onClick={() => setActiveTab('posts')}
           >
-            Posts
+            Photos
           </Tab>
           <Tab
             $active={activeTab === 'videos'}
@@ -856,7 +1162,7 @@ const PublicProfile = () => {
               $active={activeTab === 'bookmarked'}
               onClick={() => setActiveTab('bookmarked')}
             >
-              Bookmarked
+              Saved
             </Tab>
           )}
         </Navbar>
@@ -901,7 +1207,7 @@ const PublicProfile = () => {
                     fontFamily: 'var(--secondary-fonts)',
                   }}
                 >
-                  No image posts yet
+                  No photos yet
                 </div>
               );
             })()}

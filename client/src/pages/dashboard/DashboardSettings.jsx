@@ -1258,6 +1258,15 @@ const DashboardSettings = () => {
     try {
       setSavingFreeUpload(true);
 
+      // Validate free upload size
+      const uploadSize = parseFloat(freeUploadSize);
+      if (isNaN(uploadSize) || uploadSize < 1) {
+        setError('Please enter a valid upload size (minimum 1 MB)');
+        setTimeout(() => setError(''), 3000);
+        setSavingFreeUpload(false);
+        return;
+      }
+
       // Get existing pricing plans from localStorage or use current state
       const savedPlans = localStorage.getItem('pricingPlans');
       let existingPlans = pricingPlans;
@@ -1275,10 +1284,10 @@ const DashboardSettings = () => {
         free: {
           name: 'Free',
           price: 0,
-          maxUploadSize: freeUploadSize,
+          maxUploadSize: uploadSize,
           description: 'Perfect for getting started',
           features: [
-            `${freeUploadSize}MB upload limit`,
+            `${uploadSize}MB upload limit`,
             'Basic features',
             'Community support',
           ],
@@ -1304,6 +1313,9 @@ const DashboardSettings = () => {
           detail: { pricingPlans: allPlans, pricingConfig },
         })
       );
+
+      // Update state with the validated numeric value
+      setFreeUploadSize(uploadSize);
 
       setSuccess('Free upload size updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
@@ -1518,9 +1530,11 @@ const DashboardSettings = () => {
               type='number'
               min='1'
               value={freeUploadSize}
-              onChange={(e) =>
-                setFreeUploadSize(parseFloat(e.target.value) || 5)
-              }
+              onChange={(e) => {
+                const value = e.target.value;
+                // Allow empty string during typing, otherwise parse the number
+                setFreeUploadSize(value === '' ? '' : parseFloat(value) || 0);
+              }}
               placeholder='Enter size in MB'
             />
           </FormGroup>
