@@ -2,10 +2,10 @@ export const pricingPlans = {
   "free": {
     "name": "Free",
     "price": 0,
-    "maxUploadSize": 15,
+    "maxUploadSize": 5,
     "description": "Perfect for getting started",
     "features": [
-      "15MB upload limit",
+      "5MB upload limit",
       "Basic features",
       "Community support"
     ]
