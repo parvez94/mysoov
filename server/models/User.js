@@ -23,6 +23,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    coverImage: {
+      type: String,
+      default: null,
+    },
+    coverImagePosition: {
+      type: Number,
+      default: 50, // Y-axis position percentage (0-100)
+    },
     bio: {
       type: String,
       default: '',

@@ -71,12 +71,22 @@ export const updateUser = async (req, res, next) => {
   if (req.params.id === req.user.id) {
     try {
       // Whitelist updatable fields for safety
-      const { username, displayName, bio, displayImage } = req.body;
+      const {
+        username,
+        displayName,
+        bio,
+        displayImage,
+        coverImage,
+        coverImagePosition,
+      } = req.body;
       const payload = {};
       if (typeof username === 'string') payload.username = username;
       if (typeof displayName === 'string') payload.displayName = displayName;
       if (typeof bio === 'string') payload.bio = bio;
       if (typeof displayImage === 'string') payload.displayImage = displayImage;
+      if (typeof coverImage === 'string') payload.coverImage = coverImage;
+      if (typeof coverImagePosition === 'number')
+        payload.coverImagePosition = coverImagePosition;
 
       const updatedUser = await User.findByIdAndUpdate(
         req.params.id,

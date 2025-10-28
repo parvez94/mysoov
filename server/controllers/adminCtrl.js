@@ -534,23 +534,27 @@ export const getPricingPlans = async (req, res, next) => {
     const fileContent = fs.readFileSync(configPath, 'utf8');
 
     // Extract the pricing plans object using regex
-    const match = fileContent.match(
+    const plansMatch = fileContent.match(
       /export const pricingPlans = ({[\s\S]*?});/
     );
 
-    if (!match) {
+    if (!plansMatch) {
       return next(createError(500, 'Failed to parse pricing plans'));
     }
 
-    // Import the actual module to get the data
-    const { pricingPlans, pricingConfig } = await import(
-      '../config/pricingPlans.js'
+    // Extract the pricing config object using regex
+    const configMatch = fileContent.match(
+      /export const pricingConfig = ({[\s\S]*?});/
     );
+
+    // Parse the JSON objects
+    const pricingPlans = JSON.parse(plansMatch[1]);
+    const pricingConfig = configMatch ? JSON.parse(configMatch[1]) : {};
 
     res.status(200).json({
       success: true,
       pricingPlans,
-      pricingConfig: pricingConfig || {},
+      pricingConfig,
     });
   } catch (error) {
     next(error);
