@@ -20,6 +20,7 @@ import { resolveImageUrl } from '../utils/imageUtils';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import UsernameAvailabilityIndicator from '../components/UsernameAvailabilityIndicator';
 import UserListModal from '../components/modal/UserListModal';
+import NotFound from './NotFound';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -1032,17 +1033,9 @@ const PublicProfile = () => {
     );
   }
 
-  // Show user not found if channel is explicitly null after loading
+  // Show 404 page if channel is explicitly null after loading
   if (!isLoading && !channel) {
-    return (
-      <Container>
-        <InfoWrapper>
-          <DisplayName>Profile</DisplayName>
-          <UserName>@{username}</UserName>
-          <UserBio>User not found.</UserBio>
-        </InfoWrapper>
-      </Container>
-    );
+    return <NotFound />;
   }
 
   return (

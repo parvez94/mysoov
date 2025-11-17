@@ -13,10 +13,19 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
+    },
+    phone: {
+      type: String,
+      required: true,
     },
     password: {
       type: String,
+      required: true,
+    },
+    accountType: {
+      type: String,
+      enum: ['regular', 'happy-team'],
+      default: 'regular',
       required: true,
     },
     displayImage: {
@@ -47,8 +56,12 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'admin', 'editor'],
       default: 'user',
+    },
+    editorRole: {
+      type: String,
+      default: '',
     },
     subscription: {
       isPaid: {
@@ -76,5 +89,8 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.index({ email: 1, accountType: 1 }, { unique: true });
+userSchema.index({ phone: 1, accountType: 1 }, { unique: true });
 
 export default mongoose.model('User', userSchema);

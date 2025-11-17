@@ -237,6 +237,7 @@ export const searchFilmDirectory = async (req, res, next) => {
         _id: directory._id,
         folderName: directory.folderName,
         description: directory.description,
+        price: directory.price,
         filmCount: directory.films.length,
         createdAt: directory.createdAt,
       },
@@ -270,6 +271,7 @@ export const getFilmDirectoryDetails = async (req, res, next) => {
         _id: directory._id,
         folderName: directory.folderName,
         description: directory.description,
+        price: directory.price,
         films: directory.films,
         createdAt: directory.createdAt,
       },
@@ -288,6 +290,15 @@ export const addFilmToProfile = async (req, res, next) => {
 
     if (!filmId || !directoryId) {
       return next(createError(400, 'Film ID and Directory ID are required'));
+    }
+
+    if (directoryId === 'null' || directoryId === 'undefined') {
+      return next(
+        createError(
+          400,
+          'Invalid request. Please return to the film directory page and try again.'
+        )
+      );
     }
 
     // Verify directory exists
@@ -342,10 +353,27 @@ export const purchaseFilm = async (req, res, next) => {
       return next(createError(400, 'Film ID and Directory ID are required'));
     }
 
-    // Verify directory exists
-    const directory = await FilmDirectory.findById(directoryId);
-    if (!directory) {
-      return next(createError(404, 'Film directory not found'));
+    if (directoryId === 'null' || directoryId === 'undefined') {
+      return next(
+        createError(
+          400,
+          'Invalid purchase request. Please return to the film directory page and try again.'
+        )
+      );
+    }
+
+    // Handle both film systems:
+    // - Old system: directoryId is a MongoDB ObjectId (folder-based)
+    // - New system: directoryId is 'new-system' (customerCode films)
+    const isNewSystem = directoryId === 'new-system';
+
+    let directory = null;
+    if (!isNewSystem) {
+      // Old system: verify directory exists
+      directory = await FilmDirectory.findById(directoryId);
+      if (!directory) {
+        return next(createError(404, 'Film directory not found'));
+      }
     }
 
     // Verify the original film exists
@@ -354,7 +382,8 @@ export const purchaseFilm = async (req, res, next) => {
       return next(createError(404, 'Film not found'));
     }
 
-    if (originalFilm.filmDirectoryId?.toString() !== directoryId) {
+    // Old system: verify film belongs to directory
+    if (!isNewSystem && originalFilm.filmDirectoryId?.toString() !== directoryId) {
       return next(createError(400, 'Film does not belong to this directory'));
     }
 
@@ -381,34 +410,37 @@ export const purchaseFilm = async (req, res, next) => {
       });
       await userFilm.save();
     } else {
-      // Film already in profile, just mark as purchased
+      // Film already in profile, just mark as purchased (remove buy button)
       userFilm.filmDirectoryId = null;
+      userFilm.sourceFilmId = null; // Also remove sourceFilmId to indicate fully owned
       await userFilm.save();
     }
 
-    // ✅ AUTO-DELETE FOLDER AFTER SUCCESSFUL PURCHASE
-    try {
-      // Delete ORIGINAL films in the folder (isFilm: true)
-      await Video.deleteMany({
-        filmDirectoryId: directoryId,
-        isFilm: true,
-      });
+    // ✅ AUTO-DELETE FOLDER AFTER SUCCESSFUL PURCHASE (OLD SYSTEM ONLY)
+    if (!isNewSystem) {
+      try {
+        // Delete ORIGINAL films in the folder (isFilm: true)
+        await Video.deleteMany({
+          filmDirectoryId: directoryId,
+          isFilm: true,
+        });
 
-      // Keep user COPIES but remove filmDirectoryId reference
-      await Video.updateMany(
-        { filmDirectoryId: directoryId, isFilm: false },
-        { $set: { filmDirectoryId: null } }
-      );
+        // Keep user COPIES but remove filmDirectoryId reference
+        await Video.updateMany(
+          { filmDirectoryId: directoryId, isFilm: false },
+          { $set: { filmDirectoryId: null } }
+        );
 
-      // Delete the directory itself
-      await FilmDirectory.findByIdAndDelete(directoryId);
+        // Delete the directory itself
+        await FilmDirectory.findByIdAndDelete(directoryId);
 
-      console.log(
-        `✅ Folder ${directoryId} automatically deleted after purchase`
-      );
-    } catch (deleteError) {
-      // Log error but don't fail the purchase
-      console.error('⚠️ Failed to auto-delete folder:', deleteError);
+        console.log(
+          `✅ Folder ${directoryId} automatically deleted after purchase`
+        );
+      } catch (deleteError) {
+        // Log error but don't fail the purchase
+        console.error('⚠️ Failed to auto-delete folder:', deleteError);
+      }
     }
 
     res.status(200).json({
@@ -466,6 +498,155 @@ export const syncOrphanedFilms = async (req, res, next) => {
       message: `Synced ${syncedCount} orphaned film(s) to their directories`,
       syncedCount,
       totalFilmsChecked: orphanedFilms.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ========================================
+// NEW SIMPLIFIED FILM SYSTEM (NO FOLDERS)
+// ========================================
+
+// Admin: Get all films (videos with customer codes)
+export const getAllFilms = async (req, res, next) => {
+  try {
+    const films = await Video.find({
+      customerCode: { $exists: true, $ne: null },
+    })
+      .populate('userId', 'username displayName displayImage')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      films,
+      total: films.length,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Create film with video upload
+export const createFilm = async (req, res, next) => {
+  try {
+    const { caption, customerCode, purchasePrice, videoUrl, thumbnail } =
+      req.body;
+
+    if (!caption || !customerCode) {
+      return next(createError(400, 'Title and customer code are required'));
+    }
+
+    // Check if code already exists
+    const existingFilm = await Video.findOne({ customerCode });
+    if (existingFilm) {
+      return next(createError(400, 'Customer code already exists'));
+    }
+
+    const film = await Video.create({
+      caption,
+      customerCode: customerCode.trim().toUpperCase(),
+      purchasePrice: purchasePrice || 0,
+      videoUrl: videoUrl || {},
+      thumbnail: thumbnail || '',
+      userId: req.user.id,
+      privacy: 'Private',
+      isFilm: true,
+      mediaType: 'video',
+    });
+
+    await film.populate('userId', 'username displayName displayImage');
+
+    res.status(201).json({
+      success: true,
+      message: 'Film created successfully',
+      film,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Delete film
+export const deleteFilm = async (req, res, next) => {
+  try {
+    const { filmId } = req.params;
+
+    const film = await Video.findById(filmId);
+    if (!film) {
+      return next(createError(404, 'Film not found'));
+    }
+
+    // Delete the film
+    await Video.findByIdAndDelete(filmId);
+
+    // Also delete any user copies of this film
+    await Video.deleteMany({ sourceFilmId: filmId });
+
+    res.status(200).json({
+      success: true,
+      message: 'Film deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// User: Search film by customer code (for frontpage)
+export const searchFilmByCode = async (req, res, next) => {
+  try {
+    const { code } = req.params;
+
+    if (!code) {
+      return next(createError(400, 'Customer code is required'));
+    }
+
+    // Find film by customer code
+    const film = await Video.findOne({
+      customerCode: code.trim().toUpperCase(),
+      isFilm: true,
+    });
+
+    if (!film) {
+      return next(createError(404, 'Film not found with this code'));
+    }
+
+    // Check if user already has this film
+    const userHasFilm = await Video.findOne({
+      userId: req.user.id,
+      sourceFilmId: film._id,
+    });
+
+    if (userHasFilm) {
+      return next(
+        createError(400, 'You already have this film in your profile')
+      );
+    }
+
+    // Create a copy for the user (add to profile automatically)
+    const filmCopy = new Video({
+      caption: film.caption,
+      videoUrl: film.videoUrl,
+      thumbnail: film.thumbnail,
+      userId: req.user.id,
+      privacy: 'Public',
+      isFilm: false,
+      mediaType: film.mediaType,
+      storageProvider: film.storageProvider,
+      sourceFilmId: film._id,
+    });
+
+    await filmCopy.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Film successfully added to your profile!',
+      film: {
+        ...filmCopy.toObject(),
+        originalTitle: film.caption,
+        purchasePrice: film.purchasePrice,
+        customerCode: film.customerCode,
+      },
     });
   } catch (error) {
     next(error);

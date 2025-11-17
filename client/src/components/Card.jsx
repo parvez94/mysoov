@@ -72,6 +72,7 @@ const VideoContainer = styled.div`
   display: flex;
   justify-content: center;
   width: 100%;
+  overflow: hidden;
 
   @media (max-width: 768px) {
     justify-content: start;
@@ -116,6 +117,39 @@ const YouTubeEmbed = styled.iframe`
   border-radius: 10px;
   border: none;
   background: #000;
+`;
+
+const WatermarkOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  &::before {
+    content: 'MYSOOV.TV';
+    font-size: 42px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    font-family: var(--secondary-fonts);
+    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.6);
+  }
+
+  @media (max-width: 768px) {
+    &::before {
+      font-size: 28px;
+      letter-spacing: 4px;
+    }
+  }
 `;
 
 const VideoStats = styled.div`
@@ -363,6 +397,8 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
       }
     });
 
+  const isUnpurchasedFilm = video?.sourceFilmId != null;
+
   return (
     <Container>
       <HomeCard
@@ -402,19 +438,25 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                 />
               )
             ) : isYouTubeVideo ? (
-              <YouTubeEmbed
-                src={getCleanYouTubeUrl(videoUrl.url)}
-                title={caption || 'Video'}
-                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                allowFullScreen
-              />
+              <>
+                <YouTubeEmbed
+                  src={getCleanYouTubeUrl(videoUrl.url)}
+                  title={caption || 'Video'}
+                  allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                  allowFullScreen
+                />
+                {isUnpurchasedFilm && <WatermarkOverlay />}
+              </>
             ) : (
-              <Video
-                src={videoUrl.url}
-                controls
-                onLoadedMetadata={handleVideoLoadedMetadata}
-                data-aspect-ratio={aspectRatio}
-              />
+              <>
+                <Video
+                  src={videoUrl.url}
+                  controls
+                  onLoadedMetadata={handleVideoLoadedMetadata}
+                  data-aspect-ratio={aspectRatio}
+                />
+                {isUnpurchasedFilm && <WatermarkOverlay />}
+              </>
             )}
           </VideoContainer>
           {/* <Stats variant="home" video={video} /> */}

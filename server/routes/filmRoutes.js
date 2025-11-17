@@ -12,11 +12,32 @@ import {
   purchaseFilm,
   getFilmDirectoryStats,
   syncOrphanedFilms,
+  // New simplified film system
+  getAllFilms,
+  createFilm,
+  deleteFilm,
+  searchFilmByCode,
 } from '../controllers/filmCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
 
 const router = express.Router();
+
+// ========================================
+// NEW SIMPLIFIED FILM SYSTEM (NO FOLDERS)
+// ========================================
+
+// Admin routes for new film system
+router.get('/admin/films', verifyToken, verifyAdmin, getAllFilms);
+router.post('/admin/films', verifyToken, verifyAdmin, createFilm);
+router.delete('/admin/films/:filmId', verifyToken, verifyAdmin, deleteFilm);
+
+// User routes for new film system
+router.post('/redeem/:code', verifyToken, searchFilmByCode);
+
+// ========================================
+// OLD FOLDER-BASED SYSTEM (KEEP FOR NOW)
+// ========================================
 
 // Admin routes (require authentication and admin role)
 router.get(

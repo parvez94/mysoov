@@ -82,6 +82,22 @@ const videoSchema = new mongoose.Schema(
       ref: 'FilmDirectory',
       default: null,
     },
+    // New fields for simplified film system (no folders)
+    customerCode: {
+      type: String,
+      // NO default - field won't exist unless explicitly set
+      unique: true,
+      sparse: true, // Allows multiple documents without this field
+      index: true, // Index for faster search
+    },
+    purchasePrice: {
+      type: Number,
+      min: 0,
+    },
+    sourceFilmId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Video',
+    },
   },
   { timestamps: true }
 );

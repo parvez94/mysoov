@@ -60,7 +60,7 @@ const Table = styled.div`
 
 const TableHeader = styled.div`
   display: grid;
-  grid-template-columns: 60px 1fr 200px 150px 150px 120px;
+  grid-template-columns: 60px 1fr 200px 150px 150px 180px;
   padding: 16px 20px;
   background: rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -70,7 +70,7 @@ const TableHeader = styled.div`
   font-size: 14px;
 
   @media (max-width: 1024px) {
-    grid-template-columns: 60px 1fr 150px 120px;
+    grid-template-columns: 60px 1fr 150px 180px;
 
     & > div:nth-child(4),
     & > div:nth-child(5) {
@@ -79,7 +79,7 @@ const TableHeader = styled.div`
   }
 
   @media (max-width: 768px) {
-    grid-template-columns: 50px 1fr 100px;
+    grid-template-columns: 50px 1fr 120px;
 
     & > div:nth-child(3),
     & > div:nth-child(4),
@@ -91,7 +91,7 @@ const TableHeader = styled.div`
 
 const TableRow = styled.div`
   display: grid;
-  grid-template-columns: 60px 1fr 200px 150px 150px 120px;
+  grid-template-columns: 60px 1fr 200px 150px 150px 180px;
   padding: 16px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   align-items: center;
@@ -106,7 +106,7 @@ const TableRow = styled.div`
   }
 
   @media (max-width: 1024px) {
-    grid-template-columns: 60px 1fr 150px 120px;
+    grid-template-columns: 60px 1fr 150px 180px;
 
     & > div:nth-child(4),
     & > div:nth-child(5) {
@@ -115,7 +115,7 @@ const TableRow = styled.div`
   }
 
   @media (max-width: 768px) {
-    grid-template-columns: 50px 1fr 100px;
+    grid-template-columns: 50px 1fr 120px;
 
     & > div:nth-child(3),
     & > div:nth-child(4),
@@ -203,6 +203,16 @@ const ActionButton = styled.button`
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.3);
   }
+
+  &.delete {
+    color: #f44336;
+    border-color: rgba(244, 67, 54, 0.3);
+
+    &:hover {
+      background: rgba(244, 67, 54, 0.1);
+      border-color: rgba(244, 67, 54, 0.5);
+    }
+  }
 `;
 
 const EmptyState = styled.div`
@@ -280,6 +290,29 @@ const DashboardUsers = () => {
     });
   };
 
+  const handleDeleteUser = async (userId, username) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete user "${username}"? This action cannot be undone and will also delete all their content.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`,
+        {
+          withCredentials: true,
+        }
+      );
+      alert('User deleted successfully');
+      fetchUsers();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete user');
+    }
+  };
+
   if (isLoading) {
     return (
       <Container>
@@ -346,8 +379,14 @@ const DashboardUsers = () => {
               </div>
               <Text>{user.videos?.length || 0}</Text>
               <Text>{formatDate(user.createdAt)}</Text>
-              <div>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <ActionButton>View</ActionButton>
+                <ActionButton
+                  className='delete'
+                  onClick={() => handleDeleteUser(user._id, user.username)}
+                >
+                  Delete
+                </ActionButton>
               </div>
             </TableRow>
           ))

@@ -278,16 +278,18 @@ const Navbar = () => {
     <>
       <Container>
         <ContentWrapper>
-          <Logo>
-            {branding.logo ? (
-              <LogoImage
-                src={branding.logo}
-                alt={branding.siteName || 'Logo'}
-              />
-            ) : (
-              branding.siteName || 'Mysoov.TV'
-            )}
-          </Logo>
+          <Link to='/'>
+            <Logo>
+              {branding.logo ? (
+                <LogoImage
+                  src={branding.logo}
+                  alt={branding.siteName || 'Logo'}
+                />
+              ) : (
+                branding.siteName || 'Mysoov.TV'
+              )}
+            </Logo>
+          </Link>
           <Search>
             <Input
               placeholder='Search by access code...'

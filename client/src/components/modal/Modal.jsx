@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { closeModal } from '../../redux/modal/modalSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { closeModal, selectModal } from '../../redux/modal/modalSlice';
 import styled from 'styled-components';
 import Login from '../auth/Login';
 import Register from '../auth/Register';
+import RegisterEditor from '../auth/RegisterEditor';
 import { createPortal } from 'react-dom';
 import { IoClose } from 'react-icons/io5';
 
@@ -52,8 +53,14 @@ const CloseButton = styled.button`
 `;
 
 const Modal = () => {
-  const [activeForm, setActiveForm] = useState('login');
+  const { modalType } = useSelector(selectModal);
+  const [activeForm, setActiveForm] = useState(modalType || 'login');
   const dispatch = useDispatch();
+
+  // Update activeForm when modalType changes
+  useEffect(() => {
+    setActiveForm(modalType || 'login');
+  }, [modalType]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -97,6 +104,10 @@ const Modal = () => {
         </CloseButton>
         {activeForm === 'login' && <Login link={switchToReg} />}
         {activeForm === 'register' && <Register link={switchToLogin} />}
+        {activeForm === 'register-editor' && (
+          <RegisterEditor link={switchToLogin} />
+        )}
+        {activeForm === 'happy-team-login' && <Login link={switchToLogin} accountType='happy-team' />}
       </ModalContent>
     </ModalWrapper>
   );

@@ -5,13 +5,10 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { Spinner } from '../../components/index';
 import {
-  FaFolder,
-  FaFolderOpen,
   FaTrash,
   FaPlus,
   FaTimes,
   FaFilm,
-  FaCheck,
   FaUpload,
   FaPlay,
 } from 'react-icons/fa';
@@ -136,7 +133,6 @@ const Tbody = styled.tbody``;
 
 const Tr = styled.tr`
   transition: background 0.2s ease;
-  cursor: pointer;
 
   &:hover {
     background: rgba(255, 255, 255, 0.05);
@@ -154,51 +150,32 @@ const Td = styled.td`
   vertical-align: middle;
 `;
 
-const FolderInfo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-const FolderIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 20px;
-`;
-
-const FolderName = styled.div`
+const FilmTitle = styled.div`
   color: var(--primary-color);
   font-weight: 500;
+  margin-bottom: 4px;
 `;
 
 const CodeBadge = styled.span`
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   background: rgba(102, 126, 234, 0.2);
   color: #667eea;
   border: 1px solid rgba(102, 126, 234, 0.3);
   font-family: monospace;
+  text-transform: uppercase;
 `;
 
-const StatusBadge = styled.span`
+const PriceBadge = styled.span`
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  background: ${(props) =>
-    props.$redeemed ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.2)'};
-  color: ${(props) => (props.$redeemed ? '#4caf50' : '#ff9800')};
-  border: 1px solid
-    ${(props) =>
-      props.$redeemed ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.3)'};
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.3);
 `;
 
 const ActionButtons = styled.div`
@@ -298,8 +275,10 @@ const ModalBox = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 30px;
-  max-width: 500px;
+  max-width: 600px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
 `;
 
 const ModalHeader = styled.div`
@@ -364,32 +343,11 @@ const Input = styled.input`
   }
 `;
 
-const TextArea = styled.textarea`
-  width: 100%;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--primary-color);
-  font-family: var(--primary-fonts);
-  font-size: 14px;
-  min-height: 80px;
-  resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-
-  &::placeholder {
-    color: var(--secondary-color);
-  }
-`;
-
 const ModalButtons = styled.div`
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+  margin-top: 24px;
 `;
 
 const Button = styled.button`
@@ -417,69 +375,6 @@ const Button = styled.button`
     opacity: 0.5;
     cursor: not-allowed;
   }
-`;
-
-// Films List Modal
-const FilmsListModal = styled(Modal)``;
-
-const FilmsListBox = styled(ModalBox)`
-  max-width: 800px;
-  max-height: 80vh;
-  overflow-y: auto;
-`;
-
-const FilmItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  margin-bottom: 12px;
-  position: relative;
-`;
-
-const FilmActions = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: center;
-`;
-
-const FilmThumbnail = styled.div`
-  width: 80px;
-  height: 60px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 24px;
-  flex-shrink: 0;
-`;
-
-const FilmInfo = styled.div`
-  flex: 1;
-`;
-
-const FilmCaption = styled.div`
-  color: var(--primary-color);
-  font-size: 14px;
-  margin-bottom: 4px;
-  font-family: var(--primary-fonts);
-  font-weight: 500;
-`;
-
-const FilmMeta = styled.div`
-  color: var(--secondary-color);
-  font-size: 12px;
-  font-family: var(--primary-fonts);
-`;
-
-// Upload Modal Styles
-const UploadModalBox = styled(ModalBox)`
-  max-width: 600px;
 `;
 
 const DragUploadArea = styled.label`
@@ -606,99 +501,21 @@ const ProgressText = styled.p`
   text-align: center;
 `;
 
-const RedButton = styled(Button)`
-  background: linear-gradient(135deg, #f44336 0%, #e91e63 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 20px auto 0;
-  padding: 12px 24px;
-
-  &:hover {
-    background: linear-gradient(135deg, #e91e63 0%, #f44336 100%);
-  }
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`;
-
-const DeleteVideoButton = styled.button`
-  padding: 6px 10px;
-  background: rgba(244, 67, 54, 0.1);
-  border: 1px solid rgba(244, 67, 54, 0.3);
-  border-radius: 6px;
-  color: #f44336;
-  font-family: var(--primary-fonts);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  &:hover {
-    background: rgba(244, 67, 54, 0.2);
-    border-color: rgba(244, 67, 54, 0.5);
-  }
-
-  svg {
-    width: 12px;
-    height: 12px;
-  }
-`;
-
-const WatchVideoButton = styled.button`
-  padding: 6px 10px;
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.3);
-  border-radius: 6px;
-  color: #667eea;
-  font-family: var(--primary-fonts);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  &:hover {
-    background: rgba(102, 126, 234, 0.2);
-    border-color: rgba(102, 126, 234, 0.5);
-  }
-
-  svg {
-    width: 12px;
-    height: 12px;
-  }
-`;
-
 const DashboardFilms = () => {
   const { currentUser } = useSelector((state) => state.user);
-  const [directories, setDirectories] = useState([]);
-  const [stats, setStats] = useState({
-    totalDirectories: 0,
-    totalFilms: 0,
-  });
+  const [films, setFilms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showFilmsModal, setShowFilmsModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedDirectory, setSelectedDirectory] = useState(null);
-  const [formData, setFormData] = useState({
-    folderName: '',
-    description: '',
-    price: 9.99,
-  });
 
-  // Upload modal state
+  // Upload form state
   const [uploadFile, setUploadFile] = useState(null);
-  const [uploadCaption, setUploadCaption] = useState('');
+  const [formData, setFormData] = useState({
+    title: '',
+    code: '',
+    price: 0,
+  });
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -708,115 +525,25 @@ const DashboardFilms = () => {
   }
 
   useEffect(() => {
-    fetchDirectories();
-    fetchStats();
+    fetchFilms();
   }, []);
 
-  const fetchDirectories = async () => {
+  const fetchFilms = async () => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories`,
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/films`,
         {
           withCredentials: true,
         }
       );
-      response.data.directories?.forEach((dir, index) => {});
-      setDirectories(response.data.directories || []);
+      setFilms(response.data.films || []);
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Failed to load film directories'
-      );
+      setError(err.response?.data?.message || 'Failed to load films');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/stats`,
-        {
-          withCredentials: true,
-        }
-      );
-      setStats(response.data.stats || {});
-    } catch (err) {}
-  };
-
-  const handleCreateFolder = async (e) => {
-    e.preventDefault();
-    try {
-      setError(null);
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories`,
-        formData,
-        {
-          withCredentials: true,
-        }
-      );
-      setSuccess('Film directory created successfully!');
-      setShowCreateModal(false);
-      setFormData({ folderName: '', description: '', price: 9.99 });
-      fetchDirectories();
-      fetchStats();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create directory');
-    }
-  };
-
-  const handleDeleteDirectory = async (directoryId) => {
-    if (
-      !window.confirm(
-        'Are you sure you want to delete this directory? All films will be unmarked.'
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setError(null);
-      await axios.delete(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/v1/films/admin/directories/${directoryId}`,
-        {
-          withCredentials: true,
-        }
-      );
-      setSuccess('Directory deleted successfully!');
-      fetchDirectories();
-      fetchStats();
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete directory');
-    }
-  };
-
-  const handleViewFilms = async (directory) => {
-    // Fetch the directory with populated films to ensure we have the latest data
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${
-          directory._id
-        }`,
-        { withCredentials: true }
-      );
-      setSelectedDirectory(response.data.directory);
-    } catch (err) {
-      // Fallback to the directory from the list
-      setSelectedDirectory(directory);
-    }
-
-    setShowFilmsModal(true);
-  };
-
-  const handleOpenUploadModal = (directory) => {
-    setSelectedDirectory(directory);
-    setShowFilmsModal(false);
-    setShowUploadModal(true);
   };
 
   const handleFileSelect = (e) => {
@@ -840,7 +567,10 @@ const DashboardFilms = () => {
   };
 
   const handleUploadFilm = async () => {
-    if (!uploadFile || !selectedDirectory) return;
+    if (!uploadFile || !formData.title || !formData.code) {
+      setError('Please fill in all fields and select a video file');
+      return;
+    }
 
     try {
       setIsUploading(true);
@@ -851,7 +581,7 @@ const DashboardFilms = () => {
       const signatureResponse = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/v1/upload/signature`,
         {
-          folder: 'videos',
+          folder: 'films',
           resourceType: 'video',
         },
         { withCredentials: true }
@@ -872,7 +602,7 @@ const DashboardFilms = () => {
         `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
         cloudinaryFormData,
         {
-          withCredentials: false, // Cloudinary doesn't accept credentials
+          withCredentials: false,
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
               (progressEvent.loaded * 100) / progressEvent.total
@@ -888,55 +618,29 @@ const DashboardFilms = () => {
         provider: 'cloudinary',
       };
 
-      // Step 3: Create the video entry with the uploaded file info
-      const videoData = {
-        caption: uploadCaption || 'Untitled Film',
-        videoUrl: uploadResult, // This is the full response object with { url, public_id, provider }
-        mediaType: 'video',
-        privacy: 'Private', // Films are private by default (capitalized)
-        storageProvider: uploadResult.provider || 'cloudinary',
-        isFilm: true, // Mark as film to exclude from regular feeds
-        filmDirectoryId: selectedDirectory._id, // Link to directory
+      // Step 3: Create the film entry
+      const filmData = {
+        caption: formData.title,
+        customerCode: formData.code,
+        purchasePrice: parseFloat(formData.price) || 0,
+        videoUrl: uploadResult,
+        storageProvider: 'cloudinary',
       };
 
-      const videoResponse = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/videos`,
-        videoData,
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/films`,
+        filmData,
         { withCredentials: true }
       );
-
-      const videoId = videoResponse.data.video?._id;
-
-      // Step 4: Assign the video to the film directory
-      if (videoId) {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${
-            selectedDirectory._id
-          }/films`,
-          { videoId },
-          { withCredentials: true }
-        );
-      }
 
       setSuccess('Film uploaded successfully!');
       setShowUploadModal(false);
       setUploadFile(null);
-      setUploadCaption('');
+      setFormData({ title: '', code: '', price: 0 });
       setUploadProgress(0);
 
-      // Fetch updated directories
-      await fetchDirectories();
-
-      // Update the selectedDirectory with fresh data
-      const updatedResponse = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${
-          selectedDirectory._id
-        }`,
-        { withCredentials: true }
-      );
-      setSelectedDirectory(updatedResponse.data.directory);
-
-      fetchStats();
+      // Fetch updated films
+      await fetchFilms();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(
@@ -949,58 +653,27 @@ const DashboardFilms = () => {
     }
   };
 
-  const handleSyncOrphanedFilms = async () => {
-    try {
-      setError(null);
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/sync-orphaned`,
-        {},
-        { withCredentials: true }
-      );
-      setSuccess(response.data.message); // Refresh directories after sync
-      await fetchDirectories();
-      await fetchStats();
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to sync films');
-    }
-  };
-
-  const handleDeleteVideo = async (videoId) => {
-    if (!window.confirm('Are you sure you want to delete this video?')) {
+  const handleDeleteFilm = async (filmId) => {
+    if (!window.confirm('Are you sure you want to delete this film?')) {
       return;
     }
 
     try {
       setError(null);
       await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/v1/videos/${videoId}`,
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/films/${filmId}`,
         { withCredentials: true }
       );
-      setSuccess('Video deleted successfully!');
-
-      // Refresh the directory data
-      if (selectedDirectory) {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${
-            selectedDirectory._id
-          }`,
-          { withCredentials: true }
-        );
-        setSelectedDirectory(response.data.directory);
-      }
-
-      await fetchDirectories();
-      await fetchStats();
+      setSuccess('Film deleted successfully!');
+      await fetchFilms();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete video');
+      setError(err.response?.data?.message || 'Failed to delete film');
     }
   };
 
-  const handleWatchVideo = (videoId) => {
-    // Open video in a new tab
-    window.open(`/video/${videoId}`, '_blank');
+  const handleWatchVideo = (filmId) => {
+    window.open(`/video/${filmId}`, '_blank');
   };
 
   const formatDate = (date) => {
@@ -1023,35 +696,15 @@ const DashboardFilms = () => {
     <Container>
       <Header>
         <TitleSection>
-          <Title>Film Directories</Title>
+          <Title>Films Management</Title>
           <Subtitle>
-            Manage film folders - folder name is the access code
+            Upload videos with customer codes for frontpage redemption
           </Subtitle>
         </TitleSection>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button
-            onClick={handleSyncOrphanedFilms}
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: '#f59e0b',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            🔄 Sync Films
-          </button>
-          <UploadButton onClick={() => setShowCreateModal(true)}>
-            <FaPlus />
-            Create New Folder
-          </UploadButton>
-        </div>
+        <UploadButton onClick={() => setShowUploadModal(true)}>
+          <FaPlus />
+          Upload New Film
+        </UploadButton>
       </Header>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -1059,12 +712,8 @@ const DashboardFilms = () => {
 
       <StatsGrid>
         <StatCard>
-          <StatLabel>Total Directories</StatLabel>
-          <StatValue>{stats.totalDirectories || 0}</StatValue>
-        </StatCard>
-        <StatCard>
           <StatLabel>Total Films</StatLabel>
-          <StatValue>{stats.totalFilms || 0}</StatValue>
+          <StatValue>{films.length}</StatValue>
         </StatCard>
       </StatsGrid>
 
@@ -1072,65 +721,56 @@ const DashboardFilms = () => {
         <Table>
           <Thead>
             <Tr>
-              <Th>Folder Name (Access Code)</Th>
-              <Th>Films</Th>
+              <Th>Title</Th>
+              <Th>Customer Code</Th>
               <Th>Price</Th>
               <Th>Created</Th>
               <Th>Actions</Th>
             </Tr>
           </Thead>
           <Tbody>
-            {directories.length === 0 ? (
+            {films.length === 0 ? (
               <tr>
                 <td colSpan='5'>
                   <EmptyState>
                     <EmptyIcon>
-                      <FaFolder />
+                      <FaFilm />
                     </EmptyIcon>
-                    <EmptyText>No film directories yet</EmptyText>
+                    <EmptyText>No films yet</EmptyText>
                     <EmptySubtext>
-                      Click "Create New Folder" to get started
+                      Click "Upload New Film" to get started
                     </EmptySubtext>
                   </EmptyState>
                 </td>
               </tr>
             ) : (
-              directories.map((directory) => (
-                <Tr
-                  key={directory._id}
-                  onClick={() => handleViewFilms(directory)}
-                >
+              films.map((film) => (
+                <Tr key={film._id}>
                   <Td>
-                    <FolderInfo>
-                      <FolderIcon>
-                        <FaFolder />
-                      </FolderIcon>
-                      <FolderName>{directory.folderName}</FolderName>
-                    </FolderInfo>
+                    <FilmTitle>{film.caption || 'Untitled'}</FilmTitle>
                   </Td>
                   <Td>
-                    <span style={{ color: '#667eea' }}>
-                      {directory.films?.length || 0} film(s)
-                    </span>
+                    <CodeBadge>{film.customerCode}</CodeBadge>
                   </Td>
                   <Td>
-                    <span style={{ color: '#4caf50', fontWeight: '600' }}>
-                      ${(directory.price || 9.99).toFixed(2)}
-                    </span>
+                    <PriceBadge>
+                      ${film.purchasePrice?.toFixed(2) || '0.00'}
+                    </PriceBadge>
                   </Td>
-                  <Td>{formatDate(directory.createdAt)}</Td>
-                  <Td onClick={(e) => e.stopPropagation()}>
+                  <Td>{formatDate(film.createdAt)}</Td>
+                  <Td>
                     <ActionButtons>
                       <IconButton
-                        onClick={() => handleViewFilms(directory)}
-                        title='View Films'
+                        color='#667eea'
+                        onClick={() => handleWatchVideo(film._id)}
+                        title='Watch Video'
                       >
-                        <FaFolderOpen />
+                        <FaPlay />
                       </IconButton>
                       <IconButton
                         color='#f44336'
-                        onClick={() => handleDeleteDirectory(directory._id)}
-                        title='Delete Directory'
+                        onClick={() => handleDeleteFilm(film._id)}
+                        title='Delete Film'
                       >
                         <FaTrash />
                       </IconButton>
@@ -1143,151 +783,14 @@ const DashboardFilms = () => {
         </Table>
       </TableWrapper>
 
-      {/* Create Folder Modal */}
-      {showCreateModal && (
-        <Modal onClick={() => setShowCreateModal(false)}>
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <Modal onClick={() => !isUploading && setShowUploadModal(false)}>
           <ModalBox onClick={(e) => e.stopPropagation()}>
             <ModalHeader>
-              <ModalTitle>Create New Film Directory</ModalTitle>
-              <CloseButton onClick={() => setShowCreateModal(false)}>
-                <FaTimes />
-              </CloseButton>
-            </ModalHeader>
-            <form onSubmit={handleCreateFolder}>
-              <FormGroup>
-                <Label>Folder Name (This will be the access code) *</Label>
-                <Input
-                  type='text'
-                  placeholder='e.g., JohnDoeFilms2024'
-                  value={formData.folderName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, folderName: e.target.value })
-                  }
-                  required
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Price per Film (USD) *</Label>
-                <Input
-                  type='number'
-                  step='0.01'
-                  min='0'
-                  placeholder='e.g., 9.99'
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      price: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  required
-                />
-              </FormGroup>
-              <FormGroup>
-                <Label>Description (Optional)</Label>
-                <TextArea
-                  placeholder='Add a description for this directory...'
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  rows='3'
-                />
-              </FormGroup>
-              <ModalButtons>
-                <Button type='button' onClick={() => setShowCreateModal(false)}>
-                  Cancel
-                </Button>
-                <Button type='submit' $primary>
-                  Create Directory
-                </Button>
-              </ModalButtons>
-            </form>
-          </ModalBox>
-        </Modal>
-      )}
-
-      {/* View Films Modal */}
-      {showFilmsModal && selectedDirectory && (
-        <FilmsListModal onClick={() => setShowFilmsModal(false)}>
-          <FilmsListBox onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>{selectedDirectory.folderName} - Films</ModalTitle>
-              <CloseButton onClick={() => setShowFilmsModal(false)}>
-                <FaTimes />
-              </CloseButton>
-            </ModalHeader>
-            {!selectedDirectory.films ||
-            selectedDirectory.films.length === 0 ? (
-              <EmptyState>
-                <EmptyIcon>
-                  <FaFilm />
-                </EmptyIcon>
-                <EmptyText>No films in this directory</EmptyText>
-                <EmptySubtext>
-                  Click the button below to upload films
-                </EmptySubtext>
-                <RedButton
-                  onClick={() => handleOpenUploadModal(selectedDirectory)}
-                >
-                  <FaUpload />
-                  Upload
-                </RedButton>
-              </EmptyState>
-            ) : (
-              <>
-                <RedButton
-                  onClick={() => handleOpenUploadModal(selectedDirectory)}
-                  style={{ marginBottom: '1rem' }}
-                >
-                  <FaUpload />
-                  Upload More Films
-                </RedButton>
-                {selectedDirectory.films.map((film) => (
-                  <FilmItem key={film._id}>
-                    <FilmThumbnail>
-                      <FaFilm />
-                    </FilmThumbnail>
-                    <FilmInfo>
-                      <FilmCaption>
-                        {film.caption || 'Untitled Film'}
-                      </FilmCaption>
-                      <FilmMeta>
-                        {film.mediaType} • {formatDate(film.createdAt)}
-                      </FilmMeta>
-                    </FilmInfo>
-                    <FilmActions>
-                      <WatchVideoButton
-                        onClick={() => handleWatchVideo(film._id)}
-                      >
-                        <FaPlay />
-                        Watch
-                      </WatchVideoButton>
-                      <DeleteVideoButton
-                        onClick={() => handleDeleteVideo(film._id)}
-                      >
-                        <FaTrash />
-                        Delete
-                      </DeleteVideoButton>
-                    </FilmActions>
-                  </FilmItem>
-                ))}
-              </>
-            )}
-          </FilmsListBox>
-        </FilmsListModal>
-      )}
-
-      {/* Upload Film Modal */}
-      {showUploadModal && selectedDirectory && (
-        <Modal onClick={() => !isUploading && setShowUploadModal(false)}>
-          <UploadModalBox onClick={(e) => e.stopPropagation()}>
-            <ModalHeader>
-              <ModalTitle>
-                Upload Film to {selectedDirectory.folderName}
-              </ModalTitle>
+              <ModalTitle>Upload New Film</ModalTitle>
               <CloseButton
-                onClick={() => !isUploading && setShowUploadModal(false)}
+                onClick={() => setShowUploadModal(false)}
                 disabled={isUploading}
               >
                 <FaTimes />
@@ -1295,76 +798,111 @@ const DashboardFilms = () => {
             </ModalHeader>
 
             {!uploadFile ? (
-              <DragUploadArea htmlFor='film-upload'>
+              <DragUploadArea>
                 <HiddenInput
-                  id='film-upload'
                   type='file'
                   accept='video/*'
                   onChange={handleFileSelect}
-                  disabled={isUploading}
                 />
                 <UploadIcon>
                   <FaUpload />
                 </UploadIcon>
-                <UploadText>Click to select a video file</UploadText>
-                <UploadSubtext>or drag and drop here</UploadSubtext>
+                <UploadText>Click to select video</UploadText>
+                <UploadSubtext>MP4, MOV, AVI supported</UploadSubtext>
               </DragUploadArea>
             ) : (
-              <>
-                <SelectedFile>
-                  <FileIcon>
-                    <FaFilm />
-                  </FileIcon>
-                  <FileInfo>
-                    <FileName>{uploadFile.name}</FileName>
-                    <FileSize>{formatFileSize(uploadFile.size)}</FileSize>
-                  </FileInfo>
-                  {!isUploading && (
-                    <RemoveFileButton onClick={handleRemoveFile}>
-                      Remove
-                    </RemoveFileButton>
-                  )}
-                </SelectedFile>
-
-                <FormGroup>
-                  <Label>Title (Optional)</Label>
-                  <TextArea
-                    placeholder='Add a title for this film...'
-                    value={uploadCaption}
-                    onChange={(e) => setUploadCaption(e.target.value)}
-                    disabled={isUploading}
-                  />
-                </FormGroup>
-
-                {isUploading && (
-                  <UploadProgress>
-                    <ProgressBarContainer>
-                      <ProgressBarFill $progress={uploadProgress} />
-                    </ProgressBarContainer>
-                    <ProgressText>Uploading... {uploadProgress}%</ProgressText>
-                  </UploadProgress>
-                )}
-
-                <ModalButtons>
-                  <Button
-                    type='button'
-                    onClick={() => setShowUploadModal(false)}
-                    disabled={isUploading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type='button'
-                    $primary
-                    onClick={handleUploadFilm}
-                    disabled={isUploading || !uploadFile}
-                  >
-                    {isUploading ? 'Uploading...' : 'Upload Film'}
-                  </Button>
-                </ModalButtons>
-              </>
+              <SelectedFile>
+                <FileIcon>
+                  <FaFilm />
+                </FileIcon>
+                <FileInfo>
+                  <FileName>{uploadFile.name}</FileName>
+                  <FileSize>{formatFileSize(uploadFile.size)}</FileSize>
+                </FileInfo>
+                <RemoveFileButton
+                  onClick={handleRemoveFile}
+                  disabled={isUploading}
+                >
+                  Remove
+                </RemoveFileButton>
+              </SelectedFile>
             )}
-          </UploadModalBox>
+
+            {isUploading && (
+              <UploadProgress>
+                <ProgressBarContainer>
+                  <ProgressBarFill $progress={uploadProgress} />
+                </ProgressBarContainer>
+                <ProgressText>Uploading... {uploadProgress}%</ProgressText>
+              </UploadProgress>
+            )}
+
+            <FormGroup>
+              <Label>Title *</Label>
+              <Input
+                type='text'
+                placeholder='Enter film title'
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                disabled={isUploading}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Customer Code *</Label>
+              <Input
+                type='text'
+                placeholder='e.g., SUMMER2024'
+                value={formData.code}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    code: e.target.value.toUpperCase(),
+                  })
+                }
+                disabled={isUploading}
+                style={{ textTransform: 'uppercase' }}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Price ($)</Label>
+              <Input
+                type='number'
+                placeholder='0.00'
+                min='0'
+                step='0.01'
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({ ...formData, price: e.target.value })
+                }
+                disabled={isUploading}
+              />
+            </FormGroup>
+
+            <ModalButtons>
+              <Button
+                onClick={() => setShowUploadModal(false)}
+                disabled={isUploading}
+              >
+                Cancel
+              </Button>
+              <Button
+                $primary
+                onClick={handleUploadFilm}
+                disabled={
+                  isUploading ||
+                  !uploadFile ||
+                  !formData.title ||
+                  !formData.code
+                }
+              >
+                {isUploading ? 'Uploading...' : 'Upload Film'}
+              </Button>
+            </ModalButtons>
+          </ModalBox>
         </Modal>
       )}
     </Container>

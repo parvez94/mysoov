@@ -5,7 +5,7 @@ import { createNotification } from './notificationCtrl.js';
 
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find({ accountType: 'regular' }).select('-password');
     res.status(200).json(users);
   } catch (err) {
     next(err);
@@ -15,6 +15,15 @@ export const getUsers = async (req, res, next) => {
 export const getUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
+    
+    if (!user) {
+      return next(createError(404, 'User not found'));
+    }
+
+    if (user.accountType === 'happy-team') {
+      return next(createError(404, 'User profile not found'));
+    }
+
     res.status(200).json(user);
   } catch (err) {
     next(err);
@@ -251,7 +260,10 @@ export const getSavedVideos = async (req, res, next) => {
     const authorIds = [
       ...new Set(videos.map((v) => String(v.userId)).filter(Boolean)),
     ];
-    const authors = await User.find({ _id: { $in: authorIds } }).select(
+    const authors = await User.find({ 
+      _id: { $in: authorIds },
+      accountType: 'regular'
+    }).select(
       '_id username displayName displayImage'
     );
     const authorMap = new Map(authors.map((u) => [String(u._id), u]));
@@ -295,7 +307,11 @@ export const getUserVideos = async (req, res, next) => {
       query.$or = [{ accessCode: null }, { accessCode: { $exists: false } }];
     }
 
-    const videos = await Video.find(query).sort({ createdAt: -1 });
+    const videos = await Video.find(query)
+      .sort({ createdAt: -1 })
+      .populate('sourceFilmId', 'purchasePrice customerCode caption')
+      .populate('filmDirectoryId', 'price folderName');
+
     res.status(200).json(videos);
   } catch (err) {
     next(err);
@@ -307,8 +323,10 @@ export const getFollowers = async (req, res, next) => {
   try {
     const userId = req.params.id;
 
-    // Find all users who follow this user
-    const followers = await User.find({ following: userId })
+    const followers = await User.find({ 
+      following: userId,
+      accountType: 'regular'
+    })
       .select('_id username displayName displayImage')
       .sort({ displayName: 1, username: 1 });
 
@@ -323,14 +341,15 @@ export const getFollowing = async (req, res, next) => {
   try {
     const userId = req.params.id;
 
-    // Get the user and populate their following list
     const user = await User.findById(userId).select('following');
     if (!user) {
       return next(createError(404, 'User not found'));
     }
 
-    // Get details of users being followed
-    const following = await User.find({ _id: { $in: user.following } })
+    const following = await User.find({ 
+      _id: { $in: user.following },
+      accountType: 'regular'
+    })
       .select('_id username displayName displayImage')
       .sort({ displayName: 1, username: 1 });
 

@@ -6,12 +6,32 @@ import validatePassword from '../utils/passwordValidator.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, phone, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !phone || !password) {
       return res
         .status(400)
-        .json({ error: 'Name, email and password are required' });
+        .json({ error: 'Name, email, phone and password are required' });
+    }
+
+    const existingEmail = await User.findOne({ 
+      email, 
+      accountType: 'regular' 
+    });
+    if (existingEmail) {
+      return res
+        .status(400)
+        .json({ error: 'Email is already registered for a regular account' });
+    }
+
+    const existingPhone = await User.findOne({ 
+      phone, 
+      accountType: 'regular' 
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: 'Phone number is already registered for a regular account' });
     }
 
     const passwordError = validatePassword(password);
@@ -47,7 +67,103 @@ export const register = async (req, res, next) => {
       username,
       displayName: name,
       email,
+      phone,
       password: hashPass,
+      accountType: 'regular',
+    });
+
+    await newUser.save();
+
+    const token = jwt.sign(
+      { id: newUser._id, role: newUser.role },
+      process.env.SECRET_KEY
+    );
+
+    res.header('Access-Control-Allow-Credentials', true);
+
+    const cookieOptions = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+    };
+
+    res.cookie('access_token', token, cookieOptions).status(201).json(newUser);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Register as Happy Team member (editor)
+export const registerEditor = async (req, res, next) => {
+  try {
+    const { name, email, phone, password, editorRole } = req.body;
+
+    if (!name || !email || !phone || !password || !editorRole) {
+      return res
+        .status(400)
+        .json({ error: 'Name, email, phone, password and role are required' });
+    }
+
+    const existingEmail = await User.findOne({ 
+      email, 
+      accountType: 'happy-team' 
+    });
+    if (existingEmail) {
+      return res
+        .status(400)
+        .json({ error: 'Email is already registered for a Happy Team account' });
+    }
+
+    const existingPhone = await User.findOne({ 
+      phone, 
+      accountType: 'happy-team' 
+    });
+    if (existingPhone) {
+      return res
+        .status(400)
+        .json({ error: 'Phone number is already registered for a Happy Team account' });
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashPass = await bcrypt.hash(password, salt);
+
+    // Generate a username
+    const base =
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .slice(0, 20) || 'editor';
+
+    let username;
+    for (let i = 0; i < 10; i++) {
+      const suffix = Math.floor(Math.random() * 90 + 10);
+      const candidate = `${base}${suffix}`;
+      const exists = await User.exists({ username: candidate });
+      if (!exists) {
+        username = candidate;
+        break;
+      }
+    }
+    if (!username) {
+      username = `${base}${Date.now().toString().slice(-2)}`;
+    }
+
+    const newUser = new User({
+      username,
+      displayName: name,
+      email,
+      phone,
+      password: hashPass,
+      role: 'editor',
+      editorRole,
+      accountType: 'happy-team',
     });
 
     await newUser.save();
@@ -75,14 +191,20 @@ export const register = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, accountType } = req.body;
 
     if (!email || !password)
       return next(createError(400, 'Email and password are required.'));
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ 
+      email, 
+      accountType: accountType || 'regular'
+    });
 
-    if (!user) return next(createError(404, 'User not found.'));
+    if (!user) {
+      const accountTypeName = accountType === 'happy-team' ? 'Happy Team' : 'regular';
+      return next(createError(404, `No ${accountTypeName} account found with this email.`));
+    }
 
     const isCorrect = await bcrypt.compare(password, user.password);
     if (!isCorrect) return next(createError(400, 'Invalid credentials.'));

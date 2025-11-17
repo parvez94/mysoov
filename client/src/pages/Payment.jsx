@@ -784,7 +784,13 @@ const Payment = () => {
   const planId = searchParams.get('plan') || 'basic';
   const type = searchParams.get('type'); // 'film' or undefined
   const filmId = searchParams.get('filmId');
-  const directoryId = searchParams.get('directoryId');
+  const directoryIdParam = searchParams.get('directoryId');
+  // Handle both old system (actual ID) and new system (special 'new-system' value)
+  const directoryId = 
+    directoryIdParam === 'null' || directoryIdParam === 'undefined' 
+      ? null 
+      : directoryIdParam;
+  const isNewFilmSystem = directoryId === 'new-system';
   const filmName = searchParams.get('filmName');
   const filmPrice = parseFloat(searchParams.get('price')) || 9.99;
 
@@ -806,6 +812,46 @@ const Payment = () => {
   const [loadingStripe, setLoadingStripe] = useState(true);
 
   const { currentUser } = useSelector((state) => state.user);
+
+  // Validate film purchase parameters and auto-redirect if invalid
+  useEffect(() => {
+    console.log('Payment page params:', {
+      type,
+      filmId,
+      directoryId,
+      isNewFilmSystem,
+      filmName,
+      filmPrice,
+    });
+
+    if (type === 'film' && (!filmId || !directoryId)) {
+      console.error('Invalid payment parameters - redirecting to search');
+      setTimeout(() => {
+        navigate('/search?error=invalid_payment_link');
+      }, 1000);
+    }
+  }, [type, filmId, directoryId, isNewFilmSystem, navigate]);
+
+  // Show error if parameters are invalid
+  if (type === 'film' && (!filmId || !directoryId)) {
+    return (
+      <Container>
+        <BackButton onClick={() => navigate(-1)}>
+          <MdArrowBack size={20} />
+          Go Back
+        </BackButton>
+        <Title>Invalid Payment Request</Title>
+        <Subtitle>
+          The payment link is missing required information. Redirecting to search
+          page...
+        </Subtitle>
+        <InfoText>
+          Please search for your film directory and try again. Make sure to
+          click "View Films" before purchasing.
+        </InfoText>
+      </Container>
+    );
+  }
 
   // Load Stripe configuration
   useEffect(() => {
@@ -928,7 +974,7 @@ const Payment = () => {
           <PlanHeader>
             <PlanName>{filmName || 'Film Purchase'}</PlanName>
             <PlanPrice>
-              $9.99
+              ${filmPrice.toFixed(2)}
               <span>/one-time</span>
             </PlanPrice>
           </PlanHeader>

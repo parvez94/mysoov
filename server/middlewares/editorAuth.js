@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { createError } from '../utils/error.js';
 
-// Middleware to check if user is admin (role === 'admin')
-export const verifyAdmin = async (req, res, next) => {
+export const verifyEditor = async (req, res, next) => {
   try {
     const token = req.cookies.access_token;
 
@@ -15,9 +14,9 @@ export const verifyAdmin = async (req, res, next) => {
         return next(createError(403, 'Token is not valid!'));
       }
 
-      if (user.role !== 'admin') {
+      if (user.role !== 'editor' && user.role !== 'admin') {
         return next(
-          createError(403, 'You are not authorized to access this resource')
+          createError(403, 'You do not have permission to access this!')
         );
       }
 

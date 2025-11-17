@@ -16,6 +16,11 @@ const GlobalStyle = createGlobalStyle`
         --primary-fonts: 'Alata';
         --secondary-fonts: 'IBM Plex Sans';
 
+        /* Text colors */
+        --text-primary: #333333;
+        --text-secondary: #666666;
+        --text-light: #ffffff;
+
         /* Layout variables */
         --navbar-h: 67px; /* matches Navbar min-height */
     }

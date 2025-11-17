@@ -1,0 +1,239 @@
+import mongoose from 'mongoose';
+
+const FrontpageSettingsSchema = new mongoose.Schema(
+  {
+    // Section 1: Slider
+    slider: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      items: [
+        {
+          type: {
+            type: String,
+            enum: ['image', 'video'],
+            required: true,
+          },
+          url: {
+            type: String,
+            required: true,
+          },
+          alt: String,
+          title: String,
+        },
+      ],
+    },
+
+    // Section 2: Happy Views with steps and code input
+    happyViewsSection: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      backgroundColor: {
+        type: String,
+        default: '#FF8C00', // Deep orange
+      },
+      textColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      headingColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      headingStrokeColor: {
+        type: String,
+        default: '',
+      },
+      headingStrokeWidth: {
+        type: Number,
+        default: 0,
+      },
+      heading: {
+        type: String,
+        default: 'Happy Views',
+      },
+      icon: {
+        type: String,
+        default: '',
+      },
+      steps: [
+        {
+          number: Number,
+          text: String,
+        },
+      ],
+      codeInput: {
+        label: {
+          type: String,
+          default: 'Enter your code',
+        },
+        placeholder: {
+          type: String,
+          default: 'Enter code here...',
+        },
+      },
+      buttonBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      buttonTextColor: {
+        type: String,
+        default: '',
+      },
+    },
+
+    // Section 3: Your Account section
+    accountSection: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      backgroundColor: {
+        type: String,
+        default: '#1a1a1a',
+      },
+      textColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      headingColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      headingStrokeColor: {
+        type: String,
+        default: '',
+      },
+      headingStrokeWidth: {
+        type: Number,
+        default: 0,
+      },
+      leftText: {
+        type: String,
+        default: 'Your Account',
+      },
+      icon: {
+        type: String,
+        default: '',
+      },
+      loginText: {
+        type: String,
+        default: 'Login',
+      },
+      signupText: {
+        type: String,
+        default: 'Sign Up',
+      },
+      loginButtonBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      loginButtonTextColor: {
+        type: String,
+        default: '',
+      },
+      signupButtonBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      signupButtonTextColor: {
+        type: String,
+        default: '',
+      },
+    },
+
+    // Section 4: Happy Team section
+    happyTeamSection: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      backgroundColor: {
+        type: String,
+        default: '#0f0f0f',
+      },
+      textColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      headingColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      headingStrokeColor: {
+        type: String,
+        default: '',
+      },
+      headingStrokeWidth: {
+        type: Number,
+        default: 0,
+      },
+      leftText: {
+        type: String,
+        default: 'Happy Team',
+      },
+      icon: {
+        type: String,
+        default: '',
+      },
+      steps: [
+        {
+          number: Number,
+          text: String,
+        },
+      ],
+      buttonText: {
+        type: String,
+        default: 'Register',
+      },
+      buttonBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      buttonTextColor: {
+        type: String,
+        default: '',
+      },
+    },
+
+    // Section 5: Banner image
+    bannerSection: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      imageUrl: String,
+      alt: {
+        type: String,
+        default: 'Banner Image',
+      },
+    },
+
+    // There should only be one frontpage settings document
+    singleton: {
+      type: Boolean,
+      default: true,
+      unique: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+// Ensure only one frontpage settings document exists
+FrontpageSettingsSchema.pre('save', async function (next) {
+  if (this.isNew) {
+    const count = await mongoose.models.FrontpageSettings.countDocuments();
+    if (count > 0) {
+      const error = new Error('FrontpageSettings document already exists');
+      return next(error);
+    }
+  }
+  next();
+});
+
+export default mongoose.model('FrontpageSettings', FrontpageSettingsSchema);

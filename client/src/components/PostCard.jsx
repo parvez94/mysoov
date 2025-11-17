@@ -12,6 +12,7 @@ const Card = styled.div`
 const VideoWrapper = styled.div`
   position: relative;
   width: 100%;
+  overflow: hidden;
 `;
 
 const Video = styled.video`
@@ -59,6 +60,39 @@ const PrivacyBadge = styled.div`
   font-size: 13px;
   font-weight: 500;
   z-index: 1;
+`;
+
+const WatermarkOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  &::before {
+    content: 'MYSOOV.TV';
+    font-size: 36px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    font-family: var(--secondary-fonts);
+    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.6);
+  }
+
+  @media (max-width: 768px) {
+    &::before {
+      font-size: 24px;
+      letter-spacing: 4px;
+    }
+  }
 `;
 
 const ClickableContent = styled.div`
@@ -109,9 +143,30 @@ const PostCard = ({
   const isPrivate = video?.privacy === 'Private';
   const mediaType = video?.mediaType || 'video';
 
-  // Show buy button for films that still have filmDirectoryId (free copies)
-  // Purchased films have filmDirectoryId removed, so no buy button
-  const showBuyButton = !!video?.filmDirectoryId;
+  // Show buy button for films using TWO different systems:
+  // System 1 (OLD): filmDirectoryId exists (folder-based films)
+  // System 2 (NEW): sourceFilmId exists with purchasePrice (customerCode films)
+  console.log('Video data:', {
+    caption: video?.caption,
+    filmDirectoryId: video?.filmDirectoryId,
+    sourceFilmId: video?.sourceFilmId,
+    isFilm: video?.isFilm,
+  });
+  
+  const showBuyButton = 
+    !!video?.filmDirectoryId || // Old system: folder-based
+    !!(video?.sourceFilmId && video?.sourceFilmId?.purchasePrice); // New system: has price
+    
+  // Get the purchase price from:
+  // 1. sourceFilmId.purchasePrice (new system)
+  // 2. filmDirectory.price (old system)
+  // 3. video.purchasePrice (fallback)
+  // 4. default to 9.99
+  const purchasePrice =
+    video?.sourceFilmId?.purchasePrice ||
+    video?.filmDirectoryId?.price ||
+    video?.purchasePrice ||
+    9.99;
 
   // Check if video is from YouTube
   const isYouTubeVideo =
@@ -141,16 +196,39 @@ const PostCard = ({
     e.preventDefault();
     e.stopPropagation();
 
-    const filmId = video?.sourceFilmId || video?._id;
-    const directoryId = video?.filmDirectoryId;
-    const price = 9.99; // Default price, could be fetched from video metadata if available
+    // Determine which film system is being used
+    const isNewSystem = video?.sourceFilmId && video?.sourceFilmId?.purchasePrice;
+    const isOldSystem = video?.filmDirectoryId;
 
-    navigate(
-      `/payment?type=film&filmId=${filmId}&directoryId=${directoryId}&filmName=${encodeURIComponent(
-        video?.caption || 'Film'
-      )}&price=${price}`
-    );
+    if (isNewSystem) {
+      // NEW SYSTEM: customerCode films
+      const filmId = video?.sourceFilmId?._id || video?.sourceFilmId || video?._id;
+      navigate(
+        `/payment?type=film&filmId=${filmId}&directoryId=new-system&filmName=${encodeURIComponent(
+          video?.caption || 'Film'
+        )}&price=${purchasePrice}`
+      );
+    } else if (isOldSystem) {
+      // OLD SYSTEM: folder-based films
+      const filmId = video?._id;
+      const directoryId = video?.filmDirectoryId?._id || video?.filmDirectoryId;
+      
+      if (!directoryId) {
+        console.error('Cannot purchase: Invalid directory ID');
+        return;
+      }
+
+      navigate(
+        `/payment?type=film&filmId=${filmId}&directoryId=${directoryId}&filmName=${encodeURIComponent(
+          video?.caption || 'Film'
+        )}&price=${purchasePrice}`
+      );
+    } else {
+      console.error('Cannot purchase: Unknown film system');
+    }
   };
+
+  const isUnpurchasedFilm = video?.sourceFilmId != null;
 
   const videoContent = (
     <>
@@ -170,20 +248,26 @@ const PostCard = ({
               <Image src={src} alt={video?.caption || 'Post image'} />
             )
           ) : isYouTubeVideo ? (
-            <YouTubeEmbed
-              src={getCleanYouTubeUrl(src)}
-              title={video?.caption || 'Video'}
-              allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-              allowFullScreen
-            />
+            <>
+              <YouTubeEmbed
+                src={getCleanYouTubeUrl(src)}
+                title={video?.caption || 'Video'}
+                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+                allowFullScreen
+              />
+              {isUnpurchasedFilm && <WatermarkOverlay />}
+            </>
           ) : (
-            <Video src={src} controls playsInline />
+            <>
+              <Video src={src} controls playsInline />
+              {isUnpurchasedFilm && <WatermarkOverlay />}
+            </>
           )}
         </VideoWrapper>
       ) : null}
       {showBuyButton && (
         <BuyButton onClick={handleBuyClick}>
-          Buy Complete Ownership - $9.99
+          Buy Complete Ownership - ${purchasePrice.toFixed(2)}
         </BuyButton>
       )}
     </>

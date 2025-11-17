@@ -14,6 +14,20 @@ export const createFilmPaymentIntent = async (req, res, next) => {
       );
     }
 
+    if (directoryId === 'null' || directoryId === 'undefined') {
+      return next(
+        createError(
+          400,
+          'Invalid payment request. Please return to the film directory page and try again.'
+        )
+      );
+    }
+
+    // Handle both film systems:
+    // - Old system: directoryId is a MongoDB ObjectId
+    // - New system: directoryId is 'new-system' (customerCode films)
+    const isNewSystem = directoryId === 'new-system';
+
     // Get Stripe configuration from settings
     const settings = await Settings.findOne();
     if (!settings || !settings.stripeConfig || !settings.stripeConfig.enabled) {

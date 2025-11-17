@@ -98,6 +98,8 @@ import publicRouter from './routes/publicRoutes.js';
 import blogRouter from './routes/blogRoutes.js';
 import filmRouter from './routes/filmRoutes.js';
 import paymentRouter from './routes/paymentRoutes.js';
+import frontpageRouter from './routes/frontpageRoutes.js';
+import happyTeamRouter from './routes/happyTeamRoutes.js';
 
 // Health check
 app.get('/', (req, res) => {
@@ -206,6 +208,8 @@ app.use('/api/public', publicRouter);
 app.use('/api/v1/blog', blogRouter);
 app.use('/api/v1/films', filmRouter);
 app.use('/api/v1/payment', paymentRouter);
+app.use('/api/v1/frontpage', frontpageRouter);
+app.use('/api/v1/happy-team', happyTeamRouter);
 
 // Social media meta tags route - /video/:id (backward compatibility)
 app.get('/video/:id', async (req, res) => {

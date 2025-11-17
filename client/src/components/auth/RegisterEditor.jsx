@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   loginStart,
   loginSuccess,
@@ -12,7 +12,7 @@ import ThreeDotsLoader from '../loading/ThreeDotsLoader';
 
 const ModalTop = styled.div`
   padding: 20px 40px;
-  min-height: 0; /* let content size itself */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -24,6 +24,15 @@ const Title = styled.h2`
   color: var(--secondary-color);
   font-size: 25px;
   text-align: center;
+`;
+
+const Subtitle = styled.p`
+  font-family: var(--secondary-fonts);
+  color: var(--secondary-color);
+  font-size: 14px;
+  text-align: center;
+  opacity: 0.8;
+  margin-top: -8px;
 `;
 
 const Form = styled.form`
@@ -80,6 +89,11 @@ const Button = styled.button`
   }
 `;
 
+const ModalBottom = styled.div`
+  border-top: 0.8px solid var(--secondary-color);
+  padding: 20px 40px;
+`;
+
 const ErrorMessage = styled.div`
   margin-top: 10px;
   padding: 8px 12px;
@@ -92,11 +106,6 @@ const ErrorMessage = styled.div`
   text-align: center;
 `;
 
-const ModalBottom = styled.div`
-  border-top: 0.8px solid var(--secondary-color);
-  padding: 20px 40px;
-`;
-
 const Text = styled.p`
   font-family: var(--primary-fonts);
   color: var(--secondary-color);
@@ -104,12 +113,16 @@ const Text = styled.p`
   text-align: center;
 `;
 
-const Login = ({ link, accountType = 'regular' }) => {
+const RegisterEditor = ({ link }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('');
   const [error, setError] = useState('');
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isLoading } = useSelector((state) => state.user);
 
   const handleSubmit = async (e) => {
@@ -119,12 +132,27 @@ const Login = ({ link, accountType = 'regular' }) => {
     setError('');
 
     // Basic validation
-    if (!email || !password) {
+    if (!name || !email || !phone || !password || !role) {
       setError('Please fill in all fields');
       return;
     }
 
-    const url = `${import.meta.env.VITE_API_URL}/api/v1/auth/signin`;
+    if (name.length < 2) {
+      setError('Name must be at least 2 characters long');
+      return;
+    }
+
+    if (phone.length < 10) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    const url = `${import.meta.env.VITE_API_URL}/api/v1/auth/signup-editor`;
 
     const requestOptions = {
       method: 'POST',
@@ -134,9 +162,11 @@ const Login = ({ link, accountType = 'regular' }) => {
       },
       credentials: 'include',
       body: JSON.stringify({
+        name,
         email,
+        phone,
         password,
-        accountType,
+        editorRole: role,
       }),
     };
 
@@ -149,12 +179,14 @@ const Login = ({ link, accountType = 'regular' }) => {
         const data = await res.json();
         dispatch(loginSuccess(data));
         dispatch(closeModal());
+        // Redirect to happy team dashboard
+        navigate('/dashboard/happy-team');
       } else {
         const errorData = await res.json();
         const errorMessage =
           errorData.message ||
           errorData.error ||
-          'Login failed. Please try again.';
+          'Registration failed. Please try again.';
         setError(errorMessage);
         dispatch(loginFailed(errorMessage));
       }
@@ -169,15 +201,47 @@ const Login = ({ link, accountType = 'regular' }) => {
   return (
     <>
       <ModalTop>
-        <Title>Sign in</Title>
+        <Title>Join Happy Team 🎉</Title>
+        <Subtitle>Become a content editor and share amazing moments!</Subtitle>
         <Form>
+          <InputField>
+            <Label>Name</Label>
+            <Input
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError('');
+              }}
+            />
+          </InputField>
           <InputField>
             <Label>Email</Label>
             <Input
               type='email'
               onChange={(e) => {
                 setEmail(e.target.value);
-                if (error) setError(''); // Clear error when user starts typing
+                if (error) setError('');
+              }}
+            />
+          </InputField>
+          <InputField>
+            <Label>Phone Number</Label>
+            <Input
+              type='tel'
+              placeholder='+1234567890'
+              onChange={(e) => {
+                setPhone(e.target.value);
+                if (error) setError('');
+              }}
+            />
+          </InputField>
+          <InputField>
+            <Label>Your Role</Label>
+            <Input
+              type='text'
+              placeholder='e.g., Photographer, Video Editor, Designer'
+              onChange={(e) => {
+                setRole(e.target.value);
+                if (error) setError('');
               }}
             />
           </InputField>
@@ -192,17 +256,17 @@ const Login = ({ link, accountType = 'regular' }) => {
             />
           </InputField>
           <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? <ThreeDotsLoader /> : 'Log in'}
+            {isLoading ? <ThreeDotsLoader /> : 'Join Happy Team'}
           </Button>
           {error && <ErrorMessage>{error}</ErrorMessage>}
         </Form>
       </ModalTop>
       <ModalBottom>
         <Text>
-          Don’t have an account? <Link onClick={link}>Sign up</Link>
+          Already have an account? <Link onClick={link}>Log in</Link>
         </Text>
       </ModalBottom>
     </>
   );
 };
-export default Login;
+export default RegisterEditor;

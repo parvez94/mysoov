@@ -13,6 +13,7 @@ import {
   Explore,
   Upload,
   PublicProfile,
+  NotFound,
 } from './pages/index';
 import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
@@ -23,6 +24,14 @@ import DashboardPosts from './pages/dashboard/DashboardPosts';
 import DashboardSettings from './pages/dashboard/DashboardSettings';
 import DashboardArticles from './pages/dashboard/DashboardArticles';
 import DashboardFilms from './pages/dashboard/DashboardFilms';
+import DashboardFrontpage from './pages/dashboard/DashboardFrontpage';
+import HappyTeamDashboard from './pages/HappyTeamDashboard';
+import HappyContent from './pages/HappyContent';
+import Frontpage from './pages/Frontpage';
+import { Navbar, Modal, LeftSidebar } from './components/index';
+import { useSelector } from 'react-redux';
+import { selectModal } from './redux/modal/modalSlice';
+import styled from 'styled-components';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import ArticleEditor from './pages/ArticleEditor';
@@ -35,14 +44,60 @@ const VideoRedirect = () => {
   return <Navigate to={`/post/${id}`} replace />;
 };
 
+// Wrapper component for frontpage with navbar and sidebar (for preview)
+const FrontpageWrapper = () => {
+  const { isOpen } = useSelector(selectModal);
+  return (
+    <>
+      {isOpen && <Modal />}
+      <Navbar />
+      <Main>
+        <LeftSidebar />
+        <Wrapper>
+          <Frontpage />
+        </Wrapper>
+      </Main>
+    </>
+  );
+};
+
+const Main = styled.div`
+  background-color: var(--tertiary-color);
+  display: flex;
+`;
+
+const Wrapper = styled.div`
+  flex: 10;
+`;
+
+// Wrapper component for 404 page with navbar
+const NotFoundWrapper = () => {
+  const { isOpen } = useSelector(selectModal);
+  return (
+    <>
+      {isOpen && <Modal />}
+      <Navbar />
+      <NotFound />
+    </>
+  );
+};
+
+const HomeOrFrontpage = () => {
+  return <Frontpage />;
+};
+
 const router = createBrowserRouter([
+  {
+    path: '/frontpage-preview',
+    element: <FrontpageWrapper />,
+  },
   {
     path: '/',
     element: <Layout />,
     children: [
       {
         index: true,
-        element: <Home />,
+        element: <HomeOrFrontpage />,
       },
       {
         path: 'following',
@@ -85,6 +140,18 @@ const router = createBrowserRouter([
         element: <DashboardFilms />,
       },
       {
+        path: 'dashboard/frontpage',
+        element: <DashboardFrontpage />,
+      },
+      {
+        path: 'dashboard/happy-team',
+        element: <HappyTeamDashboard />,
+      },
+      {
+        path: 'happy-content',
+        element: <HappyContent />,
+      },
+      {
         path: 'blog',
         element: <Blog />,
       },
@@ -115,10 +182,6 @@ const router = createBrowserRouter([
         element: <SearchResults />,
       },
       {
-        path: ':username',
-        element: <PublicProfile />,
-      },
-      {
         path: 'upload',
         element: <Upload />,
       },
@@ -134,7 +197,19 @@ const router = createBrowserRouter([
         path: 'video-redirect/:id',
         element: <VideoRedirect />,
       },
+      {
+        path: ':username',
+        element: <PublicProfile />,
+      },
+      {
+        path: '*',
+        element: <NotFound />,
+      },
     ],
+  },
+  {
+    path: '*',
+    element: <NotFoundWrapper />,
   },
 ]);
 

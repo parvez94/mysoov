@@ -107,6 +107,7 @@ const Text = styled.p`
 const Register = ({ link }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
@@ -120,13 +121,18 @@ const Register = ({ link }) => {
     setError('');
 
     // Basic validation
-    if (!name || !email || !password) {
+    if (!name || !email || !phone || !password) {
       setError('Please fill in all fields');
       return;
     }
 
     if (name.length < 2) {
       setError('Name must be at least 2 characters long');
+      return;
+    }
+
+    if (phone.length < 10) {
+      setError('Please enter a valid phone number');
       return;
     }
 
@@ -147,6 +153,7 @@ const Register = ({ link }) => {
       body: JSON.stringify({
         name,
         email,
+        phone,
         password,
       }),
     };
@@ -197,6 +204,17 @@ const Register = ({ link }) => {
               type='email'
               onChange={(e) => {
                 setEmail(e.target.value);
+                if (error) setError(''); // Clear error when user starts typing
+              }}
+            />
+          </InputField>
+          <InputField>
+            <Label>Phone Number</Label>
+            <Input
+              type='tel'
+              placeholder='+1234567890'
+              onChange={(e) => {
+                setPhone(e.target.value);
                 if (error) setError(''); // Clear error when user starts typing
               }}
             />

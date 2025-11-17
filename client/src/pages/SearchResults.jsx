@@ -373,6 +373,39 @@ const OwnButton = styled.button`
   }
 `;
 
+const WatermarkOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  &::before {
+    content: 'MYSOOV.TV';
+    font-size: 40px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.4);
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    font-family: var(--secondary-fonts);
+    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.6);
+  }
+
+  @media (max-width: 768px) {
+    &::before {
+      font-size: 26px;
+      letter-spacing: 4px;
+    }
+  }
+`;
+
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -412,6 +445,7 @@ const SearchResults = () => {
               withCredentials: true,
             }
           );
+          console.log('Initial search result:', filmResponse.data.directory);
           setFilmDirectory(filmResponse.data.directory);
         } catch (filmErr) {
           // Only show error if it's not a 404 (not found)
@@ -467,6 +501,7 @@ const SearchResults = () => {
       );
 
       // Update film directory with full data including price
+      console.log('Fetched directory details:', response.data.directory);
       setFilmDirectory(response.data.directory);
       setDirectoryFilms(response.data.directory.films || []);
       setShowFilmsModal(true);
@@ -484,6 +519,11 @@ const SearchResults = () => {
   };
 
   const handleAddToProfile = async (film) => {
+    if (!filmDirectory?._id || !film?._id) {
+      setError('Unable to add film to profile. Please try again.');
+      return;
+    }
+
     try {
       setLoadingFilms(true);
       const response = await axios.post(
@@ -510,9 +550,33 @@ const SearchResults = () => {
   };
 
   const handleBuyCompleteFolder = () => {
-    // Navigate to payment page with folder details
-    // We'll use the first film's ID as reference
-    const price = filmDirectory?.price || 9.99;
+    console.log('Buy Complete Folder clicked', {
+      filmDirectory,
+      directoryFilms,
+      filmDirectoryId: filmDirectory?._id,
+    });
+
+    if (!filmDirectory) {
+      setError('Film directory information is missing. Please try again.');
+      return;
+    }
+
+    if (!filmDirectory._id) {
+      setError('Film directory ID is missing. Please refresh and try again.');
+      return;
+    }
+
+    if (!directoryFilms || directoryFilms.length === 0) {
+      setError('No films found in this directory. Please try again.');
+      return;
+    }
+
+    if (!directoryFilms[0]._id) {
+      setError('Film information is invalid. Please try again.');
+      return;
+    }
+
+    const price = filmDirectory.price || 9.99;
     const firstFilm = directoryFilms[0];
     navigate(
       `/payment?type=film&filmId=${firstFilm._id}&directoryId=${
@@ -647,14 +711,18 @@ const SearchResults = () => {
                           style={{ cursor: 'pointer' }}
                         >
                           {film.videoUrl?.url ? (
-                            <video
-                              src={film.videoUrl.url}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                              }}
-                            />
+                            <>
+                              <video
+                                src={film.videoUrl.url}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                }}
+                                onContextMenu={(e) => e.preventDefault()}
+                              />
+                              <WatermarkOverlay />
+                            </>
                           ) : (
                             <div
                               style={{
@@ -745,17 +813,37 @@ const SearchResults = () => {
                       {directoryFilms.length === 1 ? 'film' : 'films'}) for
                       permanent ownership and download access
                     </ModalText>
+                    {!filmDirectory?._id && (
+                      <div
+                        style={{
+                          padding: '12px',
+                          background: 'rgba(255, 0, 0, 0.1)',
+                          border: '1px solid rgba(255, 0, 0, 0.3)',
+                          borderRadius: '8px',
+                          color: '#ff6b6b',
+                          marginBottom: '12px',
+                          fontSize: '14px',
+                        }}
+                      >
+                        ⚠️ Directory ID missing. Please close and reopen this
+                        modal.
+                      </div>
+                    )}
                     <OwnButton
                       onClick={handleBuyCompleteFolder}
+                      disabled={!filmDirectory?._id}
                       style={{
                         width: '100%',
                         maxWidth: '400px',
                         padding: '14px 24px',
                         fontSize: '16px',
                         fontWeight: '700',
-                        background:
-                          'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        background: !filmDirectory?._id
+                          ? '#666'
+                          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                        opacity: !filmDirectory?._id ? 0.5 : 1,
+                        cursor: !filmDirectory?._id ? 'not-allowed' : 'pointer',
                       }}
                     >
                       🛒 Purchase All Films - $
@@ -790,18 +878,23 @@ const SearchResults = () => {
                     borderRadius: '8px',
                     overflow: 'hidden',
                     marginBottom: '20px',
+                    position: 'relative',
                   }}
                 >
                   <video
                     src={selectedFilm.videoUrl?.url}
                     controls
+                    controlsList="nodownload"
+                    disablePictureInPicture
                     autoPlay
                     style={{
                       width: '100%',
                       maxHeight: '300px',
                       display: 'block',
                     }}
+                    onContextMenu={(e) => e.preventDefault()}
                   />
+                  <WatermarkOverlay />
                 </div>
 
                 <div

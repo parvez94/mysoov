@@ -14,10 +14,12 @@ import {
   MdKeyboardArrowDown,
   MdKeyboardArrowUp,
   MdMovie,
+  MdWeb,
 } from 'react-icons/md';
 import { LuUser } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
 import { HiOutlineNewspaper } from 'react-icons/hi2';
+import { FaSmile } from 'react-icons/fa';
 
 import { openModal } from '../../redux/modal/modalSlice';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -217,6 +219,7 @@ const LeftSidebar = () => {
 
   // Check if user is admin (role === 'admin')
   const isAdmin = currentUser?.role === 'admin';
+  const isEditor = currentUser?.role === 'editor';
 
   return (
     <Container>
@@ -225,6 +228,12 @@ const LeftSidebar = () => {
           <NavItem>
             <IoIosHome />
             <span>Home</span>
+          </NavItem>
+        </Link>
+        <Link to='explore' onClick={guardClick}>
+          <NavItem>
+            <MdOutlineExplore />
+            <span>Explore</span>
           </NavItem>
         </Link>
         <Link to='notifications' onClick={guardClick}>
@@ -238,20 +247,6 @@ const LeftSidebar = () => {
             )}
           </NavItem>
         </Link>
-        <Link to='explore' onClick={guardClick}>
-          <NavItem>
-            <MdOutlineExplore />
-            <span>Explore</span>
-          </NavItem>
-        </Link>
-        {currentUser && (
-          <Link to='upload'>
-            <NavItem>
-              <AiOutlineUpload />
-              <span>Upload</span>
-            </NavItem>
-          </Link>
-        )}
         {currentUser ? (
           <Link to={`/${currentUser.username}`}>
             <NavItem>
@@ -322,6 +317,18 @@ const LeftSidebar = () => {
                   <span>Films</span>
                 </SubMenuItem>
               </Link>
+              <Link to='/dashboard/frontpage'>
+                <SubMenuItem>
+                  <MdWeb />
+                  <span>Frontpage</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/happy-team'>
+                <SubMenuItem>
+                  <FaSmile />
+                  <span>Happy Team</span>
+                </SubMenuItem>
+              </Link>
               <Link to='/dashboard/settings'>
                 <SubMenuItem>
                   <MdSettings />
@@ -330,6 +337,16 @@ const LeftSidebar = () => {
               </Link>
             </SubMenu>
           </DashboardMenu>
+        )}
+
+        {/* Editor Happy Team Menu (only for editors, not admins) */}
+        {isEditor && !isAdmin && (
+          <Link to='/dashboard/happy-team'>
+            <NavItem>
+              <FaSmile />
+              <span>Happy Team</span>
+            </NavItem>
+          </Link>
         )}
       </Nav>
       {!currentUser && (

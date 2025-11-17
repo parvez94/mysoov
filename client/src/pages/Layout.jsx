@@ -17,7 +17,6 @@ const Wrapper = styled.div`
 
 const Layout = () => {
   const { isOpen } = useSelector(selectModal);
-  const { currentUser } = useSelector((state) => state.user);
   const location = useLocation();
 
   useEffect(() => {
