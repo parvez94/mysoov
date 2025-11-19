@@ -175,6 +175,7 @@ const CodeSectionContainer = styled.div`
   gap: 25px;
   max-width: 600px;
   margin: 0 auto;
+  margin-top: 40px;
 `;
 
 const CodeLabel = styled.label`
