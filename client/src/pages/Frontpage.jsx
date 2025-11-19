@@ -94,7 +94,7 @@ const Dot = styled.div`
 const HappyViewsSection = styled.section`
   background-color: ${(props) => props.$bgColor || '#FF8C00'};
   color: ${(props) => props.$textColor || '#ffffff'};
-  padding: 60px 20px;
+  padding: 20px 20px 35px 20px;
   text-align: center;
 `;
 
@@ -107,7 +107,7 @@ const SectionHeading = styled.h2`
   font-size: 2.5rem;
   font-weight: 700;
   color: ${(props) => props.$color || 'inherit'};
-  margin-bottom: 40px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: ${(props) => {
@@ -255,7 +255,7 @@ const CodeSubmitButton = styled.button`
 
 // Section 3: Your Account
 const AccountSection = styled.section`
-  padding: 60px 20px;
+  padding: 30px 20px;
   background-color: ${(props) => props.$bgColor || 'var(--secondary-color)'};
   color: ${(props) => props.$textColor || '#ffffff'};
 `;
@@ -339,7 +339,7 @@ const AuthButton = styled.button`
 
 // Section 4: Happy Team
 const HappyTeamSection = styled.section`
-  padding: 60px 20px;
+  padding: 20px 20px 35px 20px;
   background-color: ${(props) => props.$bgColor || 'var(--tertiary-color)'};
   color: ${(props) => props.$textColor || '#ffffff'};
 `;
@@ -549,7 +549,7 @@ const CopyrightOverlay = styled.div`
   z-index: 10;
   text-align: center;
   user-select: none;
-  
+
   @media (max-width: 768px) {
     font-size: 48px;
   }
@@ -746,10 +746,13 @@ const IconDisplay = ({ icon, IconComponent }) => {
     );
   }
 
-  if (typeof icon === 'string' && (icon.startsWith('http') || icon.startsWith('/') || icon.includes('.'))) {
+  if (
+    typeof icon === 'string' &&
+    (icon.startsWith('http') || icon.startsWith('/') || icon.includes('.'))
+  ) {
     return (
       <IconComponent>
-        <img src={icon} alt="Icon" />
+        <img src={icon} alt='Icon' />
       </IconComponent>
     );
   }
@@ -959,7 +962,9 @@ const Frontpage = () => {
             </SectionHeading>
 
             {settings.happyViewsSection.description && (
-              <SectionDescription $textAlign={settings.happyViewsSection.textAlign}>
+              <SectionDescription
+                $textAlign={settings.happyViewsSection.textAlign}
+              >
                 {settings.happyViewsSection.description}
               </SectionDescription>
             )}
@@ -1051,12 +1056,22 @@ const Frontpage = () => {
             </SectionHeading>
 
             {settings.happyTeamSection.description && (
-              <SectionDescription $textAlign={settings.happyTeamSection.textAlign}>
+              <SectionDescription
+                $textAlign={settings.happyTeamSection.textAlign}
+              >
                 {settings.happyTeamSection.description}
               </SectionDescription>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '30px', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '15px',
+                marginTop: '30px',
+                flexWrap: 'wrap',
+              }}
+            >
               <RegisterButton
                 $bgColor={settings.happyTeamSection.buttonBackgroundColor}
                 $textColor={settings.happyTeamSection.buttonTextColor}
@@ -1104,7 +1119,7 @@ const Frontpage = () => {
                     <video
                       src={getVideoUrl(redeemedFilm)}
                       controls
-                      controlsList="nodownload"
+                      controlsList='nodownload'
                       disablePictureInPicture
                       autoPlay
                       style={{ width: '100%', height: '100%' }}
