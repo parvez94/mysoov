@@ -73,16 +73,24 @@ const userSchema = new mongoose.Schema(
         enum: ['free', 'basic', 'pro', 'premium'],
         default: 'free',
       },
-      maxUploadSize: {
-        type: Number,
-        default: 5, // in MB
-      },
       expiresAt: {
         type: Date,
         default: null,
       },
     },
+    storageUsed: {
+      type: Number,
+      default: 0,
+    },
     isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    dateOfBirth: {
+      type: Date,
+      default: null,
+    },
+    marketingConsent: {
       type: Boolean,
       default: false,
     },

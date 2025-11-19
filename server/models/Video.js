@@ -16,6 +16,10 @@ const videoSchema = new mongoose.Schema(
       type: [Object],
       default: [],
     },
+    fileSize: {
+      type: Number,
+      default: 0,
+    },
     storageProvider: {
       type: String,
       enum: ['local', 'cloudinary', 'youtube'],

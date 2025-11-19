@@ -5,7 +5,7 @@ import fs from 'fs';
 import { verifyToken } from '../utils/verifyToken.js';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
-import { getMaxUploadSize } from '../config/pricingPlans.js';
+import { getTotalStorageLimit } from '../config/pricingPlans.js';
 import {
   uploadToYouTube,
   isYouTubeConfigured,
@@ -79,25 +79,22 @@ router.post('/upload', verifyToken, async (req, res) => {
     console.log('🔍 Upload Debug - Storage Provider:', provider);
     console.log('🔍 Upload Debug - Is Video:', isVideo);
 
-    // Check size limits based on provider
-    // YouTube uploads bypass size limits, local/cloudinary have limits
-    const willCheckSize = provider !== 'youtube' || !isYouTubeConfigured();
+    const totalStorageLimit = getTotalStorageLimit(user);
+    const storageUsed = user.storageUsed || 0;
+    const fileSizeMB = file.size / (1024 * 1024);
+    const availableStorage = totalStorageLimit - storageUsed;
 
-    if (willCheckSize) {
-      const userMaxUploadSize = getMaxUploadSize(user);
-      const maxSizeBytes = userMaxUploadSize * 1024 * 1024; // Convert MB to bytes
-      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-
-      if (file.size > maxSizeBytes) {
-        removeTmp(file.tempFilePath);
-        return res.status(403).json({
-          msg: `File size (${fileSizeMB}MB) exceeds your plan limit of ${userMaxUploadSize}MB`,
-          exceedsLimit: true,
-          fileSize: fileSizeMB,
-          maxSize: userMaxUploadSize,
-          currentPlan: user.subscription?.plan || 'free',
-        });
-      }
+    if (fileSizeMB > availableStorage) {
+      removeTmp(file.tempFilePath);
+      return res.status(403).json({
+        msg: `Not enough storage. File size: ${fileSizeMB.toFixed(2)}MB, Available: ${availableStorage.toFixed(2)}MB`,
+        exceedsLimit: true,
+        fileSize: fileSizeMB.toFixed(2),
+        storageUsed: storageUsed.toFixed(2),
+        totalStorageLimit: totalStorageLimit,
+        availableStorage: availableStorage.toFixed(2),
+        currentPlan: user.subscription?.plan || 'free',
+      });
     }
 
     let result;
@@ -171,8 +168,11 @@ router.post('/upload', verifyToken, async (req, res) => {
     // Clean up temporary file
     removeTmp(file.tempFilePath);
 
-    // Send response
-    res.json(result);
+    await User.findByIdAndUpdate(req.user.id, {
+      $inc: { storageUsed: fileSizeMB },
+    });
+
+    res.json({ ...result, fileSize: fileSizeMB });
   } catch (err) {
     return res
       .status(500)
@@ -298,33 +298,30 @@ router.post('/upload/images', verifyToken, async (req, res) => {
       return res.status(400).json({ msg: 'No files were uploaded.' });
     }
 
-    // Get user's upload limit based on subscription
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    const userMaxUploadSize = getMaxUploadSize(user);
-    const maxSizeBytes = userMaxUploadSize * 1024 * 1024;
-
-    // Handle both single and multiple file uploads
     const files = req.files.images;
     const fileArray = Array.isArray(files) ? files : [files];
 
-    // Validate file sizes
-    for (const file of fileArray) {
-      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      if (file.size > maxSizeBytes) {
-        // Clean up temp files
-        fileArray.forEach((f) => removeTmp(f.tempFilePath));
-        return res.status(403).json({
-          msg: `File size (${fileSizeMB}MB) exceeds your plan limit of ${userMaxUploadSize}MB`,
-          exceedsLimit: true,
-          fileSize: fileSizeMB,
-          maxSize: userMaxUploadSize,
-          currentPlan: user.subscription?.plan || 'free',
-        });
-      }
+    const totalStorageLimit = getTotalStorageLimit(user);
+    const storageUsed = user.storageUsed || 0;
+    const totalFileSizeMB = fileArray.reduce((sum, file) => sum + (file.size / (1024 * 1024)), 0);
+    const availableStorage = totalStorageLimit - storageUsed;
+
+    if (totalFileSizeMB > availableStorage) {
+      fileArray.forEach((f) => removeTmp(f.tempFilePath));
+      return res.status(403).json({
+        msg: `Not enough storage. Total size: ${totalFileSizeMB.toFixed(2)}MB, Available: ${availableStorage.toFixed(2)}MB`,
+        exceedsLimit: true,
+        fileSize: totalFileSizeMB.toFixed(2),
+        storageUsed: storageUsed.toFixed(2),
+        totalStorageLimit: totalStorageLimit,
+        availableStorage: availableStorage.toFixed(2),
+        currentPlan: user.subscription?.plan || 'free',
+      });
     }
 
     // Get storage settings
@@ -371,6 +368,10 @@ router.post('/upload/images', verifyToken, async (req, res) => {
 
     // Clean up temporary files
     fileArray.forEach((file) => removeTmp(file.tempFilePath));
+
+    await User.findByIdAndUpdate(req.user.id, {
+      $inc: { storageUsed: totalFileSizeMB },
+    });
 
     res.json({ images: uploadedImages });
   } catch (err) {

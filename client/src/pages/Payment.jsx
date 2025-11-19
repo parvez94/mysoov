@@ -345,10 +345,10 @@ const defaultPricingPlans = {
   basic: {
     name: 'Basic',
     price: 9.99,
-    maxUploadSize: 50,
+    totalStorageLimit: 1024,
     description: 'Great for casual creators',
     features: [
-      'Upload up to 50MB',
+      '1GB total storage',
       'Verified badge',
       'HD quality',
       'Priority support',
@@ -357,10 +357,10 @@ const defaultPricingPlans = {
   pro: {
     name: 'Pro',
     price: 19.99,
-    maxUploadSize: 200,
+    totalStorageLimit: 5120,
     description: 'For professional content creators',
     features: [
-      'Upload up to 200MB',
+      '5GB total storage',
       'Verified badge',
       '4K quality',
       'Priority support',
@@ -370,10 +370,10 @@ const defaultPricingPlans = {
   premium: {
     name: 'Premium',
     price: 29.99,
-    maxUploadSize: 500,
+    totalStorageLimit: 10240,
     description: 'Ultimate plan for power users',
     features: [
-      'Upload up to 500MB',
+      '10GB total storage',
       'Verified badge',
       '4K quality',
       'Priority support',

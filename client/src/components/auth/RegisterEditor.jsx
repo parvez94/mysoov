@@ -113,12 +113,36 @@ const Text = styled.p`
   text-align: center;
 `;
 
+const CheckboxField = styled.div`
+  margin-bottom: 15px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+`;
+
+const Checkbox = styled.input`
+  margin-top: 3px;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+`;
+
+const CheckboxLabel = styled.label`
+  font-family: var(--secondary-fonts);
+  color: var(--secondary-color);
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1.4;
+`;
+
 const RegisterEditor = ({ link }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [error, setError] = useState('');
 
   const dispatch = useDispatch();
@@ -132,7 +156,7 @@ const RegisterEditor = ({ link }) => {
     setError('');
 
     // Basic validation
-    if (!name || !email || !phone || !password || !role) {
+    if (!name || !email || !phone || !password || !role || !dateOfBirth) {
       setError('Please fill in all fields');
       return;
     }
@@ -167,6 +191,8 @@ const RegisterEditor = ({ link }) => {
         phone,
         password,
         editorRole: role,
+        dateOfBirth,
+        marketingConsent,
       }),
     };
 
@@ -255,6 +281,28 @@ const RegisterEditor = ({ link }) => {
               }}
             />
           </InputField>
+          <InputField>
+            <Label>Date of Birth</Label>
+            <Input
+              type='date'
+              value={dateOfBirth}
+              onChange={(e) => {
+                setDateOfBirth(e.target.value);
+                if (error) setError('');
+              }}
+            />
+          </InputField>
+          <CheckboxField>
+            <Checkbox
+              type='checkbox'
+              id='marketingConsentEditor'
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+            />
+            <CheckboxLabel htmlFor='marketingConsentEditor'>
+              I would like to receive marketing emails and updates
+            </CheckboxLabel>
+          </CheckboxField>
           <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? <ThreeDotsLoader /> : 'Join Happy Team'}
           </Button>

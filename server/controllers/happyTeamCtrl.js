@@ -1,5 +1,6 @@
 import HappyTeamContent from '../models/HappyTeamContent.js';
 import User from '../models/User.js';
+import Video from '../models/Video.js';
 import { createError } from '../utils/error.js';
 import fs from 'fs';
 import path from 'path';
@@ -111,6 +112,16 @@ export const deleteOwnContent = async (req, res, next) => {
     deleteFileFromDisk(content.fileUrl);
     deleteFileFromDisk(content.thumbnailUrl);
 
+    const film = await Video.findOne({
+      customerCode: content.code.trim().toUpperCase(),
+      isFilm: true,
+    });
+
+    if (film) {
+      await Video.deleteMany({ sourceFilmId: film._id });
+      await Video.findByIdAndDelete(film._id);
+    }
+
     await HappyTeamContent.findByIdAndDelete(req.params.id);
 
     res.status(200).json({ message: 'Content deleted successfully' });
@@ -126,17 +137,51 @@ export const approveContent = async (req, res, next) => {
       return next(createError(403, 'Only admins can approve content'));
     }
 
-    const content = await HappyTeamContent.findByIdAndUpdate(
-      req.params.id,
-      { status: 'approved' },
-      { new: true }
-    ).populate('userId', 'displayName username email editorRole');
+    const content = await HappyTeamContent.findById(req.params.id);
 
     if (!content) {
       return next(createError(404, 'Content not found'));
     }
 
-    res.status(200).json(content);
+    let film = await Video.findOne({ 
+      customerCode: content.code.trim().toUpperCase() 
+    });
+    
+    if (content.status === 'approved' && film) {
+      await content.populate('userId', 'displayName username email editorRole');
+      return res.status(200).json({
+        ...content.toObject(),
+        filmId: film._id,
+        customerCode: film.customerCode,
+        message: 'Content is already approved and film exists'
+      });
+    }
+
+    if (!film) {
+      film = await Video.create({
+        caption: content.title || 'Happy Team Content',
+        customerCode: content.code.trim().toUpperCase(),
+        purchasePrice: content.price || 0,
+        videoUrl: { url: content.fileUrl },
+        thumbnail: content.thumbnailUrl || '',
+        userId: content.userId,
+        privacy: 'Private',
+        isFilm: true,
+        mediaType: content.type,
+        storageProvider: 'local',
+      });
+    }
+
+    content.status = 'approved';
+    await content.save();
+
+    await content.populate('userId', 'displayName username email editorRole');
+
+    res.status(200).json({
+      ...content.toObject(),
+      filmId: film._id,
+      customerCode: film.customerCode,
+    });
   } catch (err) {
     next(err);
   }
@@ -175,6 +220,16 @@ export const rejectContent = async (req, res, next) => {
 
     deleteFileFromDisk(content.fileUrl);
     deleteFileFromDisk(content.thumbnailUrl);
+
+    const film = await Video.findOne({
+      customerCode: content.code.trim().toUpperCase(),
+      isFilm: true,
+    });
+
+    if (film) {
+      await Video.deleteMany({ sourceFilmId: film._id });
+      await Video.findByIdAndDelete(film._id);
+    }
 
     await HappyTeamContent.findByIdAndDelete(req.params.id);
 
@@ -240,10 +295,46 @@ export const redeemContent = async (req, res, next) => {
     );
 
     if (alreadyPurchased) {
+      const userFilm = await Video.findOne({
+        userId: userId,
+        customerCode: content.code.trim().toUpperCase(),
+      });
+
       return res.status(200).json({
         ...content.toObject(),
-        alreadyPurchased: true
+        alreadyPurchased: true,
+        filmId: userFilm?._id,
       });
+    }
+
+    const film = await Video.findOne({
+      customerCode: code.trim().toUpperCase(),
+      isFilm: true,
+    });
+
+    if (!film) {
+      return next(createError(404, 'Film not found for this content. Please contact support.'));
+    }
+
+    const userHasFilm = await Video.findOne({
+      userId: userId,
+      sourceFilmId: film._id,
+    });
+
+    if (!userHasFilm) {
+      const filmCopy = new Video({
+        caption: film.caption,
+        videoUrl: film.videoUrl,
+        thumbnail: film.thumbnail,
+        images: film.images || [],
+        userId: userId,
+        privacy: 'Public',
+        isFilm: false,
+        mediaType: film.mediaType,
+        storageProvider: film.storageProvider,
+        sourceFilmId: film._id,
+      });
+      await filmCopy.save();
     }
 
     content.purchasedBy.push(userId);
@@ -251,7 +342,8 @@ export const redeemContent = async (req, res, next) => {
 
     res.status(200).json({
       ...content.toObject(),
-      alreadyPurchased: false
+      alreadyPurchased: false,
+      filmId: film._id,
     });
   } catch (err) {
     next(err);

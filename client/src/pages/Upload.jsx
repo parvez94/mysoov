@@ -660,7 +660,7 @@ const Upload = () => {
       // Mark as submitted so cleanup won't delete files
       isSubmittedRef.current = true;
 
-      window.location.href = '/';
+      window.location.href = '/feeds';
     } catch (error) {
       alert('Failed to create post. Please try again.');
     }

@@ -13,7 +13,7 @@ const Wrapper = styled.div`
   padding: 20px;
 `;
 
-const Explore = () => {
+const Feeds = () => {
   const { currentUser } = useSelector((state) => state.user);
   const [isLoading, setIsLoading] = useState(false);
   const [videos, setVideos] = useState([]);
@@ -76,17 +76,21 @@ const Explore = () => {
     fetchAllVideos();
   }, [currentUser]);
 
+  const handleVideoDelete = (videoId) => {
+    setVideos((prevVideos) => prevVideos.filter((v) => v._id !== videoId));
+  };
+
   return (
     <Container>
       <Wrapper>
         {isLoading ? (
           <Spinner label='Loading videos' full duration={2} />
         ) : (
-          videos.map((video) => <Card key={video._id} video={video} />)
+          videos.map((video) => <Card key={video._id} video={video} onVideoDelete={handleVideoDelete} />)
         )}
       </Wrapper>
       <HomeSidebar />
     </Container>
   );
 };
-export default Explore;
+export default Feeds;

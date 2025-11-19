@@ -10,7 +10,7 @@ import {
   Home,
   Layout,
   Video,
-  Explore,
+  Feeds,
   Upload,
   PublicProfile,
   NotFound,
@@ -168,14 +168,8 @@ const router = createBrowserRouter([
         element: <RefreshUser />,
       },
       {
-        path: 'explore',
-        element: <Explore />,
-        // children: [
-        //   {
-        //     path: ":id",
-        //     element: <Video />,
-        //   },
-        // ],
+        path: 'feeds',
+        element: <Feeds />,
       },
       {
         path: 'search',

@@ -137,6 +137,13 @@ export const deleteVideo = async (req, res, next) => {
       }
 
       await Video.findByIdAndDelete(req.params.id);
+
+      if (video.fileSize) {
+        await User.findByIdAndUpdate(video.userId, {
+          $inc: { storageUsed: -video.fileSize },
+        });
+      }
+
       res.status(200).json('Video deleted');
     } else {
       return next(createError(403, 'You can delete only your video'));

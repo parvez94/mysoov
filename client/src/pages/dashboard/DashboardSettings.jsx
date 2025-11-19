@@ -707,8 +707,7 @@ const DashboardSettings = () => {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [adminToRemove, setAdminToRemove] = useState(null);
 
-  // Free upload size state (for non-subscribed users)
-  const [freeUploadSize, setFreeUploadSize] = useState(5);
+  const [freeStorageLimit, setFreeStorageLimit] = useState(100);
 
   // Pricing config state
   const [pricingConfig, setPricingConfig] = useState({
@@ -728,10 +727,10 @@ const DashboardSettings = () => {
     basic: {
       name: 'Basic',
       price: 9.99,
-      maxUploadSize: 50,
+      totalStorageLimit: 1024,
       description: 'Great for casual creators',
       features: [
-        '50MB upload limit',
+        '1GB total storage',
         'HD video quality',
         'Priority support',
         'No ads',
@@ -740,10 +739,10 @@ const DashboardSettings = () => {
     pro: {
       name: 'Pro',
       price: 19.99,
-      maxUploadSize: 200,
+      totalStorageLimit: 5120,
       description: 'For professional content creators',
       features: [
-        '200MB upload limit',
+        '5GB total storage',
         '4K video quality',
         'Advanced analytics',
         'Priority support',
@@ -753,10 +752,10 @@ const DashboardSettings = () => {
     premium: {
       name: 'Premium',
       price: 29.99,
-      maxUploadSize: 500,
+      totalStorageLimit: 10240,
       description: 'Ultimate plan for power users',
       features: [
-        '500MB upload limit',
+        '10GB total storage',
         '4K video quality',
         'Advanced analytics',
         'Dedicated support',
@@ -858,8 +857,8 @@ const DashboardSettings = () => {
       if (response.data.pricingPlans) {
         const { free, ...paidPlans } = response.data.pricingPlans;
         setPricingPlans(paidPlans);
-        if (free?.maxUploadSize) {
-          setFreeUploadSize(free.maxUploadSize);
+        if (free?.totalStorageLimit) {
+          setFreeStorageLimit(free.totalStorageLimit);
         }
         // Also save to localStorage for client-side access
         localStorage.setItem(
@@ -882,8 +881,8 @@ const DashboardSettings = () => {
           const parsed = JSON.parse(savedPlans);
           const { free, ...paidPlans } = parsed;
           setPricingPlans(paidPlans);
-          if (free?.maxUploadSize) {
-            setFreeUploadSize(free.maxUploadSize);
+          if (free?.totalStorageLimit) {
+            setFreeStorageLimit(free.totalStorageLimit);
           }
         } catch (parseErr) {}
       }
@@ -1241,7 +1240,7 @@ const DashboardSettings = () => {
         [planId]: {
           ...prev[planId],
           [field]:
-            field === 'price' || field === 'maxUploadSize'
+            field === 'price' || field === 'totalStorageLimit'
               ? parseFloat(value) || 0
               : field === 'name' || field === 'description'
               ? value
@@ -1254,20 +1253,18 @@ const DashboardSettings = () => {
     });
   };
 
-  const handleSaveFreeUpload = async () => {
+  const handleSaveFreeStorage = async () => {
     try {
       setSavingFreeUpload(true);
 
-      // Validate free upload size
-      const uploadSize = parseFloat(freeUploadSize);
-      if (isNaN(uploadSize) || uploadSize < 1) {
-        setError('Please enter a valid upload size (minimum 1 MB)');
+      const storageLimit = parseFloat(freeStorageLimit);
+      if (isNaN(storageLimit) || storageLimit < 1) {
+        setError('Please enter a valid storage limit (minimum 1 MB)');
         setTimeout(() => setError(''), 3000);
         setSavingFreeUpload(false);
         return;
       }
 
-      // Get existing pricing plans from localStorage or use current state
       const savedPlans = localStorage.getItem('pricingPlans');
       let existingPlans = pricingPlans;
 
@@ -1279,15 +1276,14 @@ const DashboardSettings = () => {
         } catch (err) {}
       }
 
-      // Combine free upload size with existing paid plans
       const allPlans = {
         free: {
           name: 'Free',
           price: 0,
-          maxUploadSize: uploadSize,
+          totalStorageLimit: storageLimit,
           description: 'Perfect for getting started',
           features: [
-            `${uploadSize}MB upload limit`,
+            `${storageLimit}MB total storage`,
             'Basic features',
             'Community support',
           ],
@@ -1314,14 +1310,13 @@ const DashboardSettings = () => {
         })
       );
 
-      // Update state with the validated numeric value
-      setFreeUploadSize(uploadSize);
+      setFreeStorageLimit(storageLimit);
 
-      setSuccess('Free upload size updated successfully!');
+      setSuccess('Free storage limit updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(
-        err.response?.data?.message || 'Failed to save free upload size'
+        err.response?.data?.message || 'Failed to save free storage limit'
       );
       setTimeout(() => setError(''), 3000);
     } finally {
@@ -1332,15 +1327,14 @@ const DashboardSettings = () => {
   const handleSavePricing = async () => {
     try {
       setSavingPricing(true);
-      // Combine free upload size with paid plans
       const allPlans = {
         free: {
           name: 'Free',
           price: 0,
-          maxUploadSize: freeUploadSize,
+          totalStorageLimit: freeStorageLimit,
           description: 'Perfect for getting started',
           features: [
-            `${freeUploadSize}MB upload limit`,
+            `${freeStorageLimit}MB total storage`,
             'Basic features',
             'Community support',
           ],
@@ -1383,17 +1377,16 @@ const DashboardSettings = () => {
         // Separate free plan from paid plans
         const { free, ...paidPlans } = parsed;
 
-        if (free?.maxUploadSize) {
-          setFreeUploadSize(free.maxUploadSize);
+        if (free?.totalStorageLimit) {
+          setFreeStorageLimit(free.totalStorageLimit);
         }
 
-        // Ensure all paid plans have required fields
         const validatedPlans = Object.entries(paidPlans).reduce(
           (acc, [key, plan]) => {
             acc[key] = {
               name: plan.name || key.charAt(0).toUpperCase() + key.slice(1),
               price: plan.price || 0,
-              maxUploadSize: plan.maxUploadSize || 5,
+              totalStorageLimit: plan.totalStorageLimit || 100,
               description: plan.description || '',
               features: Array.isArray(plan.features) ? plan.features : [],
             };
@@ -1512,7 +1505,7 @@ const DashboardSettings = () => {
       </Section>
 
       <Section>
-        <SectionTitle>Free Upload Size Configuration</SectionTitle>
+        <SectionTitle>Free Storage Configuration</SectionTitle>
         <p
           style={{
             color: '#999',
@@ -1520,22 +1513,21 @@ const DashboardSettings = () => {
             fontFamily: 'var(--secondary-fonts)',
           }}
         >
-          Set the maximum upload size for users without a subscription plan.
+          Set the total storage limit for users without a subscription plan.
         </p>
 
         <FreeUploadBox>
           <FormGroup>
-            <Label>Free Upload Size (MB)</Label>
+            <Label>Free Storage Limit (MB)</Label>
             <Input
               type='number'
               min='1'
-              value={freeUploadSize}
+              value={freeStorageLimit}
               onChange={(e) => {
                 const value = e.target.value;
-                // Allow empty string during typing, otherwise parse the number
-                setFreeUploadSize(value === '' ? '' : parseFloat(value) || 0);
+                setFreeStorageLimit(value === '' ? '' : parseFloat(value) || 0);
               }}
-              placeholder='Enter size in MB'
+              placeholder='Enter storage limit in MB'
             />
           </FormGroup>
           <p
@@ -1550,7 +1542,7 @@ const DashboardSettings = () => {
             This applies to all users who don't have an active subscription.
           </p>
           <SaveButton
-            onClick={handleSaveFreeUpload}
+            onClick={handleSaveFreeStorage}
             disabled={savingFreeUpload}
           >
             {savingFreeUpload ? (
@@ -1560,7 +1552,7 @@ const DashboardSettings = () => {
             ) : (
               <>
                 <MdSave size={18} />
-                Save Free Upload Size
+                Save Storage Limit
               </>
             )}
           </SaveButton>
@@ -2571,13 +2563,13 @@ const DashboardSettings = () => {
               </FormGroup>
 
               <FormGroup>
-                <Label>Max Upload Size (MB)</Label>
+                <Label>Total Storage Limit (MB)</Label>
                 <Input
                   type='number'
                   min='1'
-                  value={plan.maxUploadSize}
+                  value={plan.totalStorageLimit}
                   onChange={(e) =>
-                    handlePricingChange(planId, 'maxUploadSize', e.target.value)
+                    handlePricingChange(planId, 'totalStorageLimit', e.target.value)
                   }
                 />
               </FormGroup>

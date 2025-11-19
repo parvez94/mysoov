@@ -39,34 +39,29 @@ const Container = styled.div`
 // Section 1: Slider
 const SliderSection = styled.section`
   width: 100%;
-  height: 500px;
+  height: auto;
   position: relative;
   overflow: hidden;
-
-  @media (max-width: 768px) {
-    height: 300px;
-  }
 `;
 
 const SliderContainer = styled.div`
   position: relative;
   width: 100%;
-  height: 100%;
+  height: auto;
   overflow: hidden;
 `;
 
 const Slide = styled.div`
-  position: absolute;
   width: 100%;
-  height: 100%;
   opacity: ${(props) => (props.$active ? 1 : 0)};
   transition: opacity 0.5s ease-in-out;
+  ${(props) => !props.$active && 'position: absolute; top: 0; left: 0;'}
 
   img,
   video {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    height: auto;
+    display: block;
   }
 `;
 
@@ -115,7 +110,12 @@ const SectionHeading = styled.h2`
   margin-bottom: 40px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: ${(props) => {
+    if (props.$textAlign === 'left') return 'flex-start';
+    if (props.$textAlign === 'right') return 'flex-end';
+    return 'center';
+  }};
+  text-align: ${(props) => props.$textAlign || 'center'};
   gap: 15px;
   ${(props) =>
     props.$strokeWidth &&
@@ -156,46 +156,16 @@ const HeadingIcon = styled.span`
   }
 `;
 
-const StepsList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 40px;
-`;
-
-const StepItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 20px;
-  border-radius: 10px;
+const SectionDescription = styled.p`
+  font-size: 1.1rem;
+  line-height: 1.6;
   color: inherit;
+  margin-bottom: 40px;
+  text-align: ${(props) => props.$textAlign || 'center'};
 
   @media (max-width: 768px) {
-    flex-direction: column;
-    text-align: center;
+    font-size: 1rem;
   }
-`;
-
-const StepNumber = styled.div`
-  width: 40px;
-  height: 40px;
-  background: white;
-  color: #ff8c00;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-`;
-
-const StepText = styled.span`
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: inherit;
 `;
 
 const CodeSectionContainer = styled.div`
@@ -979,6 +949,7 @@ const Frontpage = () => {
               $color={settings.happyViewsSection.headingColor}
               $strokeColor={settings.happyViewsSection.headingStrokeColor}
               $strokeWidth={settings.happyViewsSection.headingStrokeWidth}
+              $textAlign={settings.happyViewsSection.textAlign}
             >
               <IconDisplay
                 icon={settings.happyViewsSection.icon}
@@ -987,17 +958,11 @@ const Frontpage = () => {
               {settings.happyViewsSection.heading}
             </SectionHeading>
 
-            {settings.happyViewsSection.steps &&
-              settings.happyViewsSection.steps.length > 0 && (
-                <StepsList>
-                  {settings.happyViewsSection.steps.map((step, index) => (
-                    <StepItem key={index}>
-                      <StepNumber>{step.number}</StepNumber>
-                      <StepText>{step.text}</StepText>
-                    </StepItem>
-                  ))}
-                </StepsList>
-              )}
+            {settings.happyViewsSection.description && (
+              <SectionDescription $textAlign={settings.happyViewsSection.textAlign}>
+                {settings.happyViewsSection.description}
+              </SectionDescription>
+            )}
 
             <CodeSectionContainer>
               <CodeLabel>
@@ -1076,6 +1041,7 @@ const Frontpage = () => {
               $color={settings.happyTeamSection.headingColor}
               $strokeColor={settings.happyTeamSection.headingStrokeColor}
               $strokeWidth={settings.happyTeamSection.headingStrokeWidth}
+              $textAlign={settings.happyTeamSection.textAlign}
             >
               <IconDisplay
                 icon={settings.happyTeamSection.icon}
@@ -1084,17 +1050,11 @@ const Frontpage = () => {
               {settings.happyTeamSection.leftText}
             </SectionHeading>
 
-            {settings.happyTeamSection.steps &&
-              settings.happyTeamSection.steps.length > 0 && (
-                <StepsList>
-                  {settings.happyTeamSection.steps.map((step, index) => (
-                    <StepItem key={index}>
-                      <StepNumber>{step.number}</StepNumber>
-                      <StepText>{step.text}</StepText>
-                    </StepItem>
-                  ))}
-                </StepsList>
-              )}
+            {settings.happyTeamSection.description && (
+              <SectionDescription $textAlign={settings.happyTeamSection.textAlign}>
+                {settings.happyTeamSection.description}
+              </SectionDescription>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '30px', flexWrap: 'wrap' }}>
               <RegisterButton

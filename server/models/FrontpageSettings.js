@@ -59,12 +59,15 @@ const FrontpageSettingsSchema = new mongoose.Schema(
         type: String,
         default: '',
       },
-      steps: [
-        {
-          number: Number,
-          text: String,
-        },
-      ],
+      description: {
+        type: String,
+        default: '',
+      },
+      textAlign: {
+        type: String,
+        enum: ['left', 'center', 'right'],
+        default: 'center',
+      },
       codeInput: {
         label: {
           type: String,
@@ -179,12 +182,15 @@ const FrontpageSettingsSchema = new mongoose.Schema(
         type: String,
         default: '',
       },
-      steps: [
-        {
-          number: Number,
-          text: String,
-        },
-      ],
+      description: {
+        type: String,
+        default: '',
+      },
+      textAlign: {
+        type: String,
+        enum: ['left', 'center', 'right'],
+        default: 'center',
+      },
       buttonText: {
         type: String,
         default: 'Register',

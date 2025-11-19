@@ -581,7 +581,7 @@ export const updatePricingPlans = async (req, res, next) => {
       if (
         typeof plan.name !== 'string' ||
         typeof plan.price !== 'number' ||
-        typeof plan.maxUploadSize !== 'number' ||
+        typeof plan.totalStorageLimit !== 'number' ||
         !Array.isArray(plan.features)
       ) {
         return next(createError(400, `Invalid plan structure for: ${planKey}`));
@@ -613,19 +613,16 @@ export const updatePricingPlans = async (req, res, next) => {
 // Additional pricing configuration
 export const pricingConfig = ${JSON.stringify(config, null, 2)};
 
-export const getMaxUploadSize = (user) => {
-  // Admin gets unlimited (500MB as practical limit)
+export const getTotalStorageLimit = (user) => {
   if (user.role === 'admin') {
-    return 500;
+    return 102400;
   }
 
-  // Paid users get their plan's limit
   if (user.subscription?.isPaid && user.subscription?.plan) {
-    return pricingPlans[user.subscription.plan]?.maxUploadSize || 5;
+    return pricingPlans[user.subscription.plan]?.totalStorageLimit || 100;
   }
 
-  // Free users get 5MB
-  return pricingPlans.free?.maxUploadSize || 5;
+  return pricingPlans.free?.totalStorageLimit || 100;
 };
 `;
 

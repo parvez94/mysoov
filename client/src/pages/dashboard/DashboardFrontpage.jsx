@@ -194,6 +194,22 @@ const TextArea = styled.textarea`
   }
 `;
 
+const Select = styled.select`
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--tertiary-color);
+  color: var(--text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+`;
+
 const ColorInput = styled.input`
   width: 60px;
   height: 40px;
@@ -408,43 +424,6 @@ const AddButton = styled.button`
   &:hover {
     opacity: 0.9;
   }
-`;
-
-const StepsContainer = styled.div`
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 15px;
-  background: var(--tertiary-color);
-`;
-
-const StepItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 15px;
-  background: var(--secondary-color);
-  border-radius: 6px;
-  margin-bottom: 10px;
-  border: 1px solid var(--border-color);
-`;
-
-const StepNumber = styled.input`
-  width: 60px;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--tertiary-color);
-  color: var(--text-primary);
-  text-align: center;
-`;
-
-const StepText = styled.input`
-  flex: 1;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--tertiary-color);
-  color: var(--text-primary);
 `;
 
 const Modal = styled.div`
@@ -833,54 +812,7 @@ const DashboardFrontpage = () => {
     }
   };
 
-  const updateStep = (index, field, value) => {
-    const newSteps = [...(settings.happyViewsSection?.steps || [])];
-    newSteps[index] = { ...newSteps[index], [field]: value };
-    updateSectionField('happyViewsSection', 'steps', newSteps);
-  };
 
-  const addStep = () => {
-    const newSteps = [...(settings.happyViewsSection?.steps || [])];
-    newSteps.push({
-      number: newSteps.length + 1,
-      text: `Step ${newSteps.length + 1}`,
-    });
-    updateSectionField('happyViewsSection', 'steps', newSteps);
-  };
-
-  const removeStep = (index) => {
-    const newSteps = [...(settings.happyViewsSection?.steps || [])];
-    newSteps.splice(index, 1);
-    // Renumber steps
-    newSteps.forEach((step, i) => {
-      step.number = i + 1;
-    });
-    updateSectionField('happyViewsSection', 'steps', newSteps);
-  };
-
-  const updateTeamStep = (index, field, value) => {
-    const newSteps = [...(settings.happyTeamSection?.steps || [])];
-    newSteps[index] = { ...newSteps[index], [field]: value };
-    updateSectionField('happyTeamSection', 'steps', newSteps);
-  };
-
-  const addTeamStep = () => {
-    const newSteps = [...(settings.happyTeamSection?.steps || [])];
-    newSteps.push({
-      number: newSteps.length + 1,
-      text: `Step ${newSteps.length + 1}`,
-    });
-    updateSectionField('happyTeamSection', 'steps', newSteps);
-  };
-
-  const removeTeamStep = (index) => {
-    const newSteps = [...(settings.happyTeamSection?.steps || [])];
-    newSteps.splice(index, 1);
-    newSteps.forEach((step, i) => {
-      step.number = i + 1;
-    });
-    updateSectionField('happyTeamSection', 'steps', newSteps);
-  };
 
   if (loading) {
     return (
@@ -1162,35 +1094,35 @@ const DashboardFrontpage = () => {
             </StrokeControlsRow>
           </FormGroup>
           <FormGroup>
-            <Label>Steps</Label>
-            <StepsContainer>
-              {settings.happyViewsSection?.steps?.map((step, index) => (
-                <StepItem key={index}>
-                  <StepNumber
-                    type='number'
-                    value={step.number}
-                    onChange={(e) =>
-                      updateStep(index, 'number', parseInt(e.target.value))
-                    }
-                  />
-                  <StepText
-                    type='text'
-                    value={step.text}
-                    onChange={(e) => updateStep(index, 'text', e.target.value)}
-                  />
-                  <IconButton
-                    $variant='danger'
-                    onClick={() => removeStep(index)}
-                  >
-                    <FaTrash />
-                  </IconButton>
-                </StepItem>
-              ))}
-              <AddButton onClick={addStep}>
-                <FaPlus />
-                Add Step
-              </AddButton>
-            </StepsContainer>
+            <Label>Description (Optional)</Label>
+            <TextArea
+              value={settings.happyViewsSection?.description || ''}
+              onChange={(e) =>
+                updateSectionField(
+                  'happyViewsSection',
+                  'description',
+                  e.target.value
+                )
+              }
+              placeholder='Add an optional description here...'
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>Text Alignment</Label>
+            <Select
+              value={settings.happyViewsSection?.textAlign || 'center'}
+              onChange={(e) =>
+                updateSectionField(
+                  'happyViewsSection',
+                  'textAlign',
+                  e.target.value
+                )
+              }
+            >
+              <option value='left'>Left</option>
+              <option value='center'>Center</option>
+              <option value='right'>Right</option>
+            </Select>
           </FormGroup>
           <FormGroup>
             <Label>Code Input Label</Label>
@@ -1827,35 +1759,35 @@ const DashboardFrontpage = () => {
             </StrokeControlsRow>
           </FormGroup>
           <FormGroup>
-            <Label>Steps (Optional)</Label>
-            <StepsContainer>
-              {settings.happyTeamSection?.steps?.map((step, index) => (
-                <StepItem key={index}>
-                  <StepNumber
-                    type='number'
-                    value={step.number}
-                    onChange={(e) =>
-                      updateTeamStep(index, 'number', parseInt(e.target.value))
-                    }
-                  />
-                  <StepText
-                    type='text'
-                    value={step.text}
-                    onChange={(e) => updateTeamStep(index, 'text', e.target.value)}
-                  />
-                  <IconButton
-                    $variant='danger'
-                    onClick={() => removeTeamStep(index)}
-                  >
-                    <FaTrash />
-                  </IconButton>
-                </StepItem>
-              ))}
-              <AddButton onClick={addTeamStep}>
-                <FaPlus />
-                Add Step
-              </AddButton>
-            </StepsContainer>
+            <Label>Description (Optional)</Label>
+            <TextArea
+              value={settings.happyTeamSection?.description || ''}
+              onChange={(e) =>
+                updateSectionField(
+                  'happyTeamSection',
+                  'description',
+                  e.target.value
+                )
+              }
+              placeholder='Add an optional description here...'
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>Text Alignment</Label>
+            <Select
+              value={settings.happyTeamSection?.textAlign || 'center'}
+              onChange={(e) =>
+                updateSectionField(
+                  'happyTeamSection',
+                  'textAlign',
+                  e.target.value
+                )
+              }
+            >
+              <option value='left'>Left</option>
+              <option value='center'>Center</option>
+              <option value='right'>Right</option>
+            </Select>
           </FormGroup>
           <FormGroup>
             <Label>Button Text</Label>

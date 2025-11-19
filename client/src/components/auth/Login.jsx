@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   loginStart,
   loginSuccess,
@@ -110,6 +110,7 @@ const Login = ({ link, accountType = 'regular' }) => {
   const [error, setError] = useState('');
 
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { isLoading } = useSelector((state) => state.user);
 
   const handleSubmit = async (e) => {
@@ -149,6 +150,7 @@ const Login = ({ link, accountType = 'regular' }) => {
         const data = await res.json();
         dispatch(loginSuccess(data));
         dispatch(closeModal());
+        navigate('/feeds');
       } else {
         const errorData = await res.json();
         const errorMessage =

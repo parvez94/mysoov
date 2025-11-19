@@ -230,10 +230,10 @@ const LeftSidebar = () => {
             <span>Home</span>
           </NavItem>
         </Link>
-        <Link to='explore' onClick={guardClick}>
+        <Link to='feeds' onClick={guardClick}>
           <NavItem>
             <MdOutlineExplore />
-            <span>Explore</span>
+            <span>Feeds</span>
           </NavItem>
         </Link>
         <Link to='notifications' onClick={guardClick}>
@@ -264,12 +264,6 @@ const LeftSidebar = () => {
         )}
 
         {/* Blog Menu */}
-        <Link to='/blog'>
-          <NavItem>
-            <HiOutlineNewspaper />
-            <span>Blog</span>
-          </NavItem>
-        </Link>
 
         {/* Admin Dashboard Menu with Submenu */}
         {isAdmin && (

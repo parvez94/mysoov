@@ -6,7 +6,7 @@ import validatePassword from '../utils/passwordValidator.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email, phone, password, dateOfBirth, marketingConsent } = req.body;
 
     if (!name || !email || !phone || !password) {
       return res
@@ -70,6 +70,8 @@ export const register = async (req, res, next) => {
       phone,
       password: hashPass,
       accountType: 'regular',
+      dateOfBirth: dateOfBirth || null,
+      marketingConsent: marketingConsent || false,
     });
 
     await newUser.save();
@@ -98,7 +100,7 @@ export const register = async (req, res, next) => {
 // Register as Happy Team member (editor)
 export const registerEditor = async (req, res, next) => {
   try {
-    const { name, email, phone, password, editorRole } = req.body;
+    const { name, email, phone, password, editorRole, dateOfBirth, marketingConsent } = req.body;
 
     if (!name || !email || !phone || !password || !editorRole) {
       return res
@@ -164,6 +166,8 @@ export const registerEditor = async (req, res, next) => {
       role: 'editor',
       editorRole,
       accountType: 'happy-team',
+      dateOfBirth: dateOfBirth || null,
+      marketingConsent: marketingConsent || false,
     });
 
     await newUser.save();

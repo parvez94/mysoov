@@ -2,10 +2,10 @@ export const pricingPlans = {
   "free": {
     "name": "Free",
     "price": 0,
-    "maxUploadSize": 5,
+    "totalStorageLimit": 100,
     "description": "Perfect for getting started",
     "features": [
-      "5MB upload limit",
+      "100MB total storage",
       "Basic features",
       "Community support"
     ]
@@ -13,10 +13,10 @@ export const pricingPlans = {
   "basic": {
     "name": "Basic",
     "price": 10.99,
-    "maxUploadSize": 50,
+    "totalStorageLimit": 1024,
     "description": "Great for casual creators",
     "features": [
-      "50MB upload limit",
+      "1GB total storage",
       "HD video quality",
       "Priority support",
       "No ads"
@@ -25,10 +25,10 @@ export const pricingPlans = {
   "pro": {
     "name": "Pro",
     "price": 19.99,
-    "maxUploadSize": 200,
+    "totalStorageLimit": 5120,
     "description": "For professional content creators",
     "features": [
-      "200MB upload limit",
+      "5GB total storage",
       "4K video quality",
       "Advanced analytics",
       "Priority support",
@@ -38,10 +38,10 @@ export const pricingPlans = {
   "premium": {
     "name": "Premium",
     "price": 29.99,
-    "maxUploadSize": 500,
+    "totalStorageLimit": 10240,
     "description": "Ultimate plan for power users",
     "features": [
-      "500MB upload limit",
+      "10GB total storage",
       "4K video quality",
       "Advanced analytics",
       "Dedicated support",
@@ -62,17 +62,14 @@ export const pricingConfig = {
   "upgradeInstructions": "Include your username and desired plan in your message, and we'll upgrade your account within 24 hours."
 };
 
-export const getMaxUploadSize = (user) => {
-  // Admin gets unlimited (500MB as practical limit)
+export const getTotalStorageLimit = (user) => {
   if (user.role === 'admin') {
-    return 500;
+    return 102400;
   }
 
-  // Paid users get their plan's limit
   if (user.subscription?.isPaid && user.subscription?.plan) {
-    return pricingPlans[user.subscription.plan]?.maxUploadSize || 5;
+    return pricingPlans[user.subscription.plan]?.totalStorageLimit || 100;
   }
 
-  // Free users get 5MB
-  return pricingPlans.free?.maxUploadSize || 5;
+  return pricingPlans.free?.totalStorageLimit || 100;
 };
