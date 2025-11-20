@@ -191,15 +191,27 @@ const FrontpageSettingsSchema = new mongoose.Schema(
         enum: ['left', 'center', 'right'],
         default: 'center',
       },
-      buttonText: {
+      loginText: {
         type: String,
-        default: 'Register',
+        default: 'Login',
       },
-      buttonBackgroundColor: {
+      loginButtonBackgroundColor: {
         type: String,
         default: '',
       },
-      buttonTextColor: {
+      loginButtonTextColor: {
+        type: String,
+        default: '',
+      },
+      signupText: {
+        type: String,
+        default: 'Signup',
+      },
+      signupButtonBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      signupButtonTextColor: {
         type: String,
         default: '',
       },

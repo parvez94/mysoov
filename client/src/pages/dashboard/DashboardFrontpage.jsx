@@ -1790,33 +1790,54 @@ const DashboardFrontpage = () => {
             </Select>
           </FormGroup>
           <FormGroup>
-            <Label>Button Text</Label>
-            <Input
-              type='text'
-              value={settings.happyTeamSection?.buttonText || ''}
-              onChange={(e) =>
-                updateSectionField(
-                  'happyTeamSection',
-                  'buttonText',
-                  e.target.value
-                )
-              }
-            />
-          </FormGroup>
-          <FormGroup>
             <ColorRow>
               <ColorGroup>
-                <Label>Button Background Color</Label>
+                <Label>Login Button Text</Label>
+                <Input
+                  type='text'
+                  value={settings.happyTeamSection?.loginText || ''}
+                  onChange={(e) =>
+                    updateSectionField(
+                      'happyTeamSection',
+                      'loginText',
+                      e.target.value
+                    )
+                  }
+                  placeholder='Login'
+                />
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Signup Button Text</Label>
+                <Input
+                  type='text'
+                  value={settings.happyTeamSection?.signupText || ''}
+                  onChange={(e) =>
+                    updateSectionField(
+                      'happyTeamSection',
+                      'signupText',
+                      e.target.value
+                    )
+                  }
+                  placeholder='Signup'
+                />
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Login Button Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Background Color</Label>
                 <ColorInputRow>
                   <ColorInput
                     type='color'
                     value={
-                      settings.happyTeamSection?.buttonBackgroundColor || '#FF0000'
+                      settings.happyTeamSection?.loginButtonBackgroundColor || '#FF0000'
                     }
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
-                        'buttonBackgroundColor',
+                        'loginButtonBackgroundColor',
                         e.target.value
                       )
                     }
@@ -1824,12 +1845,12 @@ const DashboardFrontpage = () => {
                   <HexInput
                     type='text'
                     value={
-                      settings.happyTeamSection?.buttonBackgroundColor || ''
+                      settings.happyTeamSection?.loginButtonBackgroundColor || ''
                     }
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
-                        'buttonBackgroundColor',
+                        'loginButtonBackgroundColor',
                         e.target.value
                       )
                     }
@@ -1839,26 +1860,93 @@ const DashboardFrontpage = () => {
                 </ColorInputRow>
               </ColorGroup>
               <ColorGroup>
-                <Label>Button Text Color</Label>
+                <Label>Text Color</Label>
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.happyTeamSection?.buttonTextColor || '#ffffff'}
+                    value={settings.happyTeamSection?.loginButtonTextColor || '#ffffff'}
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
-                        'buttonTextColor',
+                        'loginButtonTextColor',
                         e.target.value
                       )
                     }
                   />
                   <HexInput
                     type='text'
-                    value={settings.happyTeamSection?.buttonTextColor || ''}
+                    value={settings.happyTeamSection?.loginButtonTextColor || ''}
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
-                        'buttonTextColor',
+                        'loginButtonTextColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FFFFFF'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Signup Button Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Background Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={
+                      settings.happyTeamSection?.signupButtonBackgroundColor || '#FF0000'
+                    }
+                    onChange={(e) =>
+                      updateSectionField(
+                        'happyTeamSection',
+                        'signupButtonBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={
+                      settings.happyTeamSection?.signupButtonBackgroundColor || ''
+                    }
+                    onChange={(e) =>
+                      updateSectionField(
+                        'happyTeamSection',
+                        'signupButtonBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FF0000'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Text Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.happyTeamSection?.signupButtonTextColor || '#ffffff'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'happyTeamSection',
+                        'signupButtonTextColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.happyTeamSection?.signupButtonTextColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'happyTeamSection',
+                        'signupButtonTextColor',
                         e.target.value
                       )
                     }

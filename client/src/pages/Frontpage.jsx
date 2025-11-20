@@ -435,8 +435,8 @@ const TextIcon = styled.span`
 `;
 
 const RegisterButton = styled.button`
-  padding: 15px 40px;
-  font-size: 1.1rem;
+  padding: 12px 30px;
+  font-size: 1rem;
   font-weight: 600;
   background-color: ${(props) => props.$bgColor || 'var(--primary-color)'};
   color: ${(props) => props.$textColor || 'white'};
@@ -1104,18 +1104,18 @@ const Frontpage = () => {
               }}
             >
               <RegisterButton
-                $bgColor={settings.happyTeamSection.buttonBackgroundColor}
-                $textColor={settings.happyTeamSection.buttonTextColor}
-                onClick={() => handleAuthAction('happy-team')}
-              >
-                Signup
-              </RegisterButton>
-              <RegisterButton
-                $bgColor={settings.happyTeamSection.buttonBackgroundColor}
-                $textColor={settings.happyTeamSection.buttonTextColor}
+                $bgColor={settings.happyTeamSection.loginButtonBackgroundColor}
+                $textColor={settings.happyTeamSection.loginButtonTextColor}
                 onClick={() => handleAuthAction('happy-team-login')}
               >
-                Login
+                {settings.happyTeamSection.loginText || 'Login'}
+              </RegisterButton>
+              <RegisterButton
+                $bgColor={settings.happyTeamSection.signupButtonBackgroundColor}
+                $textColor={settings.happyTeamSection.signupButtonTextColor}
+                onClick={() => handleAuthAction('happy-team')}
+              >
+                {settings.happyTeamSection.signupText || 'Signup'}
               </RegisterButton>
             </div>
           </SectionContainer>
