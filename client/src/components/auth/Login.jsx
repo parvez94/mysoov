@@ -150,7 +150,11 @@ const Login = ({ link, accountType = 'regular' }) => {
         const data = await res.json();
         dispatch(loginSuccess(data));
         dispatch(closeModal());
-        navigate('/feeds');
+        
+        const pendingCode = localStorage.getItem('pendingRedeemCode');
+        if (!pendingCode) {
+          navigate('/feeds');
+        }
       } else {
         const errorData = await res.json();
         const errorMessage =

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
@@ -104,6 +104,15 @@ const Text = styled.p`
   text-align: center;
 `;
 
+const InfoText = styled.p`
+  font-family: var(--secondary-fonts);
+  color: var(--secondary-color);
+  font-size: 14px;
+  text-align: center;
+  margin: 10px 0 0 0;
+  line-height: 1.5;
+`;
+
 const CheckboxField = styled.div`
   margin-bottom: 15px;
   display: flex;
@@ -134,10 +143,16 @@ const Register = ({ link }) => {
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [error, setError] = useState('');
+  const [hasPendingCode, setHasPendingCode] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isLoading } = useSelector((state) => state.user);
+
+  useEffect(() => {
+    const pendingCode = localStorage.getItem('pendingRedeemCode');
+    setHasPendingCode(!!pendingCode);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -194,7 +209,11 @@ const Register = ({ link }) => {
         const data = await res.json();
         dispatch(loginSuccess(data));
         dispatch(closeModal());
-        navigate('/feeds');
+        
+        const pendingCode = localStorage.getItem('pendingRedeemCode');
+        if (!pendingCode) {
+          navigate('/feeds');
+        }
       } else {
         const errorData = await res.json();
         const errorMessage =
@@ -216,6 +235,11 @@ const Register = ({ link }) => {
     <>
       <ModalTop>
         <Title>Sign Up</Title>
+        {hasPendingCode && (
+          <InfoText>
+            Please create an account to redeem your code
+          </InfoText>
+        )}
         <Form>
           <InputField>
             <Label>Name</Label>

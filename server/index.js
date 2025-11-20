@@ -286,14 +286,28 @@ app.get('/video/:id', async (req, res) => {
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
         );
+        // Ensure HTTPS for Cloudinary URLs
+        if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
       } else if (
         video.storageProvider === 'local' &&
         thumbnailUrl &&
         thumbnailUrl.startsWith('/')
       ) {
         // Convert relative URL to absolute URL for social media
-        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const baseUrl =
+          process.env.NODE_ENV === 'production'
+            ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
+            : process.env.BACKEND_URL || 'http://localhost:5000';
         thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        // Ensure HTTPS in production
+        if (
+          process.env.NODE_ENV === 'production' &&
+          !thumbnailUrl.startsWith('https://')
+        ) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
       }
     }
     // Handle video posts
@@ -305,6 +319,10 @@ app.get('/video/:id', async (req, res) => {
         );
         if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
           thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        }
+        // Ensure HTTPS for Cloudinary URLs
+        if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
         }
       } else if (video.storageProvider === 'youtube' && videoUrl) {
         const youtubeIdMatch = videoUrl.match(
@@ -319,9 +337,19 @@ app.get('/video/:id', async (req, res) => {
         videoUrl.startsWith('/')
       ) {
         // For local storage, convert relative URL to absolute URL
-        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const baseUrl =
+          process.env.NODE_ENV === 'production'
+            ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
+            : process.env.BACKEND_URL || 'http://localhost:5000';
         contentUrl = `${baseUrl}${videoUrl}`;
         thumbnailUrl = contentUrl;
+        // Ensure HTTPS in production
+        if (
+          process.env.NODE_ENV === 'production' &&
+          !thumbnailUrl.startsWith('https://')
+        ) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
       }
     }
 
@@ -396,6 +424,74 @@ app.get('/video/:id', async (req, res) => {
   }
 });
 
+// Debug endpoint to check meta tags
+app.get('/api/debug/post/:id', async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      await connectDB();
+    }
+
+    const Video = (await import('./models/Video.js')).default;
+    const video = await Video.findById(req.params.id);
+
+    if (!video) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+
+    const videoUrl =
+      typeof video.videoUrl === 'string' ? video.videoUrl : video.videoUrl?.url;
+    let thumbnailUrl = 'https://via.placeholder.com/1200x630?text=Mysoov';
+
+    // Check image posts
+    if (
+      video.mediaType === 'image' &&
+      video.images &&
+      video.images.length > 0
+    ) {
+      const firstImage = video.images[0];
+      thumbnailUrl =
+        typeof firstImage === 'string' ? firstImage : firstImage?.url;
+
+      if (video.storageProvider === 'cloudinary' && thumbnailUrl) {
+        thumbnailUrl = thumbnailUrl.replace(
+          '/upload/',
+          '/upload/w_1200,h_630,c_fill/'
+        );
+        if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
+      }
+    } else if (video.mediaType === 'video' && videoUrl) {
+      if (video.storageProvider === 'cloudinary') {
+        thumbnailUrl = videoUrl.replace(
+          '/upload/',
+          '/upload/so_0,w_1200,h_630,c_fill/'
+        );
+        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
+          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        }
+        if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
+      }
+    }
+
+    return res.json({
+      postId: video._id,
+      mediaType: video.mediaType,
+      storageProvider: video.storageProvider,
+      thumbnailUrl: thumbnailUrl,
+      isHttps: thumbnailUrl.startsWith('https://'),
+      caption: video.caption || 'Untitled',
+      shareUrl: `${process.env.FRONTEND_URL || 'https://mysoov.tv'}/post/${
+        video._id
+      }`,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 // Social media meta tags route - /post/:id
 app.get('/post/:id', async (req, res) => {
   try {
@@ -444,14 +540,28 @@ app.get('/post/:id', async (req, res) => {
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
         );
+        // Ensure HTTPS for Cloudinary URLs
+        if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
       } else if (
         video.storageProvider === 'local' &&
         thumbnailUrl &&
         thumbnailUrl.startsWith('/')
       ) {
         // Convert relative URL to absolute URL for social media
-        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const baseUrl =
+          process.env.NODE_ENV === 'production'
+            ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
+            : process.env.BACKEND_URL || 'http://localhost:5000';
         thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        // Ensure HTTPS in production
+        if (
+          process.env.NODE_ENV === 'production' &&
+          !thumbnailUrl.startsWith('https://')
+        ) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
       }
     }
     // Handle video posts
@@ -463,6 +573,10 @@ app.get('/post/:id', async (req, res) => {
         );
         if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
           thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        }
+        // Ensure HTTPS for Cloudinary URLs
+        if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
         }
       } else if (video.storageProvider === 'youtube' && videoUrl) {
         const youtubeIdMatch = videoUrl.match(
@@ -477,9 +591,19 @@ app.get('/post/:id', async (req, res) => {
         videoUrl.startsWith('/')
       ) {
         // For local storage, convert relative URL to absolute URL
-        const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const baseUrl =
+          process.env.NODE_ENV === 'production'
+            ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
+            : process.env.BACKEND_URL || 'http://localhost:5000';
         contentUrl = `${baseUrl}${videoUrl}`;
         thumbnailUrl = contentUrl;
+        // Ensure HTTPS in production
+        if (
+          process.env.NODE_ENV === 'production' &&
+          !thumbnailUrl.startsWith('https://')
+        ) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
       }
     }
 
