@@ -34,6 +34,7 @@ const Container = styled.div`
   width: 100%;
   min-height: 100vh;
   background-color: var(--tertiary-color);
+  overflow-x: hidden;
 `;
 
 // Section 1: Slider
@@ -96,11 +97,15 @@ const HappyViewsSection = styled.section`
   color: ${(props) => props.$textColor || '#ffffff'};
   padding: 20px 20px 35px 20px;
   text-align: center;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const SectionContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const SectionHeading = styled.h2`
@@ -129,7 +134,7 @@ const SectionHeading = styled.h2`
   `}
 
   @media (max-width: 768px) {
-    font-size: 2rem;
+    font-size: 1.6rem;
     gap: 10px;
   }
 `;
@@ -174,8 +179,14 @@ const CodeSectionContainer = styled.div`
   align-items: center;
   gap: 25px;
   max-width: 600px;
+  width: 100%;
   margin: 0 auto;
-  margin-top: 40px;
+  margin-top: 30px;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    margin-top: 15px;
+  }
 `;
 
 const CodeLabel = styled.label`
@@ -186,7 +197,7 @@ const CodeLabel = styled.label`
   text-align: center;
 
   @media (max-width: 768px) {
-    font-size: 1.5rem;
+    font-size: 1rem;
   }
 `;
 
@@ -198,10 +209,16 @@ const CodeFormContainer = styled.div`
   padding: 8px;
   border-radius: 50px;
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
   @media (max-width: 768px) {
-    padding: 6px;
+    flex-direction: column;
+    background: transparent;
+    padding: 0;
+    gap: 15px;
+    box-shadow: none;
   }
 `;
 
@@ -222,8 +239,11 @@ const CodeInput = styled.input`
   }
 
   @media (max-width: 768px) {
-    padding: 12px 16px;
+    width: 100%;
+    padding: 14px 20px;
     font-size: 0.95rem;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 `;
 
@@ -249,7 +269,8 @@ const CodeSubmitButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    padding: 12px 24px;
+    width: 100%;
+    padding: 14px 20px;
     font-size: 0.95rem;
   }
 `;
@@ -259,11 +280,15 @@ const AccountSection = styled.section`
   padding: 30px 20px;
   background-color: ${(props) => props.$bgColor || 'var(--secondary-color)'};
   color: ${(props) => props.$textColor || '#ffffff'};
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const AccountContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -295,6 +320,7 @@ const AccountText = styled.h3`
 
   @media (max-width: 768px) {
     justify-content: center;
+    font-size: 1.6rem;
   }
 `;
 
@@ -343,11 +369,15 @@ const HappyTeamSection = styled.section`
   padding: 20px 20px 35px 20px;
   background-color: ${(props) => props.$bgColor || 'var(--tertiary-color)'};
   color: ${(props) => props.$textColor || '#ffffff'};
+  width: 100%;
+  box-sizing: border-box;
 `;
 
 const TeamContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: center;
