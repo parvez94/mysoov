@@ -164,7 +164,7 @@ const HeadingIcon = styled.span`
 const SectionDescription = styled.p`
   font-size: 1.1rem;
   line-height: 1.6;
-  color: inherit;
+  color: #000;
   margin-bottom: 40px;
   text-align: ${(props) => props.$textAlign || 'center'};
 
@@ -177,7 +177,7 @@ const CodeSectionContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 25px;
+  gap: 15px;
   max-width: 600px;
   width: 100%;
   margin: 0 auto;
@@ -192,7 +192,7 @@ const CodeSectionContainer = styled.div`
 const CodeLabel = styled.label`
   font-size: 1.8rem;
   font-weight: 600;
-  color: inherit;
+  color: #000;
   margin: 0;
   text-align: center;
 
@@ -214,10 +214,9 @@ const CodeFormContainer = styled.div`
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 
   @media (max-width: 768px) {
-    flex-direction: column;
     background: transparent;
     padding: 0;
-    gap: 15px;
+    gap: 5px;
     box-shadow: none;
   }
 `;
@@ -226,7 +225,7 @@ const CodeInput = styled.input`
   flex: 1;
   padding: 14px 20px;
   border: none;
-  border-radius: 50px;
+  border-radius: 5px;
   font-size: 1rem;
   background: transparent;
 
@@ -239,8 +238,8 @@ const CodeInput = styled.input`
   }
 
   @media (max-width: 768px) {
-    width: 100%;
-    padding: 14px 20px;
+    width: 70%;
+    padding: 14px 15px;
     font-size: 0.95rem;
     background: white;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -252,7 +251,7 @@ const CodeSubmitButton = styled.button`
   background-color: ${(props) => props.$bgColor || 'var(--primary-color)'};
   color: ${(props) => props.$textColor || 'white'};
   border: none;
-  border-radius: 50px;
+  border-radius: 5px;
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
@@ -269,7 +268,7 @@ const CodeSubmitButton = styled.button`
   }
 
   @media (max-width: 768px) {
-    width: 100%;
+    width: 30%;
     padding: 14px 20px;
     font-size: 0.95rem;
   }
@@ -1018,7 +1017,7 @@ const Frontpage = () => {
                   $bgColor={settings.happyViewsSection.buttonBackgroundColor}
                   $textColor={settings.happyViewsSection.buttonTextColor}
                 >
-                  Submit
+                  Send
                 </CodeSubmitButton>
               </CodeFormContainer>
             </CodeSectionContainer>
