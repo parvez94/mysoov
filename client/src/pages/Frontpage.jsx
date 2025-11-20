@@ -170,6 +170,7 @@ const SectionDescription = styled.p`
 
   @media (max-width: 768px) {
     font-size: 1rem;
+    margin-bottom: 0;
   }
 `;
 
@@ -251,7 +252,7 @@ const CodeSubmitButton = styled.button`
   background-color: ${(props) => props.$bgColor || 'var(--primary-color)'};
   color: ${(props) => props.$textColor || 'white'};
   border: none;
-  border-radius: 5px;
+  border-radius: 50px;
   cursor: pointer;
   font-weight: 600;
   font-size: 1rem;
@@ -271,6 +272,7 @@ const CodeSubmitButton = styled.button`
     width: 30%;
     padding: 14px 20px;
     font-size: 0.95rem;
+    border-radius: 5px;
   }
 `;
 
@@ -1098,7 +1100,7 @@ const Frontpage = () => {
                 display: 'flex',
                 justifyContent: 'center',
                 gap: '15px',
-                marginTop: '30px',
+                marginTop: '15px',
                 flexWrap: 'wrap',
               }}
             >
