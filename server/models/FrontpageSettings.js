@@ -233,7 +233,7 @@ const FrontpageSettingsSchema = new mongoose.Schema(
 // Ensure only one frontpage settings document exists
 FrontpageSettingsSchema.pre('save', async function (next) {
   if (this.isNew) {
-    const count = await mongoose.models.FrontpageSettings.countDocuments();
+    const count = await this.constructor.countDocuments();
     if (count > 0) {
       const error = new Error('FrontpageSettings document already exists');
       return next(error);
