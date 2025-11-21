@@ -15,6 +15,7 @@ import {
   MdKeyboardArrowUp,
   MdMovie,
   MdWeb,
+  MdEmail,
 } from 'react-icons/md';
 import { LuUser } from 'react-icons/lu';
 import { AiOutlineUpload } from 'react-icons/ai';
@@ -321,6 +322,12 @@ const LeftSidebar = () => {
                 <SubMenuItem>
                   <FaSmile />
                   <span>Happy Team</span>
+                </SubMenuItem>
+              </Link>
+              <Link to='/dashboard/email-settings'>
+                <SubMenuItem>
+                  <MdEmail />
+                  <span>Email Settings</span>
                 </SubMenuItem>
               </Link>
               <Link to='/dashboard/settings'>

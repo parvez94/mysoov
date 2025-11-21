@@ -25,6 +25,7 @@ import DashboardSettings from './pages/dashboard/DashboardSettings';
 import DashboardArticles from './pages/dashboard/DashboardArticles';
 import DashboardFilms from './pages/dashboard/DashboardFilms';
 import DashboardFrontpage from './pages/dashboard/DashboardFrontpage';
+import DashboardEmailSettings from './pages/dashboard/DashboardEmailSettings';
 import HappyTeamDashboard from './pages/HappyTeamDashboard';
 import HappyContent from './pages/HappyContent';
 import Frontpage from './pages/Frontpage';
@@ -37,6 +38,7 @@ import BlogPost from './pages/BlogPost';
 import ArticleEditor from './pages/ArticleEditor';
 import RefreshUser from './pages/RefreshUser';
 import SearchResults from './pages/SearchResults';
+import ResetPassword from './pages/ResetPassword';
 
 // Helper component to handle post redirects from social media and old video links
 const VideoRedirect = () => {
@@ -92,6 +94,10 @@ const router = createBrowserRouter([
     element: <FrontpageWrapper />,
   },
   {
+    path: '/reset-password/:token',
+    element: <ResetPassword />,
+  },
+  {
     path: '/',
     element: <Layout />,
     children: [
@@ -142,6 +148,10 @@ const router = createBrowserRouter([
       {
         path: 'dashboard/frontpage',
         element: <DashboardFrontpage />,
+      },
+      {
+        path: 'dashboard/email-settings',
+        element: <DashboardEmailSettings />,
       },
       {
         path: 'dashboard/happy-team',

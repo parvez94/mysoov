@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import Settings from '../models/Settings.js';
 import { createError } from '../utils/error.js';
+import { sendPurchaseConfirmationEmail } from '../services/emailService.js';
 
 // Create payment intent for film purchase
 export const createFilmPaymentIntent = async (req, res, next) => {
@@ -185,6 +186,19 @@ export const activateSubscription = async (req, res, next) => {
     if (!user) {
       return next(createError(404, 'User not found'));
     }
+
+    const settings = await Settings.findOne();
+    const currency = settings?.stripeConfig?.currency || 'usd';
+
+    sendPurchaseConfirmationEmail(user, {
+      type: 'subscription',
+      planName: planId.charAt(0).toUpperCase() + planId.slice(1) + ' Plan',
+      amount: req.body.amount || '0',
+      currency,
+      date: new Date(),
+    }).catch(err => {
+      console.error('Failed to send purchase confirmation email:', err);
+    });
 
     res.status(200).json({
       success: true,

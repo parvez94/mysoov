@@ -25,6 +25,11 @@ import {
   approveReview,
   rejectReview,
 } from '../controllers/adminCtrl.js';
+import {
+  getEmailConfig,
+  updateEmailConfig,
+  sendTestEmail,
+} from '../controllers/emailSettingsCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
 
@@ -75,5 +80,10 @@ router.put('/stripe-settings', updateStripeSettings);
 router.get('/reviews/pending', getPendingReviews);
 router.post('/reviews/:contentType/:contentId/approve', approveReview);
 router.post('/reviews/:contentType/:contentId/reject', rejectReview);
+
+// Email settings management
+router.get('/email-config', getEmailConfig);
+router.put('/email-config', updateEmailConfig);
+router.post('/test-email', sendTestEmail);
 
 export default router;

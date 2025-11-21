@@ -73,6 +73,26 @@ const SettingsSchema = new mongoose.Schema(
       siteName: String,
     },
 
+    // Email configuration
+    emailConfig: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      host: String,
+      port: {
+        type: Number,
+        default: 587,
+      },
+      username: String,
+      password: String,
+      fromEmail: String,
+      fromName: {
+        type: String,
+        default: 'MySoov',
+      },
+    },
+
     // There should only be one settings document
     singleton: {
       type: Boolean,

@@ -104,10 +104,31 @@ const Text = styled.p`
   text-align: center;
 `;
 
+const ForgotPasswordLink = styled.div`
+  text-align: right;
+  margin-top: 5px;
+  
+  a {
+    font-family: var(--secondary-fonts);
+    color: var(--primary-color);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
 const Login = ({ link, accountType = 'regular' }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordMessage, setForgotPasswordMessage] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -172,6 +193,73 @@ const Login = ({ link, accountType = 'regular' }) => {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotPasswordMessage('');
+    
+    if (!forgotPasswordEmail) {
+      setForgotPasswordMessage('Please enter your email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: forgotPasswordEmail,
+          accountType,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setForgotPasswordMessage('Password reset email sent! Please check your inbox.');
+      } else {
+        setForgotPasswordMessage(data.error || 'Failed to send reset email');
+      }
+    } catch (err) {
+      setForgotPasswordMessage('Network error. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  if (showForgotPassword) {
+    return (
+      <>
+        <ModalTop>
+          <Title>Forgot Password</Title>
+          <Form>
+            <InputField>
+              <Label>Email</Label>
+              <Input
+                type='email'
+                value={forgotPasswordEmail}
+                onChange={(e) => {
+                  setForgotPasswordEmail(e.target.value);
+                  if (forgotPasswordMessage) setForgotPasswordMessage('');
+                }}
+              />
+            </InputField>
+            <Button onClick={handleForgotPassword} disabled={forgotPasswordLoading}>
+              {forgotPasswordLoading ? <ThreeDotsLoader /> : 'Send Reset Link'}
+            </Button>
+            {forgotPasswordMessage && <ErrorMessage style={{backgroundColor: forgotPasswordMessage.includes('sent') ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 0, 0, 0.1)', borderColor: forgotPasswordMessage.includes('sent') ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 0, 0, 0.3)', color: forgotPasswordMessage.includes('sent') ? '#4CAF50' : '#ff6b6b'}}>{forgotPasswordMessage}</ErrorMessage>}
+            <ForgotPasswordLink>
+              <a onClick={() => setShowForgotPassword(false)}>Back to Login</a>
+            </ForgotPasswordLink>
+          </Form>
+        </ModalTop>
+      </>
+    );
+  }
+
   return (
     <>
       <ModalTop>
@@ -183,7 +271,7 @@ const Login = ({ link, accountType = 'regular' }) => {
               type='email'
               onChange={(e) => {
                 setEmail(e.target.value);
-                if (error) setError(''); // Clear error when user starts typing
+                if (error) setError('');
               }}
             />
           </InputField>
@@ -196,6 +284,9 @@ const Login = ({ link, accountType = 'regular' }) => {
                 if (error) setError('');
               }}
             />
+            <ForgotPasswordLink>
+              <a onClick={() => setShowForgotPassword(true)}>Forgot Password?</a>
+            </ForgotPasswordLink>
           </InputField>
           <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? <ThreeDotsLoader /> : 'Log in'}
@@ -205,7 +296,7 @@ const Login = ({ link, accountType = 'regular' }) => {
       </ModalTop>
       <ModalBottom>
         <Text>
-          Don’t have an account? <Link onClick={link}>Sign up</Link>
+          Don't have an account? <Link onClick={link}>Sign up</Link>
         </Text>
       </ModalBottom>
     </>

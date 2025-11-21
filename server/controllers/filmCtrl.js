@@ -1,7 +1,9 @@
 import FilmDirectory from '../models/FilmDirectory.js';
 import Video from '../models/Video.js';
 import User from '../models/User.js';
+import Settings from '../models/Settings.js';
 import { createError } from '../utils/error.js';
+import { sendPurchaseConfirmationEmail } from '../services/emailService.js';
 
 // Admin: Get all film directories
 export const getAllFilmDirectories = async (req, res, next) => {
@@ -442,6 +444,20 @@ export const purchaseFilm = async (req, res, next) => {
         console.error('⚠️ Failed to auto-delete folder:', deleteError);
       }
     }
+
+    const user = await User.findById(userId);
+    const settings = await Settings.findOne();
+    const currency = settings?.stripeConfig?.currency || 'usd';
+
+    sendPurchaseConfirmationEmail(user, {
+      type: 'film_purchase',
+      filmName: originalFilm.caption || 'Film',
+      amount: req.body.amount || directory?.price || '0',
+      currency,
+      date: new Date(),
+    }).catch(err => {
+      console.error('Failed to send purchase confirmation email:', err);
+    });
 
     res.status(200).json({
       success: true,

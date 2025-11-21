@@ -1,8 +1,10 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { createError } from '../utils/error.js';
 import validatePassword from '../utils/passwordValidator.js';
+import { sendPasswordResetEmail, sendWelcomeEmail } from '../services/emailService.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -75,6 +77,10 @@ export const register = async (req, res, next) => {
     });
 
     await newUser.save();
+
+    sendWelcomeEmail(newUser).catch(err => {
+      console.error('Failed to send welcome email:', err);
+    });
 
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
@@ -172,6 +178,10 @@ export const registerEditor = async (req, res, next) => {
 
     await newUser.save();
 
+    sendWelcomeEmail(newUser).catch(err => {
+      console.error('Failed to send welcome email:', err);
+    });
+
     const token = jwt.sign(
       { id: newUser._id, role: newUser.role },
       process.env.SECRET_KEY
@@ -232,6 +242,80 @@ export const login = async (req, res, next) => {
 
     res.cookie('access_token', token, cookieOptions).status(200).json(others);
   } catch (err) {
+    next(err);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email, accountType } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const user = await User.findOne({
+      email,
+      accountType: accountType || 'regular'
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'No account found with this email' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    user.resetPasswordToken = hashedToken;
+    user.resetPasswordExpires = Date.now() + 3600000;
+    await user.save();
+
+    await sendPasswordResetEmail(user, resetToken);
+
+    res.status(200).json({ message: 'Password reset email sent successfully' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    next(err);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { password, accountType } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return res.status(400).json({ error: passwordError });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() },
+      accountType: accountType || 'regular'
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashPass = await bcrypt.hash(password, salt);
+
+    user.password = hashPass;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
+  } catch (err) {
+    console.error('Reset password error:', err);
     next(err);
   }
 };
