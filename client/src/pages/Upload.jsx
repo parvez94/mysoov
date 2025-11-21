@@ -525,6 +525,11 @@ const Upload = () => {
         provider: res.data.provider || 'local',
       };
 
+      // Include thumbnailUrl if server generated one (for local videos)
+      if (res.data.thumbnailUrl) {
+        data.thumbnailUrl = res.data.thumbnailUrl;
+      }
+
       setVideoFile(data);
       setStatus('success');
       setUploading(false);
