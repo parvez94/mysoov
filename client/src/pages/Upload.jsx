@@ -639,6 +639,11 @@ const Upload = () => {
         storageProvider: videoFile?.provider || 'cloudinary',
       };
 
+      // Include thumbnailUrl if available (for local storage videos)
+      if (videoFile?.thumbnailUrl) {
+        requestBody.thumbnailUrl = videoFile.thumbnailUrl;
+      }
+
       // If multiple images, include them
       if (images.length > 0) {
         requestBody.images = images;
