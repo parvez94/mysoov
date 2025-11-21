@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import ffmpeg from 'fluent-ffmpeg';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,26 @@ const generateUniqueFilename = (originalName) => {
 };
 
 /**
+ * Generate video thumbnail using FFmpeg
+ * @param {string} videoPath - Path to video file
+ * @param {string} outputPath - Path to save thumbnail
+ * @returns {Promise<string>} - Path to generated thumbnail
+ */
+const generateThumbnail = (videoPath, outputPath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg(videoPath)
+      .screenshots({
+        timestamps: ['00:00:01'],
+        filename: path.basename(outputPath),
+        folder: path.dirname(outputPath),
+        size: '1200x630'
+      })
+      .on('end', () => resolve(outputPath))
+      .on('error', (err) => reject(err));
+  });
+};
+
+/**
  * Upload file to local storage
  * @param {string} tempFilePath - Temporary file path
  * @param {object} options - Upload options (folder, originalName)
@@ -66,7 +87,7 @@ export const uploadToLocal = async (tempFilePath, options = {}) => {
     const backendUrl = process.env.BACKEND_URL || `http://localhost:${port}`;
     const absoluteUrl = `${backendUrl}${relativePath}`;
 
-    return {
+    const result = {
       success: true,
       public_id: `${folder}/${filename}`,
       url: absoluteUrl,
@@ -74,6 +95,25 @@ export const uploadToLocal = async (tempFilePath, options = {}) => {
       filename: filename,
       provider: 'local',
     };
+
+    // Generate thumbnail for videos
+    if (folder === 'videos') {
+      try {
+        const thumbnailFilename = filename.replace(/\.[^/.]+$/, '.jpg');
+        const thumbnailPath = path.join(UPLOAD_BASE_DIR, 'thumbnails', thumbnailFilename);
+        
+        await generateThumbnail(destinationPath, thumbnailPath);
+        
+        const thumbnailRelativePath = `/uploads/thumbnails/${thumbnailFilename}`;
+        const thumbnailAbsoluteUrl = `${backendUrl}${thumbnailRelativePath}`;
+        
+        result.thumbnailUrl = thumbnailAbsoluteUrl;
+      } catch (thumbnailError) {
+        console.error('Failed to generate thumbnail:', thumbnailError.message);
+      }
+    }
+
+    return result;
   } catch (error) {
     throw new Error(`Failed to upload file to local storage: ${error.message}`);
   }

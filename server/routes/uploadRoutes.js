@@ -163,6 +163,10 @@ router.post('/upload', verifyToken, async (req, res) => {
         url: localResult.url,
         provider: 'local',
       };
+
+      if (localResult.thumbnailUrl) {
+        result.thumbnailUrl = localResult.thumbnailUrl;
+      }
     }
 
     // Clean up temporary file

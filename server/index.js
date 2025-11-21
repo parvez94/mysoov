@@ -290,17 +290,21 @@ app.get('/video/:id', async (req, res) => {
         if (!thumbnailUrl.startsWith('https://')) {
           thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
         }
-      } else if (
-        video.storageProvider === 'local' &&
-        thumbnailUrl &&
-        thumbnailUrl.startsWith('/')
-      ) {
+      } else if (video.storageProvider === 'local' && thumbnailUrl) {
         // Convert relative URL to absolute URL for social media
         const baseUrl =
           process.env.NODE_ENV === 'production'
             ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
             : process.env.BACKEND_URL || 'http://localhost:5000';
-        thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        
+        // Handle different URL formats
+        if (thumbnailUrl.startsWith('/')) {
+          thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        } else if (!thumbnailUrl.startsWith('http')) {
+          thumbnailUrl = `${baseUrl}/${thumbnailUrl}`;
+        }
+        // If it's already absolute, use it as-is
+        
         // Ensure HTTPS in production
         if (
           process.env.NODE_ENV === 'production' &&
@@ -331,24 +335,53 @@ app.get('/video/:id', async (req, res) => {
         if (youtubeIdMatch && youtubeIdMatch[1]) {
           thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
         }
-      } else if (
-        video.storageProvider === 'local' &&
-        videoUrl &&
-        videoUrl.startsWith('/')
-      ) {
-        // For local storage, convert relative URL to absolute URL
+      } else if (video.storageProvider === 'local' && videoUrl) {
+        // For local storage videos, we can't use the video file as a thumbnail
+        // Facebook needs an actual image file
         const baseUrl =
           process.env.NODE_ENV === 'production'
             ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
             : process.env.BACKEND_URL || 'http://localhost:5000';
-        contentUrl = `${baseUrl}${videoUrl}`;
-        thumbnailUrl = contentUrl;
-        // Ensure HTTPS in production
+        
+        // Convert video URL to absolute if it's relative
+        if (videoUrl.startsWith('/')) {
+          contentUrl = `${baseUrl}${videoUrl}`;
+        } else if (!videoUrl.startsWith('http')) {
+          contentUrl = `${baseUrl}/${videoUrl}`;
+        } else {
+          contentUrl = videoUrl;
+        }
+        
+        // Use generated thumbnail if available, otherwise use placeholder
+        if (video.thumbnailUrl) {
+          // Handle different URL formats for thumbnail
+          if (video.thumbnailUrl.startsWith('/')) {
+            thumbnailUrl = `${baseUrl}${video.thumbnailUrl}`;
+          } else if (!video.thumbnailUrl.startsWith('http')) {
+            thumbnailUrl = `${baseUrl}/${video.thumbnailUrl}`;
+          } else {
+            thumbnailUrl = video.thumbnailUrl;
+          }
+          
+          // Ensure HTTPS in production
+          if (
+            process.env.NODE_ENV === 'production' &&
+            !thumbnailUrl.startsWith('https://')
+          ) {
+            thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+          }
+        } else {
+          // Fallback to placeholder if no thumbnail
+          thumbnailUrl = 'https://via.placeholder.com/1200x630/FF8C00/ffffff?text=Video+on+Mysoov';
+        }
+        
+        // Ensure HTTPS in production for content URL
         if (
           process.env.NODE_ENV === 'production' &&
-          !thumbnailUrl.startsWith('https://')
+          contentUrl &&
+          !contentUrl.startsWith('https://')
         ) {
-          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+          contentUrl = contentUrl.replace(/^http:\/\//, 'https://');
         }
       }
     }
@@ -544,17 +577,21 @@ app.get('/post/:id', async (req, res) => {
         if (!thumbnailUrl.startsWith('https://')) {
           thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
         }
-      } else if (
-        video.storageProvider === 'local' &&
-        thumbnailUrl &&
-        thumbnailUrl.startsWith('/')
-      ) {
+      } else if (video.storageProvider === 'local' && thumbnailUrl) {
         // Convert relative URL to absolute URL for social media
         const baseUrl =
           process.env.NODE_ENV === 'production'
             ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
             : process.env.BACKEND_URL || 'http://localhost:5000';
-        thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        
+        // Handle different URL formats
+        if (thumbnailUrl.startsWith('/')) {
+          thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        } else if (!thumbnailUrl.startsWith('http')) {
+          thumbnailUrl = `${baseUrl}/${thumbnailUrl}`;
+        }
+        // If it's already absolute, use it as-is
+        
         // Ensure HTTPS in production
         if (
           process.env.NODE_ENV === 'production' &&
@@ -585,24 +622,53 @@ app.get('/post/:id', async (req, res) => {
         if (youtubeIdMatch && youtubeIdMatch[1]) {
           thumbnailUrl = `https://img.youtube.com/vi/${youtubeIdMatch[1]}/maxresdefault.jpg`;
         }
-      } else if (
-        video.storageProvider === 'local' &&
-        videoUrl &&
-        videoUrl.startsWith('/')
-      ) {
-        // For local storage, convert relative URL to absolute URL
+      } else if (video.storageProvider === 'local' && videoUrl) {
+        // For local storage videos, we can't use the video file as a thumbnail
+        // Facebook needs an actual image file
         const baseUrl =
           process.env.NODE_ENV === 'production'
             ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
             : process.env.BACKEND_URL || 'http://localhost:5000';
-        contentUrl = `${baseUrl}${videoUrl}`;
-        thumbnailUrl = contentUrl;
-        // Ensure HTTPS in production
+        
+        // Convert video URL to absolute if it's relative
+        if (videoUrl.startsWith('/')) {
+          contentUrl = `${baseUrl}${videoUrl}`;
+        } else if (!videoUrl.startsWith('http')) {
+          contentUrl = `${baseUrl}/${videoUrl}`;
+        } else {
+          contentUrl = videoUrl;
+        }
+        
+        // Use generated thumbnail if available, otherwise use placeholder
+        if (video.thumbnailUrl) {
+          // Handle different URL formats for thumbnail
+          if (video.thumbnailUrl.startsWith('/')) {
+            thumbnailUrl = `${baseUrl}${video.thumbnailUrl}`;
+          } else if (!video.thumbnailUrl.startsWith('http')) {
+            thumbnailUrl = `${baseUrl}/${video.thumbnailUrl}`;
+          } else {
+            thumbnailUrl = video.thumbnailUrl;
+          }
+          
+          // Ensure HTTPS in production
+          if (
+            process.env.NODE_ENV === 'production' &&
+            !thumbnailUrl.startsWith('https://')
+          ) {
+            thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+          }
+        } else {
+          // Fallback to placeholder if no thumbnail
+          thumbnailUrl = 'https://via.placeholder.com/1200x630/FF8C00/ffffff?text=Video+on+Mysoov';
+        }
+        
+        // Ensure HTTPS in production for content URL
         if (
           process.env.NODE_ENV === 'production' &&
-          !thumbnailUrl.startsWith('https://')
+          contentUrl &&
+          !contentUrl.startsWith('https://')
         ) {
-          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+          contentUrl = contentUrl.replace(/^http:\/\//, 'https://');
         }
       }
     }

@@ -163,7 +163,7 @@ export const approveContent = async (req, res, next) => {
         customerCode: content.code.trim().toUpperCase(),
         purchasePrice: content.price || 0,
         videoUrl: { url: content.fileUrl },
-        thumbnail: content.thumbnailUrl || '',
+        thumbnailUrl: content.thumbnailUrl || '',
         userId: content.userId,
         privacy: 'Private',
         isFilm: true,
@@ -325,7 +325,7 @@ export const redeemContent = async (req, res, next) => {
       const filmCopy = new Video({
         caption: film.caption,
         videoUrl: film.videoUrl,
-        thumbnail: film.thumbnail,
+        thumbnailUrl: film.thumbnailUrl,
         images: film.images || [],
         userId: userId,
         privacy: 'Public',
