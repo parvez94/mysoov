@@ -422,13 +422,9 @@ app.get('/video/:id', async (req, res) => {
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:url" content="${shareUrl}" />
-    <meta property="og:type" content="video.other" />
+    <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Mysoov" />
     <meta property="fb:app_id" content="324758342758749" />
-    ${videoUrl ? `<meta property="og:video" content="${videoUrl}" />` : ''}
-    <meta property="og:video:type" content="video/mp4" />
-    <meta property="og:video:width" content="1280" />
-    <meta property="og:video:height" content="720" />
     
     <!-- Twitter Card tags -->
     <meta name="twitter:title" content="${videoTitle.replace(
@@ -736,31 +732,9 @@ app.get('/post/:id', async (req, res) => {
     <meta property="og:image:height" content="630" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:url" content="${shareUrl}" />
-    <meta property="og:type" content="${
-      video.mediaType === 'image' ? 'article' : 'video.other'
-    }" />
+    <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Mysoov" />
     <meta property="fb:app_id" content="324758342758749" />
-    ${
-      videoUrl && video.mediaType !== 'image'
-        ? `<meta property="og:video" content="${videoUrl}" />`
-        : ''
-    }
-    ${
-      video.mediaType !== 'image'
-        ? `<meta property="og:video:type" content="video/mp4" />`
-        : ''
-    }
-    ${
-      video.mediaType !== 'image'
-        ? `<meta property="og:video:width" content="1280" />`
-        : ''
-    }
-    ${
-      video.mediaType !== 'image'
-        ? `<meta property="og:video:height" content="720" />`
-        : ''
-    }
     
     <!-- Twitter Card tags -->
     <meta name="twitter:title" content="${videoTitle.replace(

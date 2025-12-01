@@ -88,67 +88,30 @@ const FrontpageSettingsSchema = new mongoose.Schema(
       },
     },
 
-    // Section 3: Your Account section
-    accountSection: {
+    // Section 4: Banner slider
+    bannerSection: {
       enabled: {
         type: Boolean,
         default: true,
       },
-      backgroundColor: {
-        type: String,
-        default: '#1a1a1a',
-      },
-      textColor: {
-        type: String,
-        default: '#ffffff',
-      },
-      headingColor: {
-        type: String,
-        default: '#ffffff',
-      },
-      headingStrokeColor: {
-        type: String,
-        default: '',
-      },
-      headingStrokeWidth: {
-        type: Number,
-        default: 0,
-      },
-      leftText: {
-        type: String,
-        default: 'Your Account',
-      },
-      icon: {
-        type: String,
-        default: '',
-      },
-      loginText: {
-        type: String,
-        default: 'Login',
-      },
-      signupText: {
-        type: String,
-        default: 'Sign Up',
-      },
-      loginButtonBackgroundColor: {
-        type: String,
-        default: '',
-      },
-      loginButtonTextColor: {
-        type: String,
-        default: '',
-      },
-      signupButtonBackgroundColor: {
-        type: String,
-        default: '',
-      },
-      signupButtonTextColor: {
-        type: String,
-        default: '',
-      },
+      items: [
+        {
+          type: {
+            type: String,
+            enum: ['image', 'video'],
+            required: true,
+          },
+          url: {
+            type: String,
+            required: true,
+          },
+          alt: String,
+          title: String,
+        },
+      ],
     },
 
-    // Section 4: Happy Team section
+    // Section 5: Happy Team section
     happyTeamSection: {
       enabled: {
         type: Boolean,
@@ -217,16 +180,119 @@ const FrontpageSettingsSchema = new mongoose.Schema(
       },
     },
 
-    // Section 5: Banner image
-    bannerSection: {
+    // Footer section
+    footerSection: {
       enabled: {
         type: Boolean,
         default: true,
       },
-      imageUrl: String,
-      alt: {
+      backgroundColor: {
         type: String,
-        default: 'Banner Image',
+        default: '#1a1a1a',
+      },
+      textColor: {
+        type: String,
+        default: '#ffffff',
+      },
+      siteName: {
+        type: String,
+        default: 'Company Name',
+      },
+      siteNameColor: {
+        type: String,
+        default: '',
+      },
+      description: {
+        type: String,
+        default: '',
+      },
+      descriptionColor: {
+        type: String,
+        default: '',
+      },
+      phone: {
+        type: String,
+        default: '',
+      },
+      email: {
+        type: String,
+        default: '',
+      },
+      location: {
+        type: String,
+        default: '',
+      },
+      contactTextColor: {
+        type: String,
+        default: '',
+      },
+      contactIconColor: {
+        type: String,
+        default: '',
+      },
+      formTitle: {
+        type: String,
+        default: 'Hire Us',
+      },
+      formTitleColor: {
+        type: String,
+        default: '',
+      },
+      formBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      formBorderColor: {
+        type: String,
+        default: '',
+      },
+      formInputBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      formInputTextColor: {
+        type: String,
+        default: '',
+      },
+      formInputBorderColor: {
+        type: String,
+        default: '',
+      },
+      formInputFocusColor: {
+        type: String,
+        default: '',
+      },
+      formInputPlaceholderColor: {
+        type: String,
+        default: '',
+      },
+      formButtonText: {
+        type: String,
+        default: 'Submit',
+      },
+      formButtonBackgroundColor: {
+        type: String,
+        default: '',
+      },
+      formButtonTextColor: {
+        type: String,
+        default: '',
+      },
+      roles: {
+        type: [String],
+        default: ['Developer', 'Designer', 'Manager', 'Other'],
+      },
+      copyrightText: {
+        type: String,
+        default: '',
+      },
+      copyrightTextColor: {
+        type: String,
+        default: '',
+      },
+      copyrightBorderColor: {
+        type: String,
+        default: '',
       },
     },
 

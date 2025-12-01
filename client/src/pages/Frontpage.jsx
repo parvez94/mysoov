@@ -26,6 +26,9 @@ import {
   FaCamera,
   FaMusic,
   FaHeadphones,
+  FaPhone,
+  FaEnvelope,
+  FaMapMarkerAlt,
 } from 'react-icons/fa';
 import { MdClose } from 'react-icons/md';
 
@@ -276,96 +279,7 @@ const CodeSubmitButton = styled.button`
   }
 `;
 
-// Section 3: Your Account
-const AccountSection = styled.section`
-  padding: 30px 20px;
-  background-color: ${(props) => props.$bgColor || 'var(--secondary-color)'};
-  color: ${(props) => props.$textColor || '#ffffff'};
-  width: 100%;
-  box-sizing: border-box;
-`;
-
-const AccountContainer = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-`;
-
-const AccountText = styled.h3`
-  font-size: 1.8rem;
-  color: ${(props) => props.$color || 'inherit'};
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  ${(props) =>
-    props.$strokeWidth &&
-    props.$strokeWidth > 0 &&
-    `
-    -webkit-text-stroke: ${props.$strokeWidth}px ${
-      props.$strokeColor || '#000000'
-    };
-    text-stroke: ${props.$strokeWidth}px ${props.$strokeColor || '#000000'};
-    paint-order: stroke fill;
-  `}
-
-  @media (max-width: 768px) {
-    justify-content: center;
-    font-size: 1.6rem;
-  }
-`;
-
-const AuthButtons = styled.div`
-  display: flex;
-  gap: 15px;
-
-  @media (max-width: 768px) {
-    justify-content: center;
-  }
-`;
-
-const AuthButton = styled.button`
-  padding: 12px 30px;
-  font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s;
-
-  ${(props) =>
-    props.$variant === 'login'
-      ? `
-    background-color: ${props.$bgColor || 'transparent'};
-    color: ${props.$textColor || 'var(--primary-color)'};
-    border: 2px solid ${props.$textColor || 'var(--primary-color)'};
-    
-    &:hover {
-      background-color: ${props.$textColor || 'var(--primary-color)'};
-      color: ${props.$bgColor || 'white'};
-    }
-  `
-      : `
-    background-color: ${props.$bgColor || 'var(--primary-color)'};
-    color: ${props.$textColor || 'white'};
-    
-    &:hover {
-      opacity: 0.9;
-    }
-  `}
-`;
-
-// Section 4: Happy Team
+// Section 5: Happy Team
 const HappyTeamSection = styled.section`
   padding: 20px 20px 35px 20px;
   background-color: ${(props) => props.$bgColor || 'var(--tertiary-color)'};
@@ -452,22 +366,194 @@ const RegisterButton = styled.button`
   }
 `;
 
-// Section 5: Banner
-const BannerSection = styled.section`
+// Footer Section
+const FooterSection = styled.footer`
+  padding: 60px 20px 40px 20px;
+  background-color: ${(props) => props.$bgColor || '#1a1a1a'};
+  color: ${(props) => props.$textColor || '#ffffff'};
   width: 100%;
-  height: 400px;
-  position: relative;
-  overflow: hidden;
+  box-sizing: border-box;
+`;
 
-  @media (max-width: 768px) {
-    height: 250px;
+const FooterContainer = styled.div`
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: start;
+
+  @media (max-width: 968px) {
+    grid-template-columns: 1fr;
+    gap: 40px;
   }
 `;
 
-const BannerImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+const FooterInfoSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
+
+const FooterSiteName = styled.h3`
+  font-size: 2rem;
+  font-weight: 700;
+  color: ${(props) => props.$color || 'var(--primary-color)'};
+  margin: 0 0 10px 0;
+`;
+
+const FooterDescription = styled.p`
+  font-size: 1rem;
+  line-height: 1.6;
+  color: ${(props) => props.$color || 'rgba(255, 255, 255, 0.8)'};
+  margin: 0;
+`;
+
+const FooterContactList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+`;
+
+const FooterContactItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.95rem;
+  color: ${(props) => props.$color || 'rgba(255, 255, 255, 0.9)'};
+
+  svg {
+    font-size: 1.1rem;
+    color: ${(props) => props.$iconColor || 'var(--primary-color)'};
+    flex-shrink: 0;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.3s;
+
+    &:hover {
+      color: ${(props) => props.$iconColor || 'var(--primary-color)'};
+    }
+  }
+`;
+
+const FooterFormSection = styled.div`
+  background: ${(props) => props.$formBgColor || 'rgba(255, 255, 255, 0.05)'};
+  padding: 30px;
+  border-radius: 12px;
+  border: 1px solid ${(props) => props.$formBorderColor || 'rgba(255, 255, 255, 0.1)'};
+`;
+
+const FooterFormTitle = styled.h4`
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: ${(props) => props.$color || '#ffffff'};
+  margin: 0 0 20px 0;
+`;
+
+const FooterForm = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+`;
+
+const FooterFormInput = styled.input`
+  padding: 12px 16px;
+  border: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
+  border-radius: 6px;
+  background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.3)'};
+  color: ${(props) => props.$textColor || '#ffffff'};
+  font-size: 0.95rem;
+  transition: all 0.3s;
+
+  &:focus {
+    outline: none;
+    border-color: ${(props) => props.$focusColor || 'var(--primary-color)'};
+    background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.5)'};
+  }
+
+  &::placeholder {
+    color: ${(props) => props.$placeholderColor || 'rgba(255, 255, 255, 0.5)'};
+  }
+`;
+
+const FooterFormTextArea = styled.textarea`
+  padding: 12px 16px;
+  border: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
+  border-radius: 6px;
+  background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.3)'};
+  color: ${(props) => props.$textColor || '#ffffff'};
+  font-size: 0.95rem;
+  min-height: 100px;
+  resize: vertical;
+  font-family: 'IBM Plex Sans', sans-serif;
+  transition: all 0.3s;
+
+  &:focus {
+    outline: none;
+    border-color: ${(props) => props.$focusColor || 'var(--primary-color)'};
+    background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.5)'};
+  }
+
+  &::placeholder {
+    color: ${(props) => props.$placeholderColor || 'rgba(255, 255, 255, 0.5)'};
+  }
+`;
+
+const FooterFormSelect = styled.select`
+  padding: 12px 16px;
+  border: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
+  border-radius: 6px;
+  background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.3)'};
+  color: ${(props) => props.$textColor || '#ffffff'};
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:focus {
+    outline: none;
+    border-color: ${(props) => props.$focusColor || 'var(--primary-color)'};
+  }
+
+  option {
+    background: #1a1a1a;
+    color: #ffffff;
+  }
+`;
+
+const FooterFormButton = styled.button`
+  padding: 14px 24px;
+  background-color: ${(props) => props.$bgColor || 'var(--primary-color)'};
+  color: ${(props) => props.$textColor || 'white'};
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s;
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const FooterCopyright = styled.div`
+  text-align: center;
+  padding-top: 30px;
+  margin-top: 40px;
+  border-top: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.1)'};
+  color: ${(props) => props.$color || 'rgba(255, 255, 255, 0.6)'};
+  font-size: 0.9rem;
 `;
 
 // Film Modal Styles
@@ -798,6 +884,13 @@ const Frontpage = () => {
   const [codeInput, setCodeInput] = useState('');
   const [showFilmModal, setShowFilmModal] = useState(false);
   const [redeemedFilm, setRedeemedFilm] = useState(null);
+  const [hireFormData, setHireFormData] = useState({
+    name: '',
+    email: '',
+    role: '',
+    message: '',
+  });
+  const [hireFormSubmitting, setHireFormSubmitting] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentUser } = useSelector((state) => state.user);
@@ -920,6 +1013,35 @@ const Frontpage = () => {
     );
   };
 
+  const handleHireFormSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!hireFormData.name || !hireFormData.email || !hireFormData.role) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    setHireFormSubmitting(true);
+
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/frontpage/hire-form`,
+        hireFormData
+      );
+      alert('Thank you for your interest! We will get back to you soon.');
+      setHireFormData({
+        name: '',
+        email: '',
+        role: '',
+        message: '',
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error submitting form. Please try again.');
+    } finally {
+      setHireFormSubmitting(false);
+    }
+  };
+
   // Helper function to get video URL
   const getVideoUrl = (video) => {
     if (!video?.videoUrl) return null;
@@ -1027,47 +1149,12 @@ const Frontpage = () => {
         </HappyViewsSection>
       )}
 
-      {/* Section 3: Your Account */}
-      {settings.accountSection?.enabled && !currentUser && (
-        <AccountSection
-          $bgColor={settings.accountSection.backgroundColor}
-          $textColor={settings.accountSection.textColor}
-        >
-          <AccountContainer>
-            <AccountText
-              $color={settings.accountSection.headingColor}
-              $strokeColor={settings.accountSection.headingStrokeColor}
-              $strokeWidth={settings.accountSection.headingStrokeWidth}
-            >
-              <IconDisplay
-                icon={settings.accountSection.icon}
-                IconComponent={TextIcon}
-              />
-              {settings.accountSection.leftText}
-            </AccountText>
-            <AuthButtons>
-              <AuthButton
-                $variant='login'
-                $bgColor={settings.accountSection.loginButtonBackgroundColor}
-                $textColor={settings.accountSection.loginButtonTextColor}
-                onClick={() => handleAuthAction('login')}
-              >
-                {settings.accountSection.loginText}
-              </AuthButton>
-              <AuthButton
-                $variant='signup'
-                $bgColor={settings.accountSection.signupButtonBackgroundColor}
-                $textColor={settings.accountSection.signupButtonTextColor}
-                onClick={() => handleAuthAction('signup')}
-              >
-                {settings.accountSection.signupText}
-              </AuthButton>
-            </AuthButtons>
-          </AccountContainer>
-        </AccountSection>
+      {/* Section 4: Banner */}
+      {settings.bannerSection?.enabled && (
+        <Slider items={settings.bannerSection.items || []} />
       )}
 
-      {/* Section 4: Happy Team */}
+      {/* Section 5: Happy Team */}
       {settings.happyTeamSection?.enabled && (
         <HappyTeamSection
           $bgColor={settings.happyTeamSection.backgroundColor}
@@ -1123,14 +1210,135 @@ const Frontpage = () => {
         </HappyTeamSection>
       )}
 
-      {/* Section 5: Banner */}
-      {settings.bannerSection?.enabled && settings.bannerSection.imageUrl && (
-        <BannerSection>
-          <BannerImage
-            src={settings.bannerSection.imageUrl}
-            alt={settings.bannerSection.alt}
-          />
-        </BannerSection>
+      {/* Footer Section */}
+      {settings.footerSection?.enabled && (
+        <FooterSection
+          $bgColor={settings.footerSection.backgroundColor}
+          $textColor={settings.footerSection.textColor}
+        >
+          <FooterContainer>
+            <FooterInfoSection>
+              <FooterSiteName $color={settings.footerSection.siteNameColor}>
+                {settings.footerSection.siteName || 'Company Name'}
+              </FooterSiteName>
+              {settings.footerSection.description && (
+                <FooterDescription $color={settings.footerSection.descriptionColor}>
+                  {settings.footerSection.description}
+                </FooterDescription>
+              )}
+              <FooterContactList>
+                {settings.footerSection.phone && (
+                  <FooterContactItem
+                    $color={settings.footerSection.contactTextColor}
+                    $iconColor={settings.footerSection.contactIconColor}
+                  >
+                    <FaPhone />
+                    <a href={`tel:${settings.footerSection.phone}`}>
+                      {settings.footerSection.phone}
+                    </a>
+                  </FooterContactItem>
+                )}
+                {settings.footerSection.email && (
+                  <FooterContactItem
+                    $color={settings.footerSection.contactTextColor}
+                    $iconColor={settings.footerSection.contactIconColor}
+                  >
+                    <FaEnvelope />
+                    <a href={`mailto:${settings.footerSection.email}`}>
+                      {settings.footerSection.email}
+                    </a>
+                  </FooterContactItem>
+                )}
+                {settings.footerSection.location && (
+                  <FooterContactItem
+                    $color={settings.footerSection.contactTextColor}
+                    $iconColor={settings.footerSection.contactIconColor}
+                  >
+                    <FaMapMarkerAlt />
+                    <span>{settings.footerSection.location}</span>
+                  </FooterContactItem>
+                )}
+              </FooterContactList>
+            </FooterInfoSection>
+
+            <FooterFormSection
+              $formBgColor={settings.footerSection.formBackgroundColor}
+              $formBorderColor={settings.footerSection.formBorderColor}
+            >
+              <FooterFormTitle $color={settings.footerSection.formTitleColor}>
+                {settings.footerSection.formTitle || 'Hire Us'}
+              </FooterFormTitle>
+              <FooterForm onSubmit={handleHireFormSubmit}>
+                <FooterFormInput
+                  type="text"
+                  placeholder="Your Name *"
+                  value={hireFormData.name}
+                  onChange={(e) => setHireFormData({ ...hireFormData, name: e.target.value })}
+                  required
+                  $borderColor={settings.footerSection.formInputBorderColor}
+                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $textColor={settings.footerSection.formInputTextColor}
+                  $focusColor={settings.footerSection.formInputFocusColor}
+                  $placeholderColor={settings.footerSection.formInputPlaceholderColor}
+                />
+                <FooterFormInput
+                  type="email"
+                  placeholder="Your Email *"
+                  value={hireFormData.email}
+                  onChange={(e) => setHireFormData({ ...hireFormData, email: e.target.value })}
+                  required
+                  $borderColor={settings.footerSection.formInputBorderColor}
+                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $textColor={settings.footerSection.formInputTextColor}
+                  $focusColor={settings.footerSection.formInputFocusColor}
+                  $placeholderColor={settings.footerSection.formInputPlaceholderColor}
+                />
+                <FooterFormSelect
+                  value={hireFormData.role}
+                  onChange={(e) => setHireFormData({ ...hireFormData, role: e.target.value })}
+                  required
+                  $borderColor={settings.footerSection.formInputBorderColor}
+                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $textColor={settings.footerSection.formInputTextColor}
+                  $focusColor={settings.footerSection.formInputFocusColor}
+                >
+                  <option value="">Select Role *</option>
+                  {settings.footerSection.roles?.map((role, index) => (
+                    <option key={index} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </FooterFormSelect>
+                <FooterFormTextArea
+                  placeholder="Message (Optional)"
+                  value={hireFormData.message}
+                  onChange={(e) => setHireFormData({ ...hireFormData, message: e.target.value })}
+                  $borderColor={settings.footerSection.formInputBorderColor}
+                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $textColor={settings.footerSection.formInputTextColor}
+                  $focusColor={settings.footerSection.formInputFocusColor}
+                  $placeholderColor={settings.footerSection.formInputPlaceholderColor}
+                />
+                <FooterFormButton
+                  type="submit"
+                  disabled={hireFormSubmitting}
+                  $bgColor={settings.footerSection.formButtonBackgroundColor}
+                  $textColor={settings.footerSection.formButtonTextColor}
+                >
+                  {hireFormSubmitting ? 'Submitting...' : settings.footerSection.formButtonText || 'Submit'}
+                </FooterFormButton>
+              </FooterForm>
+            </FooterFormSection>
+          </FooterContainer>
+          {settings.footerSection.copyrightText && (
+            <FooterCopyright
+              $borderColor={settings.footerSection.copyrightBorderColor}
+              $color={settings.footerSection.copyrightTextColor}
+            >
+              {settings.footerSection.copyrightText}
+            </FooterCopyright>
+          )}
+        </FooterSection>
       )}
 
       {/* Film Modal */}

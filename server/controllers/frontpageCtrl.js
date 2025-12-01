@@ -28,21 +28,19 @@ export const getFrontpageSettings = async (req, res, next) => {
             placeholder: 'Enter code here...',
           },
         },
-        accountSection: {
+        bannerSection: {
           enabled: true,
-          leftText: 'Your Account',
-          loginText: 'Login',
-          signupText: 'Sign Up',
+          items: [],
         },
         happyTeamSection: {
           enabled: true,
           leftText: 'Happy Team',
           buttonText: 'Register',
         },
-        bannerSection: {
+        footerSection: {
           enabled: true,
-          imageUrl: '',
-          alt: 'Banner Image',
+          siteName: 'Company Name',
+          roles: ['Developer', 'Designer', 'Manager', 'Other'],
         },
       });
       await settings.save();
@@ -167,6 +165,106 @@ export const submitCode = async (req, res, next) => {
       message: 'Code submitted successfully',
       code,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Add banner item
+export const addBannerItem = async (req, res, next) => {
+  try {
+    const { type, url, alt, title } = req.body;
+
+    if (!type || !url) {
+      return next(createError(400, 'Type and URL are required'));
+    }
+
+    let settings = await FrontpageSettings.findOne();
+    if (!settings) {
+      settings = new FrontpageSettings();
+    }
+
+    settings.bannerSection.items.push({ type, url, alt, title });
+    await settings.save();
+
+    res.status(200).json(settings);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Remove banner item
+export const removeBannerItem = async (req, res, next) => {
+  try {
+    const { itemId } = req.params;
+
+    let settings = await FrontpageSettings.findOne();
+    if (!settings) {
+      return next(createError(404, 'Settings not found'));
+    }
+
+    settings.bannerSection.items = settings.bannerSection.items.filter(
+      (item) => item._id.toString() !== itemId
+    );
+
+    await settings.save();
+    res.status(200).json(settings);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Update banner item
+export const updateBannerItem = async (req, res, next) => {
+  try {
+    const { itemId } = req.params;
+    const { type, url, alt, title } = req.body;
+
+    let settings = await FrontpageSettings.findOne();
+    if (!settings) {
+      return next(createError(404, 'Settings not found'));
+    }
+
+    const itemIndex = settings.bannerSection.items.findIndex(
+      (item) => item._id.toString() === itemId
+    );
+
+    if (itemIndex === -1) {
+      return next(createError(404, 'Banner item not found'));
+    }
+
+    settings.bannerSection.items[itemIndex] = {
+      ...settings.bannerSection.items[itemIndex].toObject(),
+      type,
+      url,
+      alt,
+      title,
+    };
+
+    await settings.save();
+    res.status(200).json(settings);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const submitHireForm = async (req, res, next) => {
+  try {
+    const { name, email, role, message } = req.body;
+
+    if (!name || !email || !role) {
+      return next(createError(400, 'Name, email, and role are required'));
+    }
+
+    console.log('Hire Form Submission:', {
+      name,
+      email,
+      role,
+      message: message || 'No message provided',
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(200).json({ message: 'Form submitted successfully' });
   } catch (err) {
     next(err);
   }

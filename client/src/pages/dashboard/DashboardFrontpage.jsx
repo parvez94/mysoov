@@ -622,6 +622,13 @@ const DashboardFrontpage = () => {
     title: '',
   });
   const [uploadingSliderImage, setUploadingSliderImage] = useState(false);
+  const [showAddBannerModal, setShowAddBannerModal] = useState(false);
+  const [newBannerItem, setNewBannerItem] = useState({
+    type: 'image',
+    url: '',
+    alt: '',
+    title: '',
+  });
   const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 
   useEffect(() => {
@@ -776,23 +783,57 @@ const DashboardFrontpage = () => {
     }
   };
 
+  const closeBannerModal = () => {
+    setShowAddBannerModal(false);
+    setNewBannerItem({ type: 'image', url: '', alt: '', title: '' });
+    setUploadingBannerImage(false);
+  };
+
+  const addBannerItem = async () => {
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/frontpage/banner/items`,
+        newBannerItem
+      );
+      setSettings(res.data);
+      closeBannerModal();
+    } catch (err) {
+      console.error('Error adding banner item:', err);
+      alert('Error adding banner item');
+    }
+  };
+
   const handleBannerImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    if (newBannerItem.type === 'image' && !file.type.startsWith('image/')) {
       alert('Please select an image file');
+      return;
+    }
+    if (newBannerItem.type === 'video' && !file.type.startsWith('video/')) {
+      alert('Please select a video file');
       return;
     }
 
     try {
       setUploadingBannerImage(true);
       const formData = new FormData();
-      formData.append('image', file);
+
+      if (newBannerItem.type === 'image') {
+        formData.append('image', file);
+      } else {
+        formData.append('video', file);
+      }
+
+      const endpoint =
+        newBannerItem.type === 'image'
+          ? '/api/v1/upload/image'
+          : '/api/v1/upload';
 
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/upload/image`,
+        `${import.meta.env.VITE_API_URL}${endpoint}`,
         formData,
         {
           headers: {
@@ -802,13 +843,29 @@ const DashboardFrontpage = () => {
         }
       );
 
-      // Update the banner image URL
-      updateSectionField('bannerSection', 'imageUrl', res.data.url);
+      // Update the URL in the form
+      setNewBannerItem({ ...newBannerItem, url: res.data.url });
     } catch (err) {
-      console.error('Error uploading banner image:', err);
-      alert(err.response?.data?.msg || 'Error uploading banner image');
+      console.error('Error uploading file:', err);
+      alert(err.response?.data?.msg || 'Error uploading file');
     } finally {
       setUploadingBannerImage(false);
+    }
+  };
+
+  const removeBannerItem = async (itemId) => {
+    if (!confirm('Are you sure you want to remove this banner item?')) return;
+
+    try {
+      const res = await axios.delete(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/v1/frontpage/banner/items/${itemId}`
+      );
+      setSettings(res.data);
+    } catch (err) {
+      console.error('Error removing banner item:', err);
+      alert('Error removing banner item');
     }
   };
 
@@ -1223,355 +1280,58 @@ const DashboardFrontpage = () => {
         </SectionBody>
       </SectionCard>
 
-      {/* Section 3: Account Section */}
+      {/* Section 4: Banner */}
       <SectionCard>
         <SectionHeader>
-          <SectionTitle>Your Account Section</SectionTitle>
+          <SectionTitle>
+            <FaImage />
+            Banner Slider Section
+          </SectionTitle>
           <ToggleButton
-            $enabled={settings.accountSection?.enabled}
-            onClick={() => toggleSection('accountSection')}
+            $enabled={settings.bannerSection?.enabled}
+            onClick={() => toggleSection('bannerSection')}
           >
-            {settings.accountSection?.enabled ? (
-              <FaToggleOn />
-            ) : (
-              <FaToggleOff />
-            )}
-            {settings.accountSection?.enabled ? 'Enabled' : 'Disabled'}
+            {settings.bannerSection?.enabled ? <FaToggleOn /> : <FaToggleOff />}
+            {settings.bannerSection?.enabled ? 'Enabled' : 'Disabled'}
           </ToggleButton>
         </SectionHeader>
-        <SectionBody $collapsed={!settings.accountSection?.enabled}>
+        <SectionBody $collapsed={!settings.bannerSection?.enabled}>
           <FormGroup>
-            <ColorRow>
-              <ColorGroup>
-                <Label>Background Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={
-                      settings.accountSection?.backgroundColor || '#1a1a1a'
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'backgroundColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={
-                      settings.accountSection?.backgroundColor || '#1a1a1a'
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'backgroundColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#1A1A1A'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-              <ColorGroup>
-                <Label>Text Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={settings.accountSection?.textColor || '#ffffff'}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'textColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={settings.accountSection?.textColor || '#ffffff'}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'textColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#FFFFFF'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-              <ColorGroup>
-                <Label>Heading Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={settings.accountSection?.headingColor || '#ffffff'}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'headingColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={settings.accountSection?.headingColor || '#ffffff'}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'headingColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#FFFFFF'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-            </ColorRow>
-          </FormGroup>
-          <FormGroup>
-            <Label>Left Text</Label>
-            <Input
-              type='text'
-              value={settings.accountSection?.leftText || ''}
-              onChange={(e) =>
-                updateSectionField('accountSection', 'leftText', e.target.value)
-              }
-            />
-          </FormGroup>
-          <IconPicker
-            selectedIcon={settings.accountSection?.icon || 'none'}
-            onSelect={(icon) =>
-              updateSectionField('accountSection', 'icon', icon)
-            }
-            label='Heading Icon'
-          />
-          <FormGroup>
-            <Label>Heading Text Stroke</Label>
-            <StrokeControlsRow>
-              <ColorGroup>
-                <Label>Stroke Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={
-                      settings.accountSection?.headingStrokeColor || '#000000'
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'headingStrokeColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={
-                      settings.accountSection?.headingStrokeColor || '#000000'
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'headingStrokeColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#000000'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-              <ColorGroup>
-                <Label>Stroke Width (px)</Label>
-                <StrokeWidthInput
-                  type='number'
-                  min='0'
-                  max='10'
-                  value={settings.accountSection?.headingStrokeWidth || 0}
-                  onChange={(e) =>
-                    updateSectionField(
-                      'accountSection',
-                      'headingStrokeWidth',
-                      parseInt(e.target.value)
-                    )
-                  }
-                />
-              </ColorGroup>
-            </StrokeControlsRow>
-          </FormGroup>
-          <FormGroup>
-            <Label>Login Button Text</Label>
-            <Input
-              type='text'
-              value={settings.accountSection?.loginText || ''}
-              onChange={(e) =>
-                updateSectionField(
-                  'accountSection',
-                  'loginText',
-                  e.target.value
-                )
-              }
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label>Signup Button Text</Label>
-            <Input
-              type='text'
-              value={settings.accountSection?.signupText || ''}
-              onChange={(e) =>
-                updateSectionField(
-                  'accountSection',
-                  'signupText',
-                  e.target.value
-                )
-              }
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label>Login Button Colors</Label>
-            <ColorRow>
-              <ColorGroup>
-                <Label>Background Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={
-                      settings.accountSection?.loginButtonBackgroundColor || '#000000'
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'loginButtonBackgroundColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={
-                      settings.accountSection?.loginButtonBackgroundColor || ''
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'loginButtonBackgroundColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#000000'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-              <ColorGroup>
-                <Label>Text Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={settings.accountSection?.loginButtonTextColor || '#FF0000'}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'loginButtonTextColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={settings.accountSection?.loginButtonTextColor || ''}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'loginButtonTextColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#FF0000'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-            </ColorRow>
-          </FormGroup>
-          <FormGroup>
-            <Label>Signup Button Colors</Label>
-            <ColorRow>
-              <ColorGroup>
-                <Label>Background Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={
-                      settings.accountSection?.signupButtonBackgroundColor || '#FF0000'
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'signupButtonBackgroundColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={
-                      settings.accountSection?.signupButtonBackgroundColor || ''
-                    }
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'signupButtonBackgroundColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#FF0000'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-              <ColorGroup>
-                <Label>Text Color</Label>
-                <ColorInputRow>
-                  <ColorInput
-                    type='color'
-                    value={settings.accountSection?.signupButtonTextColor || '#ffffff'}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'signupButtonTextColor',
-                        e.target.value
-                      )
-                    }
-                  />
-                  <HexInput
-                    type='text'
-                    value={settings.accountSection?.signupButtonTextColor || ''}
-                    onChange={(e) =>
-                      updateSectionField(
-                        'accountSection',
-                        'signupButtonTextColor',
-                        e.target.value
-                      )
-                    }
-                    placeholder='#FFFFFF'
-                    maxLength='7'
-                  />
-                </ColorInputRow>
-              </ColorGroup>
-            </ColorRow>
+            <Label>Banner Items</Label>
+            <SliderItemsContainer>
+              {settings.bannerSection?.items?.map((item, index) => (
+                <SliderItem key={item._id || index}>
+                  <SliderItemPreview>
+                    {item.type === 'video' ? (
+                      <video src={item.url} onContextMenu={(e) => e.preventDefault()} />
+                    ) : (
+                      <img src={item.url} alt={item.alt} />
+                    )}
+                  </SliderItemPreview>
+                  <SliderItemInfo>
+                    <SliderItemType>{item.type}</SliderItemType>
+                    <SliderItemUrl>{item.url}</SliderItemUrl>
+                  </SliderItemInfo>
+                  <ButtonGroup>
+                    <IconButton
+                      $variant='danger'
+                      onClick={() => removeBannerItem(item._id)}
+                    >
+                      <FaTrash />
+                    </IconButton>
+                  </ButtonGroup>
+                </SliderItem>
+              ))}
+              <AddButton onClick={() => setShowAddBannerModal(true)}>
+                <FaPlus />
+                Add Banner Item
+              </AddButton>
+            </SliderItemsContainer>
           </FormGroup>
         </SectionBody>
       </SectionCard>
 
-      {/* Section 4: Happy Team */}
+      {/* Section 5: Happy Team */}
       <SectionCard>
         <SectionHeader>
           <SectionTitle>Happy Team Section</SectionTitle>
@@ -1960,76 +1720,745 @@ const DashboardFrontpage = () => {
         </SectionBody>
       </SectionCard>
 
-      {/* Section 5: Banner */}
+      {/* Footer Section */}
       <SectionCard>
         <SectionHeader>
-          <SectionTitle>Banner Section</SectionTitle>
+          <SectionTitle>Footer Section</SectionTitle>
           <ToggleButton
-            $enabled={settings.bannerSection?.enabled}
-            onClick={() => toggleSection('bannerSection')}
+            $enabled={settings.footerSection?.enabled}
+            onClick={() => toggleSection('footerSection')}
           >
-            {settings.bannerSection?.enabled ? <FaToggleOn /> : <FaToggleOff />}
-            {settings.bannerSection?.enabled ? 'Enabled' : 'Disabled'}
+            {settings.footerSection?.enabled ? (
+              <FaToggleOn />
+            ) : (
+              <FaToggleOff />
+            )}
+            {settings.footerSection?.enabled ? 'Enabled' : 'Disabled'}
           </ToggleButton>
         </SectionHeader>
-        <SectionBody $collapsed={!settings.bannerSection?.enabled}>
+        <SectionBody $collapsed={!settings.footerSection?.enabled}>
           <FormGroup>
-            <Label>Banner Image URL</Label>
-            <InputWithButton>
-              <Input
-                type='url'
-                value={settings.bannerSection?.imageUrl || ''}
+            <ColorRow>
+              <ColorGroup>
+                <Label>Background Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={
+                      settings.footerSection?.backgroundColor || '#1a1a1a'
+                    }
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'backgroundColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={
+                      settings.footerSection?.backgroundColor || '#1a1a1a'
+                    }
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'backgroundColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#1A1A1A'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Text Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.textColor || '#ffffff'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'textColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.textColor || '#ffffff'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'textColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FFFFFF'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Site Name</Label>
+            <Input
+              type='text'
+              value={settings.footerSection?.siteName || ''}
+              onChange={(e) =>
+                updateSectionField(
+                  'footerSection',
+                  'siteName',
+                  e.target.value
+                )
+              }
+              placeholder='Company Name'
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>Site Name Color</Label>
+            <ColorInputRow>
+              <ColorInput
+                type='color'
+                value={settings.footerSection?.siteNameColor || '#ff0000'}
                 onChange={(e) =>
                   updateSectionField(
-                    'bannerSection',
-                    'imageUrl',
+                    'footerSection',
+                    'siteNameColor',
                     e.target.value
                   )
                 }
-                placeholder='Enter banner image URL'
-                style={{ flex: 1 }}
               />
-              <HiddenFileInput
-                type='file'
-                id='bannerFileInput'
-                accept='image/*'
-                onChange={handleBannerImageUpload}
-              />
-              <UploadButton
-                type='button'
-                onClick={() =>
-                  document.getElementById('bannerFileInput').click()
+              <HexInput
+                type='text'
+                value={settings.footerSection?.siteNameColor || ''}
+                onChange={(e) =>
+                  updateSectionField(
+                    'footerSection',
+                    'siteNameColor',
+                    e.target.value
+                  )
                 }
-                disabled={uploadingBannerImage}
-              >
-                {uploadingBannerImage ? (
-                  <>Uploading...</>
-                ) : (
-                  <>
-                    <FaImage />
-                    Upload
-                  </>
-                )}
-              </UploadButton>
-            </InputWithButton>
-            {settings.bannerSection?.imageUrl && (
-              <ImagePreview>
-                <img
-                  src={settings.bannerSection.imageUrl}
-                  alt={settings.bannerSection.alt || 'Banner preview'}
-                />
-              </ImagePreview>
-            )}
+                placeholder='#FF0000'
+                maxLength='7'
+              />
+            </ColorInputRow>
           </FormGroup>
           <FormGroup>
-            <Label>Alt Text</Label>
+            <Label>Description</Label>
+            <TextArea
+              value={settings.footerSection?.description || ''}
+              onChange={(e) =>
+                updateSectionField(
+                  'footerSection',
+                  'description',
+                  e.target.value
+                )
+              }
+              placeholder='Company description...'
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>Description Color</Label>
+            <ColorInputRow>
+              <ColorInput
+                type='color'
+                value={settings.footerSection?.descriptionColor || '#cccccc'}
+                onChange={(e) =>
+                  updateSectionField(
+                    'footerSection',
+                    'descriptionColor',
+                    e.target.value
+                  )
+                }
+              />
+              <HexInput
+                type='text'
+                value={settings.footerSection?.descriptionColor || ''}
+                onChange={(e) =>
+                  updateSectionField(
+                    'footerSection',
+                    'descriptionColor',
+                    e.target.value
+                  )
+                }
+                placeholder='#CCCCCC'
+                maxLength='7'
+              />
+            </ColorInputRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Contact Information</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Phone</Label>
+                <Input
+                  type='text'
+                  value={settings.footerSection?.phone || ''}
+                  onChange={(e) =>
+                    updateSectionField(
+                      'footerSection',
+                      'phone',
+                      e.target.value
+                    )
+                  }
+                  placeholder='+1 (555) 123-4567'
+                />
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Email</Label>
+                <Input
+                  type='email'
+                  value={settings.footerSection?.email || ''}
+                  onChange={(e) =>
+                    updateSectionField(
+                      'footerSection',
+                      'email',
+                      e.target.value
+                    )
+                  }
+                  placeholder='contact@company.com'
+                />
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Location</Label>
+                <Input
+                  type='text'
+                  value={settings.footerSection?.location || ''}
+                  onChange={(e) =>
+                    updateSectionField(
+                      'footerSection',
+                      'location',
+                      e.target.value
+                    )
+                  }
+                  placeholder='New York, USA'
+                />
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Contact Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Text Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.contactTextColor || '#ffffff'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'contactTextColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.contactTextColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'contactTextColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FFFFFF'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Icon Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.contactIconColor || '#ff0000'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'contactIconColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.contactIconColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'contactIconColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FF0000'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Hire Form Title</Label>
             <Input
               type='text'
-              value={settings.bannerSection?.alt || ''}
+              value={settings.footerSection?.formTitle || ''}
               onChange={(e) =>
-                updateSectionField('bannerSection', 'alt', e.target.value)
+                updateSectionField(
+                  'footerSection',
+                  'formTitle',
+                  e.target.value
+                )
               }
+              placeholder='Hire Us'
             />
+          </FormGroup>
+          <FormGroup>
+            <Label>Form Title Color</Label>
+            <ColorInputRow>
+              <ColorInput
+                type='color'
+                value={settings.footerSection?.formTitleColor || '#ffffff'}
+                onChange={(e) =>
+                  updateSectionField(
+                    'footerSection',
+                    'formTitleColor',
+                    e.target.value
+                  )
+                }
+              />
+              <HexInput
+                type='text'
+                value={settings.footerSection?.formTitleColor || ''}
+                onChange={(e) =>
+                  updateSectionField(
+                    'footerSection',
+                    'formTitleColor',
+                    e.target.value
+                  )
+                }
+                placeholder='#FFFFFF'
+                maxLength='7'
+              />
+            </ColorInputRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Available Roles</Label>
+            <SliderItemsContainer>
+              {settings.footerSection?.roles?.map((role, index) => (
+                <SliderItem key={index}>
+                  <SliderItemInfo>
+                    <div style={{ color: 'var(--text-primary)' }}>{role}</div>
+                  </SliderItemInfo>
+                  <ButtonGroup>
+                    <IconButton
+                      $variant='danger'
+                      onClick={() => {
+                        const newRoles = settings.footerSection.roles.filter(
+                          (_, i) => i !== index
+                        );
+                        updateSectionField('footerSection', 'roles', newRoles);
+                      }}
+                    >
+                      <FaTrash />
+                    </IconButton>
+                  </ButtonGroup>
+                </SliderItem>
+              ))}
+              <AddButton
+                onClick={() => {
+                  const role = prompt('Enter role name:');
+                  if (role) {
+                    const newRoles = [
+                      ...(settings.footerSection?.roles || []),
+                      role,
+                    ];
+                    updateSectionField('footerSection', 'roles', newRoles);
+                  }
+                }}
+              >
+                <FaPlus />
+                Add Role
+              </AddButton>
+            </SliderItemsContainer>
+          </FormGroup>
+          <FormGroup>
+            <Label>Form Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Form Background</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formBackgroundColor || '#0f0f0f'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formBackgroundColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#0F0F0F'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Form Border</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formBorderColor || '#333333'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formBorderColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formBorderColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formBorderColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#333333'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Form Input Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Input Background</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formInputBackgroundColor || '#000000'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formInputBackgroundColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#000000'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Input Text</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formInputTextColor || '#ffffff'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputTextColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formInputTextColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputTextColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FFFFFF'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Input Border</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formInputBorderColor || '#333333'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputBorderColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formInputBorderColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputBorderColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#333333'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Input Focus Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formInputFocusColor || '#ff0000'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputFocusColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formInputFocusColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputFocusColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FF0000'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Placeholder Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formInputPlaceholderColor || '#666666'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputPlaceholderColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formInputPlaceholderColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formInputPlaceholderColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#666666'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Form Button Text</Label>
+            <Input
+              type='text'
+              value={settings.footerSection?.formButtonText || ''}
+              onChange={(e) =>
+                updateSectionField(
+                  'footerSection',
+                  'formButtonText',
+                  e.target.value
+                )
+              }
+              placeholder='Submit'
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>Form Button Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Button Background</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formButtonBackgroundColor || '#ff0000'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formButtonBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formButtonBackgroundColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formButtonBackgroundColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FF0000'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Button Text</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.formButtonTextColor || '#ffffff'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formButtonTextColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.formButtonTextColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'formButtonTextColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#FFFFFF'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
+          </FormGroup>
+          <FormGroup>
+            <Label>Copyright Text</Label>
+            <Input
+              type='text'
+              value={settings.footerSection?.copyrightText || ''}
+              onChange={(e) =>
+                updateSectionField(
+                  'footerSection',
+                  'copyrightText',
+                  e.target.value
+                )
+              }
+              placeholder='© 2024 Company Name. All rights reserved.'
+            />
+          </FormGroup>
+          <FormGroup>
+            <Label>Copyright Colors</Label>
+            <ColorRow>
+              <ColorGroup>
+                <Label>Text Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.copyrightTextColor || '#999999'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'copyrightTextColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.copyrightTextColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'copyrightTextColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#999999'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+              <ColorGroup>
+                <Label>Border Color</Label>
+                <ColorInputRow>
+                  <ColorInput
+                    type='color'
+                    value={settings.footerSection?.copyrightBorderColor || '#333333'}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'copyrightBorderColor',
+                        e.target.value
+                      )
+                    }
+                  />
+                  <HexInput
+                    type='text'
+                    value={settings.footerSection?.copyrightBorderColor || ''}
+                    onChange={(e) =>
+                      updateSectionField(
+                        'footerSection',
+                        'copyrightBorderColor',
+                        e.target.value
+                      )
+                    }
+                    placeholder='#333333'
+                    maxLength='7'
+                  />
+                </ColorInputRow>
+              </ColorGroup>
+            </ColorRow>
           </FormGroup>
         </SectionBody>
       </SectionCard>
@@ -2141,6 +2570,121 @@ const DashboardFrontpage = () => {
                 $variant='primary'
                 onClick={addSliderItem}
                 disabled={uploadingSliderImage}
+              >
+                Add Item
+              </Button>
+            </ModalButtonGroup>
+          </ModalContent>
+        </Modal>
+      )}
+
+      {/* Add Banner Item Modal */}
+      {showAddBannerModal && (
+        <Modal>
+          <ModalContent>
+            <ModalHeader>
+              <ModalTitle>Add Banner Item</ModalTitle>
+              <CloseButton onClick={closeBannerModal}>×</CloseButton>
+            </ModalHeader>
+            <FormGroup>
+              <Label>Type</Label>
+              <select
+                value={newBannerItem.type}
+                onChange={(e) =>
+                  setNewBannerItem({ ...newBannerItem, type: e.target.value })
+                }
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  background: 'var(--tertiary-color)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <option value='image'>Image</option>
+                <option value='video'>Video</option>
+              </select>
+            </FormGroup>
+            <FormGroup>
+              <Label>URL</Label>
+              <InputWithButton>
+                <Input
+                  type='url'
+                  value={newBannerItem.url}
+                  onChange={(e) =>
+                    setNewBannerItem({ ...newBannerItem, url: e.target.value })
+                  }
+                  placeholder='Enter image or video URL'
+                  style={{ flex: 1 }}
+                />
+                <HiddenFileInput
+                  type='file'
+                  id='bannerFileInput'
+                  accept={
+                    newBannerItem.type === 'image' ? 'image/*' : 'video/*'
+                  }
+                  onChange={handleBannerImageUpload}
+                />
+                <UploadButton
+                  type='button'
+                  onClick={() =>
+                    document.getElementById('bannerFileInput').click()
+                  }
+                  disabled={uploadingBannerImage}
+                >
+                  {uploadingBannerImage ? (
+                    <>Uploading...</>
+                  ) : (
+                    <>
+                      {newBannerItem.type === 'image' ? (
+                        <FaImage />
+                      ) : (
+                        <FaVideo />
+                      )}
+                      Upload
+                    </>
+                  )}
+                </UploadButton>
+              </InputWithButton>
+              {newBannerItem.url && (
+                <ImagePreview>
+                  {newBannerItem.type === 'video' ? (
+                    <video src={newBannerItem.url} controls controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} />
+                  ) : (
+                    <img src={newBannerItem.url} alt='Preview' />
+                  )}
+                </ImagePreview>
+              )}
+            </FormGroup>
+            <FormGroup>
+              <Label>Alt Text</Label>
+              <Input
+                type='text'
+                value={newBannerItem.alt}
+                onChange={(e) =>
+                  setNewBannerItem({ ...newBannerItem, alt: e.target.value })
+                }
+                placeholder='Alt text for accessibility'
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>Title</Label>
+              <Input
+                type='text'
+                value={newBannerItem.title}
+                onChange={(e) =>
+                  setNewBannerItem({ ...newBannerItem, title: e.target.value })
+                }
+                placeholder='Optional title'
+              />
+            </FormGroup>
+            <ModalButtonGroup>
+              <Button onClick={closeBannerModal}>Cancel</Button>
+              <Button
+                $variant='primary'
+                onClick={addBannerItem}
+                disabled={uploadingBannerImage}
               >
                 Add Item
               </Button>

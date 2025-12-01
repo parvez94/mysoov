@@ -381,16 +381,8 @@ const Video = () => {
       setMetaTag('og:description', videoDescription);
       setMetaTag('og:image', thumbnailUrl);
       setMetaTag('og:url', shareUrl);
-      setMetaTag('og:type', 'video.other');
+      setMetaTag('og:type', 'website');
       setMetaTag('og:site_name', 'Mysoov');
-
-      // Set video-specific tags if it's a video
-      if (videoUrl && !videoUrl.includes('youtube.com')) {
-        setMetaTag('og:video', videoUrl);
-        setMetaTag('og:video:type', 'video/mp4');
-        setMetaTag('og:video:width', '1280');
-        setMetaTag('og:video:height', '720');
-      }
 
       // Also set Twitter tags for better social sharing
       let twitterTitle = document.querySelector('meta[name="twitter:title"]');
