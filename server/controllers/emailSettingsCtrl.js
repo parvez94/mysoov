@@ -118,11 +118,24 @@ export const sendTestEmail = async (req, res, next) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
 
+    console.log('=== TEST EMAIL REQUEST ===');
+    console.log('User ID:', userId);
+    console.log('User email:', user?.email);
+
     if (!user) {
       return next(createError(404, 'User not found'));
     }
 
     const settings = await Settings.findOne();
+    
+    console.log('Settings found:', !!settings);
+    console.log('Email config exists:', !!settings?.emailConfig);
+    console.log('Email config enabled:', settings?.emailConfig?.enabled);
+    console.log('SMTP Host:', settings?.emailConfig?.host);
+    console.log('SMTP Port:', settings?.emailConfig?.port);
+    console.log('SMTP Username:', settings?.emailConfig?.username);
+    console.log('SMTP Password exists:', !!settings?.emailConfig?.password);
+    console.log('SMTP Password length:', settings?.emailConfig?.password?.length);
     
     if (!settings || !settings.emailConfig) {
       return next(createError(400, 'Email configuration not found. Please save your settings first.'));
@@ -136,7 +149,14 @@ export const sendTestEmail = async (req, res, next) => {
       return next(createError(400, 'Email configuration is incomplete. Please fill in all required fields (host, username, password).'));
     }
 
+    console.log('Creating transporter...');
     const transporter = await createTransporter();
+    
+    // Verify SMTP connection
+    console.log('Verifying SMTP connection...');
+    await transporter.verify();
+    console.log('SMTP connection verified successfully');
+    
     const fromEmail = settings.emailConfig.fromEmail || settings.emailConfig.username;
     const fromName = settings.emailConfig.fromName || 'MySoov';
 
@@ -181,14 +201,34 @@ export const sendTestEmail = async (req, res, next) => {
       `,
     };
 
-    await transporter.sendMail(mailOptions);
+    console.log('Sending email to:', user.email);
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info.messageId);
 
     res.status(200).json({
       success: true,
       message: 'Test email sent successfully'
     });
   } catch (err) {
-    console.error('Test email error:', err);
-    next(createError(500, err.message || 'Failed to send test email'));
+    console.error('=== TEST EMAIL ERROR ===');
+    console.error('Error type:', err.name);
+    console.error('Error message:', err.message);
+    console.error('Error code:', err.code);
+    console.error('Full error:', err);
+    
+    // Provide user-friendly error messages
+    let userMessage = 'Failed to send test email: ';
+    
+    if (err.code === 'EAUTH' || err.responseCode === 535) {
+      userMessage += 'Authentication failed. Please check your username and password.';
+    } else if (err.code === 'ECONNECTION' || err.code === 'ETIMEDOUT') {
+      userMessage += 'Cannot connect to SMTP server. Please check host and port.';
+    } else if (err.code === 'ESOCKET') {
+      userMessage += 'Network error. Please check your internet connection.';
+    } else {
+      userMessage += err.message;
+    }
+    
+    next(createError(500, userMessage));
   }
 };

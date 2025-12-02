@@ -10,6 +10,14 @@ export const createTransporter = async () => {
 
   const config = settings.emailConfig;
 
+  console.log('Creating nodemailer transporter with config:', {
+    host: config.host,
+    port: config.port,
+    secure: config.port === 465,
+    user: config.username,
+    hasPassword: !!config.password
+  });
+
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -18,6 +26,12 @@ export const createTransporter = async () => {
       user: config.username,
       pass: config.password,
     },
+    // Additional options for better compatibility
+    tls: {
+      rejectUnauthorized: false
+    },
+    debug: true, // Enable debug output
+    logger: true // Enable logger
   });
 
   return transporter;
