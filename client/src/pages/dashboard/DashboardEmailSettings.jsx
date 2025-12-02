@@ -255,6 +255,15 @@ const DashboardEmailSettings = () => {
     setLoading(true);
 
     try {
+      console.log('Saving email config:', {
+        enabled: config.enabled,
+        host: config.host,
+        port: config.port,
+        username: config.username,
+        passwordLength: config.password?.length,
+        fromEmail: config.fromEmail
+      });
+
       const res = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/v1/admin/email-config`,
         { emailConfig: config },
@@ -264,8 +273,11 @@ const DashboardEmailSettings = () => {
       if (res.data.success) {
         setMessage('Email settings saved successfully!');
         setSuccess(true);
+        // Reload config to get masked password
+        await fetchEmailConfig();
       }
     } catch (err) {
+      console.error('Save error:', err.response?.data);
       setMessage(err.response?.data?.error || 'Failed to save settings');
       setSuccess(false);
     } finally {
@@ -373,14 +385,18 @@ const DashboardEmailSettings = () => {
           <FormGroup>
             <Label>Password / App Password</Label>
             <Input
-              type='password'
+              type='text'
               name='password'
               value={config.password}
               onChange={handleChange}
-              placeholder='••••••••••••'
+              placeholder='Enter SMTP password or app password'
               disabled={!config.enabled}
+              autoComplete='off'
             />
-            <InfoText>For Gmail, use an App Password, not your regular password</InfoText>
+            <InfoText>
+              Gmail: Paste App Password exactly as shown (including spaces if any).
+              {config.password === '••••••••' && ' Current password saved. Enter new to update.'}
+            </InfoText>
           </FormGroup>
 
           <FormGroup>

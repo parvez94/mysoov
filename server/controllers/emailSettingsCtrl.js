@@ -44,6 +44,14 @@ export const updateEmailConfig = async (req, res, next) => {
       return next(createError(400, 'Email configuration is required'));
     }
 
+    // Trim all string fields
+    if (emailConfig.host) emailConfig.host = emailConfig.host.trim();
+    if (emailConfig.username) emailConfig.username = emailConfig.username.trim();
+    // Only trim leading/trailing spaces from password (Gmail accepts spaces)
+    if (emailConfig.password) emailConfig.password = emailConfig.password.trim();
+    if (emailConfig.fromEmail) emailConfig.fromEmail = emailConfig.fromEmail.trim();
+    if (emailConfig.fromName) emailConfig.fromName = emailConfig.fromName.trim();
+
     // Convert port to number if it's a string
     if (emailConfig.port) {
       emailConfig.port = parseInt(emailConfig.port, 10);
@@ -58,7 +66,8 @@ export const updateEmailConfig = async (req, res, next) => {
       });
     } else {
       console.log('Updating existing settings');
-      if (emailConfig.password === '••••••••' && settings.emailConfig?.password) {
+      // If password is masked or empty, preserve existing password
+      if ((emailConfig.password === '••••••••' || !emailConfig.password) && settings.emailConfig?.password) {
         console.log('Preserving existing password');
         emailConfig.password = settings.emailConfig.password;
       }
@@ -66,7 +75,7 @@ export const updateEmailConfig = async (req, res, next) => {
     }
 
     await settings.save();
-    console.log('Settings saved successfully:', JSON.stringify(settings.emailConfig, null, 2));
+    console.log('Settings saved successfully - enabled:', settings.emailConfig.enabled, 'host:', settings.emailConfig.host);
 
     res.status(200).json({
       success: true,
