@@ -271,19 +271,22 @@ app.get('/video/:id', async (req, res) => {
     let contentUrl = videoUrl;
 
     // Handle image posts
-    if (
-      video.mediaType === 'image' &&
-      video.images &&
-      video.images.length > 0
-    ) {
-      // Use the first image as the thumbnail
-      const firstImage = video.images[0];
-      contentUrl =
-        typeof firstImage === 'string' ? firstImage : firstImage?.url;
-      thumbnailUrl = contentUrl;
+    if (video.mediaType === 'image') {
+      // Try to get image from images array first
+      if (video.images && video.images.length > 0) {
+        const firstImage = video.images[0];
+        contentUrl =
+          typeof firstImage === 'string' ? firstImage : firstImage?.url;
+        thumbnailUrl = contentUrl;
+      } 
+      // Fallback to videoUrl for legacy posts where image was stored in videoUrl
+      else if (videoUrl) {
+        contentUrl = videoUrl;
+        thumbnailUrl = videoUrl;
+      }
 
       // If using Cloudinary, ensure we get a properly sized image
-      if (video.storageProvider === 'cloudinary' && thumbnailUrl) {
+      if (video.storageProvider === 'cloudinary' && thumbnailUrl && thumbnailUrl !== 'https://via.placeholder.com/1200x630?text=Mysoov') {
         thumbnailUrl = thumbnailUrl.replace(
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
@@ -292,7 +295,7 @@ app.get('/video/:id', async (req, res) => {
         if (!thumbnailUrl.startsWith('https://')) {
           thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
         }
-      } else if (video.storageProvider === 'local' && thumbnailUrl) {
+      } else if (video.storageProvider === 'local' && thumbnailUrl && thumbnailUrl !== 'https://via.placeholder.com/1200x630?text=Mysoov') {
         // Convert relative URL to absolute URL for social media
         const baseUrl =
           process.env.NODE_ENV === 'production'
@@ -474,21 +477,42 @@ app.get('/api/debug/post/:id', async (req, res) => {
     let thumbnailUrl = 'https://via.placeholder.com/1200x630?text=Mysoov';
 
     // Check image posts
-    if (
-      video.mediaType === 'image' &&
-      video.images &&
-      video.images.length > 0
-    ) {
-      const firstImage = video.images[0];
-      thumbnailUrl =
-        typeof firstImage === 'string' ? firstImage : firstImage?.url;
+    if (video.mediaType === 'image') {
+      // Try images array first
+      if (video.images && video.images.length > 0) {
+        const firstImage = video.images[0];
+        thumbnailUrl =
+          typeof firstImage === 'string' ? firstImage : firstImage?.url;
+      } 
+      // Fallback to videoUrl for legacy posts
+      else if (videoUrl) {
+        thumbnailUrl = videoUrl;
+      }
 
-      if (video.storageProvider === 'cloudinary' && thumbnailUrl) {
+      if (video.storageProvider === 'cloudinary' && thumbnailUrl && thumbnailUrl !== 'https://via.placeholder.com/1200x630?text=Mysoov') {
         thumbnailUrl = thumbnailUrl.replace(
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
         );
         if (!thumbnailUrl.startsWith('https://')) {
+          thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
+        }
+      } else if (video.storageProvider === 'local' && thumbnailUrl && thumbnailUrl !== 'https://via.placeholder.com/1200x630?text=Mysoov') {
+        const baseUrl =
+          process.env.NODE_ENV === 'production'
+            ? process.env.BACKEND_URL || 'https://api.mysoov.tv'
+            : process.env.BACKEND_URL || 'http://localhost:5000';
+        
+        if (thumbnailUrl.startsWith('/')) {
+          thumbnailUrl = `${baseUrl}${thumbnailUrl}`;
+        } else if (!thumbnailUrl.startsWith('http')) {
+          thumbnailUrl = `${baseUrl}/${thumbnailUrl}`;
+        }
+        
+        if (
+          process.env.NODE_ENV === 'production' &&
+          !thumbnailUrl.startsWith('https://')
+        ) {
           thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
         }
       }
@@ -517,6 +541,9 @@ app.get('/api/debug/post/:id', async (req, res) => {
       shareUrl: `${process.env.FRONTEND_URL || 'https://mysoov.tv'}/post/${
         video._id
       }`,
+      images: video.images || [],
+      imagesCount: video.images?.length || 0,
+      videoUrl: videoUrl,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -554,19 +581,22 @@ app.get('/post/:id', async (req, res) => {
     let contentUrl = videoUrl;
 
     // Handle image posts
-    if (
-      video.mediaType === 'image' &&
-      video.images &&
-      video.images.length > 0
-    ) {
-      // Use the first image as the thumbnail
-      const firstImage = video.images[0];
-      contentUrl =
-        typeof firstImage === 'string' ? firstImage : firstImage?.url;
-      thumbnailUrl = contentUrl;
+    if (video.mediaType === 'image') {
+      // Try to get image from images array first
+      if (video.images && video.images.length > 0) {
+        const firstImage = video.images[0];
+        contentUrl =
+          typeof firstImage === 'string' ? firstImage : firstImage?.url;
+        thumbnailUrl = contentUrl;
+      } 
+      // Fallback to videoUrl for legacy posts where image was stored in videoUrl
+      else if (videoUrl) {
+        contentUrl = videoUrl;
+        thumbnailUrl = videoUrl;
+      }
 
       // If using Cloudinary, ensure we get a properly sized image
-      if (video.storageProvider === 'cloudinary' && thumbnailUrl) {
+      if (video.storageProvider === 'cloudinary' && thumbnailUrl && thumbnailUrl !== 'https://via.placeholder.com/1200x630?text=Mysoov') {
         thumbnailUrl = thumbnailUrl.replace(
           '/upload/',
           '/upload/w_1200,h_630,c_fill/'
