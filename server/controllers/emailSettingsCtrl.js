@@ -38,6 +38,13 @@ export const updateEmailConfig = async (req, res, next) => {
   try {
     const { emailConfig } = req.body;
 
+    console.log('Received email config update:', {
+      enabled: emailConfig?.enabled,
+      host: emailConfig?.host,
+      username: emailConfig?.username,
+      hasPassword: !!emailConfig?.password
+    });
+
     if (!emailConfig) {
       return next(createError(400, 'Email configuration is required'));
     }
@@ -45,23 +52,28 @@ export const updateEmailConfig = async (req, res, next) => {
     let settings = await Settings.findOne();
 
     if (!settings) {
+      console.log('Creating new settings document');
       settings = new Settings({
         emailConfig
       });
     } else {
+      console.log('Updating existing settings');
       if (emailConfig.password === '••••••••' && settings.emailConfig?.password) {
+        console.log('Preserving existing password');
         emailConfig.password = settings.emailConfig.password;
       }
       settings.emailConfig = emailConfig;
     }
 
     await settings.save();
+    console.log('Settings saved successfully');
 
     res.status(200).json({
       success: true,
       message: 'Email configuration updated successfully'
     });
   } catch (err) {
+    console.error('Error saving email config:', err);
     next(err);
   }
 };
@@ -75,10 +87,23 @@ export const sendTestEmail = async (req, res, next) => {
       return next(createError(404, 'User not found'));
     }
 
-    const transporter = await createTransporter();
     const settings = await Settings.findOne();
-    const fromEmail = settings?.emailConfig?.fromEmail || settings?.emailConfig?.username;
-    const fromName = settings?.emailConfig?.fromName || 'MySoov';
+    
+    if (!settings || !settings.emailConfig) {
+      return next(createError(400, 'Email configuration not found. Please save your settings first.'));
+    }
+
+    if (!settings.emailConfig.enabled) {
+      return next(createError(400, 'Email system is not enabled. Please enable it in settings.'));
+    }
+
+    if (!settings.emailConfig.host || !settings.emailConfig.username || !settings.emailConfig.password) {
+      return next(createError(400, 'Email configuration is incomplete. Please fill in all required fields (host, username, password).'));
+    }
+
+    const transporter = await createTransporter();
+    const fromEmail = settings.emailConfig.fromEmail || settings.emailConfig.username;
+    const fromName = settings.emailConfig.fromName || 'MySoov';
 
     const mailOptions = {
       from: `${fromName} <${fromEmail}>`,
