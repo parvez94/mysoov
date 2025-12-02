@@ -3,6 +3,15 @@ import crypto from 'crypto';
 
 const router = express.Router();
 
+router.get('/facebook-data-deletion', (req, res) => {
+  res.json({
+    message: 'Facebook Data Deletion Callback Endpoint',
+    status: 'active',
+    method: 'POST',
+    description: 'This endpoint receives data deletion requests from Facebook. Use POST method with signed_request parameter.',
+  });
+});
+
 router.post('/facebook-data-deletion', async (req, res) => {
   try {
     const signedRequest = req.body.signed_request;
