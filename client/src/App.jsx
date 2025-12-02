@@ -40,6 +40,7 @@ import RefreshUser from './pages/RefreshUser';
 import SearchResults from './pages/SearchResults';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import DataDeletion from './pages/DataDeletion';
 
 // Helper component to handle post redirects from social media and old video links
 const VideoRedirect = () => {
@@ -189,6 +190,10 @@ const router = createBrowserRouter([
       {
         path: 'privacy-policy',
         element: <PrivacyPolicy />,
+      },
+      {
+        path: 'data-deletion',
+        element: <DataDeletion />,
       },
       {
         path: 'upload',
