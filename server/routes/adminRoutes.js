@@ -29,6 +29,7 @@ import {
   getEmailConfig,
   updateEmailConfig,
   sendTestEmail,
+  debugEmailConfig,
 } from '../controllers/emailSettingsCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
@@ -83,6 +84,7 @@ router.post('/reviews/:contentType/:contentId/reject', rejectReview);
 
 // Email settings management
 router.get('/email-config', getEmailConfig);
+router.get('/email-config-debug', debugEmailConfig);
 router.put('/email-config', updateEmailConfig);
 router.post('/test-email', sendTestEmail);
 

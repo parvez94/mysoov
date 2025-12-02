@@ -38,15 +38,15 @@ export const updateEmailConfig = async (req, res, next) => {
   try {
     const { emailConfig } = req.body;
 
-    console.log('Received email config update:', {
-      enabled: emailConfig?.enabled,
-      host: emailConfig?.host,
-      username: emailConfig?.username,
-      hasPassword: !!emailConfig?.password
-    });
+    console.log('Received email config update:', JSON.stringify(emailConfig, null, 2));
 
     if (!emailConfig) {
       return next(createError(400, 'Email configuration is required'));
+    }
+
+    // Convert port to number if it's a string
+    if (emailConfig.port) {
+      emailConfig.port = parseInt(emailConfig.port, 10);
     }
 
     let settings = await Settings.findOne();
@@ -66,7 +66,7 @@ export const updateEmailConfig = async (req, res, next) => {
     }
 
     await settings.save();
-    console.log('Settings saved successfully');
+    console.log('Settings saved successfully:', JSON.stringify(settings.emailConfig, null, 2));
 
     res.status(200).json({
       success: true,
@@ -74,6 +74,32 @@ export const updateEmailConfig = async (req, res, next) => {
     });
   } catch (err) {
     console.error('Error saving email config:', err);
+    console.error('Error details:', err.message);
+    if (err.errors) {
+      console.error('Validation errors:', JSON.stringify(err.errors, null, 2));
+    }
+    next(err);
+  }
+};
+
+export const debugEmailConfig = async (req, res, next) => {
+  try {
+    const settings = await Settings.findOne();
+    
+    res.status(200).json({
+      hasSettings: !!settings,
+      hasEmailConfig: !!settings?.emailConfig,
+      config: settings?.emailConfig ? {
+        enabled: settings.emailConfig.enabled,
+        host: settings.emailConfig.host,
+        port: settings.emailConfig.port,
+        username: settings.emailConfig.username,
+        hasPassword: !!settings.emailConfig.password,
+        fromEmail: settings.emailConfig.fromEmail,
+        fromName: settings.emailConfig.fromName,
+      } : null
+    });
+  } catch (err) {
     next(err);
   }
 };
