@@ -577,54 +577,44 @@ const DashboardFilms = () => {
       setError(null);
       setUploadProgress(0);
 
-      // Step 1: Get Cloudinary signature from server
-      const signatureResponse = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/upload/signature`,
+      // Step 1: Upload video to server (respects storage provider settings)
+      const uploadFormData = new FormData();
+      uploadFormData.append('video', uploadFile);
+
+      const uploadResponse = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+        uploadFormData,
         {
-          folder: 'films',
-          resourceType: 'video',
-        },
-        { withCredentials: true }
-      );
-
-      const { signature, timestamp, cloudName, apiKey, folder } =
-        signatureResponse.data;
-
-      // Step 2: Upload directly to Cloudinary
-      const cloudinaryFormData = new FormData();
-      cloudinaryFormData.append('file', uploadFile);
-      cloudinaryFormData.append('signature', signature);
-      cloudinaryFormData.append('timestamp', timestamp);
-      cloudinaryFormData.append('api_key', apiKey);
-      cloudinaryFormData.append('folder', folder);
-
-      const cloudinaryResponse = await axios.post(
-        `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`,
-        cloudinaryFormData,
-        {
-          withCredentials: false,
+          withCredentials: true,
           onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setUploadProgress(percentCompleted);
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setUploadProgress(Math.min(95, percentCompleted));
+            }
           },
         }
       );
 
       const uploadResult = {
-        url: cloudinaryResponse.data.secure_url,
-        public_id: cloudinaryResponse.data.public_id,
-        provider: 'cloudinary',
+        url: uploadResponse.data.url,
+        public_id: uploadResponse.data.public_id,
+        provider: uploadResponse.data.provider || 'local',
       };
 
-      // Step 3: Create the film entry
+      // Include thumbnailUrl if server generated one
+      if (uploadResponse.data.thumbnailUrl) {
+        uploadResult.thumbnailUrl = uploadResponse.data.thumbnailUrl;
+      }
+
+      // Step 2: Create the film entry
       const filmData = {
         caption: formData.title,
         customerCode: formData.code,
         purchasePrice: parseFloat(formData.price) || 0,
         videoUrl: uploadResult,
-        storageProvider: 'cloudinary',
+        storageProvider: uploadResult.provider,
       };
 
       await axios.post(
@@ -637,14 +627,15 @@ const DashboardFilms = () => {
       setShowUploadModal(false);
       setUploadFile(null);
       setFormData({ title: '', code: '', price: 0 });
-      setUploadProgress(0);
+      setUploadProgress(100);
 
       // Fetch updated films
       await fetchFilms();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       setError(
-        err.response?.data?.message ||
+        err.response?.data?.msg ||
+          err.response?.data?.message ||
           err.response?.data?.error?.message ||
           'Failed to upload film'
       );
