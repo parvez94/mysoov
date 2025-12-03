@@ -38,7 +38,10 @@ export const updateEmailConfig = async (req, res, next) => {
   try {
     const { emailConfig } = req.body;
 
+    console.log('=== EMAIL CONFIG UPDATE ===');
     console.log('Received email config update:', JSON.stringify(emailConfig, null, 2));
+    console.log('Password received (raw):', emailConfig.password);
+    console.log('Password length (raw):', emailConfig.password?.length);
 
     if (!emailConfig) {
       return next(createError(400, 'Email configuration is required'));
@@ -47,8 +50,12 @@ export const updateEmailConfig = async (req, res, next) => {
     // Trim all string fields
     if (emailConfig.host) emailConfig.host = emailConfig.host.trim();
     if (emailConfig.username) emailConfig.username = emailConfig.username.trim();
-    // Only trim leading/trailing spaces from password (Gmail accepts spaces)
-    if (emailConfig.password) emailConfig.password = emailConfig.password.trim();
+    // Remove ALL spaces from password (Gmail app passwords have display spaces only)
+    if (emailConfig.password) {
+      const originalPassword = emailConfig.password;
+      emailConfig.password = emailConfig.password.replace(/\s/g, '');
+      console.log('Password after removing spaces:', emailConfig.password.substring(0, 4) + '... (length: ' + emailConfig.password.length + ')');
+    }
     if (emailConfig.fromEmail) emailConfig.fromEmail = emailConfig.fromEmail.trim();
     if (emailConfig.fromName) emailConfig.fromName = emailConfig.fromName.trim();
 
@@ -75,7 +82,12 @@ export const updateEmailConfig = async (req, res, next) => {
     }
 
     await settings.save();
-    console.log('Settings saved successfully - enabled:', settings.emailConfig.enabled, 'host:', settings.emailConfig.host);
+    console.log('Settings saved successfully!');
+    console.log('Saved config - enabled:', settings.emailConfig.enabled);
+    console.log('Saved config - host:', settings.emailConfig.host);
+    console.log('Saved config - username:', settings.emailConfig.username);
+    console.log('Saved config - password length:', settings.emailConfig.password?.length);
+    console.log('Saved config - password starts with:', settings.emailConfig.password?.substring(0, 4) + '...');
 
     res.status(200).json({
       success: true,
