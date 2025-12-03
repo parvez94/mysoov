@@ -1,5 +1,7 @@
 import FrontpageSettings from '../models/FrontpageSettings.js';
 import { createError } from '../utils/error.js';
+import { createTransporter, getEmailFromSettings } from '../utils/emailConfig.js';
+import Settings from '../models/Settings.js';
 
 // Get frontpage settings
 export const getFrontpageSettings = async (req, res, next) => {
@@ -263,6 +265,81 @@ export const submitHireForm = async (req, res, next) => {
       message: message || 'No message provided',
       timestamp: new Date().toISOString(),
     });
+
+    // Try to send email notification
+    try {
+      const settings = await Settings.findOne();
+      
+      if (settings?.emailConfig?.enabled) {
+        const transporter = await createTransporter();
+        const fromEmail = await getEmailFromSettings();
+        
+        // Email to admin about the hire form submission
+        const adminEmail = settings.emailConfig.username; // Send to the SMTP account email
+        
+        await transporter.sendMail({
+          from: fromEmail,
+          to: adminEmail,
+          subject: `New Hire Form Submission - ${role}`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background-color: #f9f9f9; }
+                .field { margin: 15px 0; }
+                .label { font-weight: bold; color: #555; }
+                .value { margin-top: 5px; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>New Hire Form Submission</h1>
+                </div>
+                <div class="content">
+                  <div class="field">
+                    <div class="label">Name:</div>
+                    <div class="value">${name}</div>
+                  </div>
+                  <div class="field">
+                    <div class="label">Email:</div>
+                    <div class="value"><a href="mailto:${email}">${email}</a></div>
+                  </div>
+                  <div class="field">
+                    <div class="label">Role:</div>
+                    <div class="value">${role}</div>
+                  </div>
+                  <div class="field">
+                    <div class="label">Message:</div>
+                    <div class="value">${message || 'No message provided'}</div>
+                  </div>
+                  <div class="field">
+                    <div class="label">Submitted At:</div>
+                    <div class="value">${new Date().toLocaleString()}</div>
+                  </div>
+                </div>
+                <div class="footer">
+                  <p>&copy; ${new Date().getFullYear()} MySoov. All rights reserved.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `,
+        });
+        
+        console.log('Hire form notification email sent to:', adminEmail);
+      } else {
+        console.log('Email system not enabled, form data logged only');
+      }
+    } catch (emailErr) {
+      console.error('Failed to send hire form email notification:', emailErr.message);
+      // Don't fail the request if email fails
+    }
 
     res.status(200).json({ message: 'Form submitted successfully' });
   } catch (err) {
