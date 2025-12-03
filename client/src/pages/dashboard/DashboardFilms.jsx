@@ -801,14 +801,14 @@ const DashboardFilms = () => {
               <DragUploadArea>
                 <HiddenInput
                   type='file'
-                  accept='video/*'
+                  accept='video/*,.mkv'
                   onChange={handleFileSelect}
                 />
                 <UploadIcon>
                   <FaUpload />
                 </UploadIcon>
                 <UploadText>Click to select video</UploadText>
-                <UploadSubtext>MP4, MOV, AVI supported</UploadSubtext>
+                <UploadSubtext>MP4, MOV, AVI, MKV supported</UploadSubtext>
               </DragUploadArea>
             ) : (
               <SelectedFile>

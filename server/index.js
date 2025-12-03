@@ -326,8 +326,8 @@ app.get('/video/:id', async (req, res) => {
           '/upload/',
           '/upload/so_0,w_1200,h_630,c_fill/'
         );
-        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
-          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov') || videoUrl.includes('.mkv')) {
+          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov|mkv)$/, '.jpg');
         }
         // Ensure HTTPS for Cloudinary URLs
         if (!thumbnailUrl.startsWith('https://')) {
@@ -522,8 +522,8 @@ app.get('/api/debug/post/:id', async (req, res) => {
           '/upload/',
           '/upload/so_0,w_1200,h_630,c_fill/'
         );
-        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
-          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov') || videoUrl.includes('.mkv')) {
+          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov|mkv)$/, '.jpg');
         }
         if (!thumbnailUrl.startsWith('https://')) {
           thumbnailUrl = thumbnailUrl.replace(/^http:\/\//, 'https://');
@@ -636,8 +636,8 @@ app.get('/post/:id', async (req, res) => {
           '/upload/',
           '/upload/so_0,w_1200,h_630,c_fill/'
         );
-        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov')) {
-          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov)$/, '.jpg');
+        if (videoUrl.includes('.mp4') || videoUrl.includes('.mov') || videoUrl.includes('.mkv')) {
+          thumbnailUrl = thumbnailUrl.replace(/\.(mp4|mov|mkv)$/, '.jpg');
         }
         // Ensure HTTPS for Cloudinary URLs
         if (!thumbnailUrl.startsWith('https://')) {
