@@ -80,11 +80,14 @@ app.use(
     },
     abortOnLimit: true,
     debug: false, // Disable debug to avoid logging non-file requests
+    uploadTimeout: 3600000, // 1 hour timeout for large files
+    parseNested: true,
   })
 );
 
 // JSON parser - comes after file upload
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Import routes
 import authRouter from './routes/authRoutes.js';

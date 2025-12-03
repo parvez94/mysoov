@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
 import styled from 'styled-components';
@@ -518,6 +518,7 @@ const DashboardFilms = () => {
   });
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  const abortControllerRef = useRef(null);
 
   // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
@@ -554,8 +555,15 @@ const DashboardFilms = () => {
   };
 
   const handleRemoveFile = () => {
+    // Cancel ongoing upload if there is one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     setUploadFile(null);
     setUploadProgress(0);
+    setIsUploading(false);
+    setError(null);
   };
 
   const formatFileSize = (bytes) => {
@@ -577,6 +585,10 @@ const DashboardFilms = () => {
       setError(null);
       setUploadProgress(0);
 
+      // Create AbortController for cancellation support
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       // Step 1: Upload video to server (respects storage provider settings)
       const uploadFormData = new FormData();
       uploadFormData.append('video', uploadFile);
@@ -586,6 +598,8 @@ const DashboardFilms = () => {
         uploadFormData,
         {
           withCredentials: true,
+          signal: controller.signal,
+          timeout: 3600000, // 1 hour timeout for large files
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round(
@@ -628,19 +642,27 @@ const DashboardFilms = () => {
       setUploadFile(null);
       setFormData({ title: '', code: '', price: 0 });
       setUploadProgress(100);
+      abortControllerRef.current = null;
 
       // Fetch updated films
       await fetchFilms();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(
-        err.response?.data?.msg ||
-          err.response?.data?.message ||
-          err.response?.data?.error?.message ||
-          'Failed to upload film'
-      );
+      // Handle cancellation
+      if (err.code === 'ERR_CANCELED' || err.name === 'CanceledError') {
+        setError('Upload cancelled');
+        setUploadProgress(0);
+      } else {
+        setError(
+          err.response?.data?.msg ||
+            err.response?.data?.message ||
+            err.response?.data?.error?.message ||
+            'Failed to upload film'
+        );
+      }
     } finally {
       setIsUploading(false);
+      abortControllerRef.current = null;
     }
   };
 

@@ -76,8 +76,17 @@ export const uploadToLocal = async (tempFilePath, options = {}) => {
     const destinationDir = path.join(UPLOAD_BASE_DIR, folder);
     const destinationPath = path.join(destinationDir, filename);
 
-    // Move file from temp to permanent location
-    await fs.promises.copyFile(tempFilePath, destinationPath);
+    // Move file from temp to permanent location using streams for better performance
+    await new Promise((resolve, reject) => {
+      const readStream = fs.createReadStream(tempFilePath);
+      const writeStream = fs.createWriteStream(destinationPath);
+      
+      readStream.on('error', reject);
+      writeStream.on('error', reject);
+      writeStream.on('finish', resolve);
+      
+      readStream.pipe(writeStream);
+    });
 
     // Generate URL path
     const relativePath = `/uploads/${folder}/${filename}`;
@@ -96,21 +105,24 @@ export const uploadToLocal = async (tempFilePath, options = {}) => {
       provider: 'local',
     };
 
-    // Generate thumbnail for videos
+    // Generate thumbnail for videos (non-blocking for faster response)
     if (folder === 'videos') {
-      try {
-        const thumbnailFilename = filename.replace(/\.[^/.]+$/, '.jpg');
-        const thumbnailPath = path.join(UPLOAD_BASE_DIR, 'thumbnails', thumbnailFilename);
-        
-        await generateThumbnail(destinationPath, thumbnailPath);
-        
-        const thumbnailRelativePath = `/uploads/thumbnails/${thumbnailFilename}`;
-        const thumbnailAbsoluteUrl = `${backendUrl}${thumbnailRelativePath}`;
-        
-        result.thumbnailUrl = thumbnailAbsoluteUrl;
-      } catch (thumbnailError) {
-        console.error('Failed to generate thumbnail:', thumbnailError.message);
-      }
+      const thumbnailFilename = filename.replace(/\.[^/.]+$/, '.jpg');
+      const thumbnailPath = path.join(UPLOAD_BASE_DIR, 'thumbnails', thumbnailFilename);
+      const thumbnailRelativePath = `/uploads/thumbnails/${thumbnailFilename}`;
+      const thumbnailAbsoluteUrl = `${backendUrl}${thumbnailRelativePath}`;
+      
+      // Generate thumbnail in background
+      generateThumbnail(destinationPath, thumbnailPath)
+        .then(() => {
+          console.log('✅ Thumbnail generated:', thumbnailFilename);
+        })
+        .catch((thumbnailError) => {
+          console.error('❌ Failed to generate thumbnail:', thumbnailError.message);
+        });
+      
+      // Return thumbnail URL immediately (it will be available shortly)
+      result.thumbnailUrl = thumbnailAbsoluteUrl;
     }
 
     return result;
