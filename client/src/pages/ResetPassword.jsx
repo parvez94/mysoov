@@ -7,7 +7,7 @@ const Container = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--background);
+  background-color: var(--tertiary-color);
   padding: 20px;
 `;
 
