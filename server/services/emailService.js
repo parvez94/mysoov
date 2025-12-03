@@ -29,7 +29,8 @@ export const sendPasswordResetEmail = async (user, resetToken) => {
     const transporter = await createTransporter();
     const fromEmail = await getEmailFromSettings();
 
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'https://mysoov.tv';
+    const resetUrl = `${clientUrl}/reset-password/${resetToken}`;
 
     const mailOptions = {
       from: fromEmail,

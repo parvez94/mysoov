@@ -1,4 +1,5 @@
 export const welcomeEmailTemplate = (user) => {
+  const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'https://mysoov.tv';
   return `
     <!DOCTYPE html>
     <html>
@@ -23,7 +24,7 @@ export const welcomeEmailTemplate = (user) => {
           <p>Your account has been successfully created. You can now start exploring our platform and all the features we offer.</p>
           <p>If you have any questions or need assistance, feel free to reach out to our support team.</p>
           <p style="text-align: center;">
-            <a href="${process.env.CLIENT_URL}/feeds" class="button">Get Started</a>
+            <a href="${clientUrl}/feeds" class="button">Get Started</a>
           </p>
         </div>
         <div class="footer">

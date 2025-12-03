@@ -10,14 +10,6 @@ export const createTransporter = async () => {
 
   const config = settings.emailConfig;
 
-  console.log('Creating nodemailer transporter with config:', {
-    host: config.host,
-    port: config.port,
-    secure: config.port === 465,
-    user: config.username,
-    hasPassword: !!config.password
-  });
-
   const transporter = nodemailer.createTransport({
     host: config.host,
     port: config.port,
@@ -29,9 +21,7 @@ export const createTransporter = async () => {
     // Additional options for better compatibility
     tls: {
       rejectUnauthorized: false
-    },
-    debug: true, // Enable debug output
-    logger: true // Enable logger
+    }
   });
 
   return transporter;
@@ -40,7 +30,9 @@ export const createTransporter = async () => {
 export const getEmailFromSettings = async () => {
   const settings = await Settings.findOne();
   if (!settings || !settings.emailConfig) {
-    return 'noreply@mysoov.com';
+    return 'MySoov TV <noreply@mysoov.com>';
   }
-  return settings.emailConfig.fromEmail || settings.emailConfig.username;
+  const fromEmail = settings.emailConfig.fromEmail || settings.emailConfig.username;
+  const fromName = settings.emailConfig.fromName || 'MySoov TV';
+  return `${fromName} <${fromEmail}>`;
 };

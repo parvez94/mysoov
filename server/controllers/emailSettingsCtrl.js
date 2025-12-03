@@ -38,11 +38,6 @@ export const updateEmailConfig = async (req, res, next) => {
   try {
     const { emailConfig } = req.body;
 
-    console.log('=== EMAIL CONFIG UPDATE ===');
-    console.log('Received email config update:', JSON.stringify(emailConfig, null, 2));
-    console.log('Password received (raw):', emailConfig.password);
-    console.log('Password length (raw):', emailConfig.password?.length);
-
     if (!emailConfig) {
       return next(createError(400, 'Email configuration is required'));
     }
@@ -52,9 +47,7 @@ export const updateEmailConfig = async (req, res, next) => {
     if (emailConfig.username) emailConfig.username = emailConfig.username.trim();
     // Remove ALL spaces from password (Gmail app passwords have display spaces only)
     if (emailConfig.password) {
-      const originalPassword = emailConfig.password;
       emailConfig.password = emailConfig.password.replace(/\s/g, '');
-      console.log('Password after removing spaces:', emailConfig.password.substring(0, 4) + '... (length: ' + emailConfig.password.length + ')');
     }
     if (emailConfig.fromEmail) emailConfig.fromEmail = emailConfig.fromEmail.trim();
     if (emailConfig.fromName) emailConfig.fromName = emailConfig.fromName.trim();
@@ -67,27 +60,18 @@ export const updateEmailConfig = async (req, res, next) => {
     let settings = await Settings.findOne();
 
     if (!settings) {
-      console.log('Creating new settings document');
       settings = new Settings({
         emailConfig
       });
     } else {
-      console.log('Updating existing settings');
       // If password is masked or empty, preserve existing password
       if ((emailConfig.password === '••••••••' || !emailConfig.password) && settings.emailConfig?.password) {
-        console.log('Preserving existing password');
         emailConfig.password = settings.emailConfig.password;
       }
       settings.emailConfig = emailConfig;
     }
 
     await settings.save();
-    console.log('Settings saved successfully!');
-    console.log('Saved config - enabled:', settings.emailConfig.enabled);
-    console.log('Saved config - host:', settings.emailConfig.host);
-    console.log('Saved config - username:', settings.emailConfig.username);
-    console.log('Saved config - password length:', settings.emailConfig.password?.length);
-    console.log('Saved config - password starts with:', settings.emailConfig.password?.substring(0, 4) + '...');
 
     res.status(200).json({
       success: true,
@@ -130,24 +114,11 @@ export const sendTestEmail = async (req, res, next) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
 
-    console.log('=== TEST EMAIL REQUEST ===');
-    console.log('User ID:', userId);
-    console.log('User email:', user?.email);
-
     if (!user) {
       return next(createError(404, 'User not found'));
     }
 
     const settings = await Settings.findOne();
-    
-    console.log('Settings found:', !!settings);
-    console.log('Email config exists:', !!settings?.emailConfig);
-    console.log('Email config enabled:', settings?.emailConfig?.enabled);
-    console.log('SMTP Host:', settings?.emailConfig?.host);
-    console.log('SMTP Port:', settings?.emailConfig?.port);
-    console.log('SMTP Username:', settings?.emailConfig?.username);
-    console.log('SMTP Password exists:', !!settings?.emailConfig?.password);
-    console.log('SMTP Password length:', settings?.emailConfig?.password?.length);
     
     if (!settings || !settings.emailConfig) {
       return next(createError(400, 'Email configuration not found. Please save your settings first.'));
@@ -161,13 +132,10 @@ export const sendTestEmail = async (req, res, next) => {
       return next(createError(400, 'Email configuration is incomplete. Please fill in all required fields (host, username, password).'));
     }
 
-    console.log('Creating transporter...');
     const transporter = await createTransporter();
     
     // Verify SMTP connection
-    console.log('Verifying SMTP connection...');
     await transporter.verify();
-    console.log('SMTP connection verified successfully');
     
     const fromEmail = settings.emailConfig.fromEmail || settings.emailConfig.username;
     const fromName = settings.emailConfig.fromName || 'MySoov';
@@ -213,20 +181,14 @@ export const sendTestEmail = async (req, res, next) => {
       `,
     };
 
-    console.log('Sending email to:', user.email);
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    await transporter.sendMail(mailOptions);
 
     res.status(200).json({
       success: true,
       message: 'Test email sent successfully'
     });
   } catch (err) {
-    console.error('=== TEST EMAIL ERROR ===');
-    console.error('Error type:', err.name);
-    console.error('Error message:', err.message);
-    console.error('Error code:', err.code);
-    console.error('Full error:', err);
+    console.error('Test email error:', err.message);
     
     // Provide user-friendly error messages
     let userMessage = 'Failed to send test email: ';
