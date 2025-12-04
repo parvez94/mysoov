@@ -630,6 +630,7 @@ const DashboardFilms = () => {
         videoUrl: uploadResult,
         thumbnail: uploadResult.thumbnailUrl || '',
         storageProvider: uploadResult.provider,
+        fileSize: uploadResult.fileSize || 0,
       };
 
       await axios.post(

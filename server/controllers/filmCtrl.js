@@ -566,9 +566,10 @@ export const createFilm = async (req, res, next) => {
       videoUrl: videoUrl || {},
       thumbnail: thumbnail || '',
       userId: req.user.id,
-      privacy: 'Private',
+      privacy: 'Public',
       isFilm: true,
       mediaType: 'video',
+      fileSize: req.body.fileSize || 0,
     });
 
     await film.populate('userId', 'username displayName displayImage');
