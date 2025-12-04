@@ -16,7 +16,8 @@ export const addVideo = async (req, res, next) => {
 
 export const getVideo = async (req, res, next) => {
   try {
-    const videoDoc = await Video.findById(req.params.id);
+    const videoDoc = await Video.findById(req.params.id)
+      .populate('sourceFilmId', 'purchasePrice customerCode caption');
     if (!videoDoc) return next(createError(404, 'Video not found'));
 
     // Convert to plain object for safe spreading

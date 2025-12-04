@@ -593,6 +593,14 @@ export const deleteFilm = async (req, res, next) => {
       return next(createError(404, 'Film not found'));
     }
 
+    // Delete video file from local storage if applicable
+    if (film.storageProvider === 'local' && film.videoUrl?.public_id) {
+      const { deleteFromLocal } = await import('../utils/localStorage.js');
+      await deleteFromLocal(film.videoUrl.public_id).catch((err) => {
+        // Log but don't fail if file deletion fails
+      });
+    }
+
     // Delete the film
     await Video.findByIdAndDelete(filmId);
 

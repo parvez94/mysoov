@@ -81,12 +81,23 @@ export const uploadToLocal = async (tempFilePath, options = {}) => {
       const readStream = fs.createReadStream(tempFilePath);
       const writeStream = fs.createWriteStream(destinationPath);
       
-      readStream.on('error', reject);
-      writeStream.on('error', reject);
+      readStream.on('error', (err) => {
+        writeStream.destroy();
+        reject(new Error(`Read stream error: ${err.message}`));
+      });
+      writeStream.on('error', (err) => {
+        readStream.destroy();
+        reject(new Error(`Write stream error: ${err.message}`));
+      });
       writeStream.on('finish', resolve);
       
       readStream.pipe(writeStream);
     });
+    
+    // Verify file was written successfully
+    if (!fs.existsSync(destinationPath)) {
+      throw new Error('File was not written to destination');
+    }
 
     // Generate URL path
     const relativePath = `/uploads/${folder}/${filename}`;
