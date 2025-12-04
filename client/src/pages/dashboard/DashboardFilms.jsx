@@ -686,7 +686,7 @@ const DashboardFilms = () => {
   };
 
   const handleWatchVideo = (filmId) => {
-    window.open(`/video/${filmId}`, '_blank');
+    window.open(`/post/${filmId}`, '_blank');
   };
 
   const formatDate = (date) => {
