@@ -2,6 +2,9 @@ import * as dotenv from 'dotenv';
 import express from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import fs from 'fs';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { verifyToken } from '../utils/verifyToken.js';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
@@ -15,6 +18,39 @@ import { uploadToLocal, deleteFromLocal } from '../utils/localStorage.js';
 dotenv.config();
 
 const router = express.Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Configure multer for large file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tempDir = path.join(__dirname, '..', 'tmp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    cb(null, tempDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'upload-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB max
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept video and image files
+    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video and image files are allowed'));
+    }
+  },
+});
 
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -45,24 +81,40 @@ router.options('/upload', (req, res) => {
   res.status(200).end();
 });
 
-router.post('/upload', verifyToken, async (req, res) => {
+router.post('/upload', verifyToken, (req, res, next) => {
+  // Accept either 'video' or 'image' field
+  upload.fields([
+    { name: 'video', maxCount: 1 },
+    { name: 'image', maxCount: 1 }
+  ])(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ msg: 'File size exceeds 500MB limit' });
+        }
+        return res.status(400).json({ msg: `Upload error: ${err.message}` });
+      }
+      return res.status(500).json({ msg: err.message || 'Upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
-    if (!req.files || Object.keys(req.files).length === 0)
-      return res.status(400).json({ msg: 'No files were uploaded.' });
-
-    const file = req.files.video || req.files.image;
-
-    if (!file) return res.status(400).json({ msg: 'Missing media file' });
+    // Handle both 'video' and 'image' field names
+    const file = req.files?.video?.[0] || req.files?.image?.[0];
+    
+    if (!file)
+      return res.status(400).json({ msg: 'No file was uploaded.' });
 
     // Get user's upload limit based on subscription
     const user = await User.findById(req.user.id);
     if (!user) {
-      removeTmp(file.tempFilePath);
+      removeTmp(file.path);
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    // Determine if it's a video or image
-    const isVideo = req.files.video ? true : false;
+    // Determine if it's a video or image based on mimetype
+    const isVideo = file.mimetype.startsWith('video/');
 
     // Get storage settings
     let settings = await Settings.findOne();
@@ -76,8 +128,6 @@ router.post('/upload', verifyToken, async (req, res) => {
     }
 
     let provider = settings.storageProvider || 'local';
-    console.log('🔍 Upload Debug - Storage Provider:', provider);
-    console.log('🔍 Upload Debug - Is Video:', isVideo);
 
     const totalStorageLimit = getTotalStorageLimit(user);
     const storageUsed = user.storageUsed || 0;
@@ -85,7 +135,7 @@ router.post('/upload', verifyToken, async (req, res) => {
     const availableStorage = totalStorageLimit - storageUsed;
 
     if (fileSizeMB > availableStorage) {
-      removeTmp(file.tempFilePath);
+      removeTmp(file.path);
       return res.status(403).json({
         msg: `Not enough storage. File size: ${fileSizeMB.toFixed(2)}MB, Available: ${availableStorage.toFixed(2)}MB`,
         exceedsLimit: true,
@@ -103,7 +153,7 @@ router.post('/upload', verifyToken, async (req, res) => {
     if (isVideo && provider === 'youtube' && isYouTubeConfigured()) {
       try {
         // Upload to YouTube
-        const youtubeResult = await uploadToYouTube(file.tempFilePath, {
+        const youtubeResult = await uploadToYouTube(file.path, {
           title: req.body.title || `Video by ${user.username}`,
           description: req.body.description || 'Uploaded via Mysoov.TV',
           tags: ['mysoov', user.username],
@@ -118,10 +168,6 @@ router.post('/upload', verifyToken, async (req, res) => {
           thumbnailUrl: youtubeResult.thumbnailUrl,
         };
       } catch (youtubeError) {
-        console.error(
-          'YouTube upload failed, falling back to local storage:',
-          youtubeError.message
-        );
         provider = 'local';
       }
     }
@@ -130,7 +176,7 @@ router.post('/upload', verifyToken, async (req, res) => {
     if (!result && provider === 'cloudinary') {
       try {
         const cloudinaryResult = await cloudinary.uploader.upload(
-          file.tempFilePath,
+          file.path,
           {
             folder: isVideo ? 'videos' : 'images',
             resource_type: isVideo ? 'video' : 'image',
@@ -143,19 +189,15 @@ router.post('/upload', verifyToken, async (req, res) => {
           provider: 'cloudinary',
         };
       } catch (cloudinaryError) {
-        console.error(
-          'Cloudinary upload failed, falling back to local storage:',
-          cloudinaryError.message
-        );
         provider = 'local';
       }
     }
 
     // Upload to local storage (default or fallback)
     if (!result) {
-      const localResult = await uploadToLocal(file.tempFilePath, {
+      const localResult = await uploadToLocal(file.path, {
         folder: isVideo ? 'videos' : 'images',
-        originalName: file.name,
+        originalName: file.originalname,
       });
 
       result = {
@@ -170,7 +212,7 @@ router.post('/upload', verifyToken, async (req, res) => {
     }
 
     // Clean up temporary file
-    removeTmp(file.tempFilePath);
+    removeTmp(file.path);
 
     await User.findByIdAndUpdate(req.user.id, {
       $inc: { storageUsed: fileSizeMB },
@@ -178,6 +220,11 @@ router.post('/upload', verifyToken, async (req, res) => {
 
     res.json({ ...result, fileSize: fileSizeMB });
   } catch (err) {
+    // Clean up file on error
+    const file = req.files?.video?.[0] || req.files?.image?.[0];
+    if (file?.path) {
+      removeTmp(file.path);
+    }
     return res
       .status(500)
       .json({ msg: err.message || 'Internal server error' });
@@ -245,17 +292,29 @@ router.post('/upload/signature', verifyToken, async (req, res) => {
 });
 
 // Upload profile image
-router.post('/upload/image', verifyToken, async (req, res) => {
+router.post('/upload/image', verifyToken, (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ msg: 'File size exceeds limit' });
+        }
+        return res.status(400).json({ msg: `Upload error: ${err.message}` });
+      }
+      return res.status(500).json({ msg: err.message || 'Upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
-    if (!req.files || Object.keys(req.files).length === 0)
-      return res.status(400).json({ msg: 'No files were uploaded.' });
+    if (!req.file)
+      return res.status(400).json({ msg: 'No file was uploaded.' });
 
-    const file = req.files.image;
-    if (!file) return res.status(400).json({ msg: 'Missing image file' });
+    const file = req.file;
 
     // ~5MB limit for avatars
     if (file.size > 5 * 1024 * 1024) {
-      removeTmp(file.tempFilePath);
+      removeTmp(file.path);
       return res.status(400).json({ msg: 'Image too large (max 5MB)' });
     }
 
@@ -267,7 +326,7 @@ router.post('/upload/image', verifyToken, async (req, res) => {
 
     if (provider === 'cloudinary') {
       const cloudinaryResult = await cloudinary.uploader.upload(
-        file.tempFilePath,
+        file.path,
         {
           folder: 'avatars',
           resource_type: 'image',
@@ -280,25 +339,44 @@ router.post('/upload/image', verifyToken, async (req, res) => {
       };
     } else {
       // Use local storage
-      const localResult = await uploadToLocal(file.tempFilePath, {
+      const localResult = await uploadToLocal(file.path, {
         folder: 'avatars',
-        originalName: file.name,
+        originalName: file.originalname,
       });
       result = { public_id: localResult.public_id, url: localResult.url };
     }
 
-    removeTmp(file.tempFilePath);
+    removeTmp(file.path);
 
     return res.json(result);
   } catch (err) {
-    return res.status(500).json({ msg: 'Internal server error' });
+    if (req.file?.path) {
+      removeTmp(req.file.path);
+    }
+    return res.status(500).json({ msg: err.message || 'Internal server error' });
   }
 });
 
 // Upload multiple images
-router.post('/upload/images', verifyToken, async (req, res) => {
+router.post('/upload/images', verifyToken, (req, res, next) => {
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ msg: 'One or more files exceed size limit' });
+        }
+        if (err.code === 'LIMIT_FILE_COUNT') {
+          return res.status(400).json({ msg: 'Too many files (max 10)' });
+        }
+        return res.status(400).json({ msg: `Upload error: ${err.message}` });
+      }
+      return res.status(500).json({ msg: err.message || 'Upload failed' });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
-    if (!req.files || Object.keys(req.files).length === 0) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({ msg: 'No files were uploaded.' });
     }
 
@@ -307,8 +385,7 @@ router.post('/upload/images', verifyToken, async (req, res) => {
       return res.status(404).json({ msg: 'User not found' });
     }
 
-    const files = req.files.images;
-    const fileArray = Array.isArray(files) ? files : [files];
+    const fileArray = req.files;
 
     const totalStorageLimit = getTotalStorageLimit(user);
     const storageUsed = user.storageUsed || 0;
@@ -316,7 +393,7 @@ router.post('/upload/images', verifyToken, async (req, res) => {
     const availableStorage = totalStorageLimit - storageUsed;
 
     if (totalFileSizeMB > availableStorage) {
-      fileArray.forEach((f) => removeTmp(f.tempFilePath));
+      fileArray.forEach((f) => removeTmp(f.path));
       return res.status(403).json({
         msg: `Not enough storage. Total size: ${totalFileSizeMB.toFixed(2)}MB, Available: ${availableStorage.toFixed(2)}MB`,
         exceedsLimit: true,
@@ -337,7 +414,7 @@ router.post('/upload/images', verifyToken, async (req, res) => {
     if (provider === 'cloudinary') {
       // Upload all images to Cloudinary
       const uploadPromises = fileArray.map((file) =>
-        cloudinary.uploader.upload(file.tempFilePath, {
+        cloudinary.uploader.upload(file.path, {
           folder: 'images',
           resource_type: 'image',
         })
@@ -354,9 +431,9 @@ router.post('/upload/images', verifyToken, async (req, res) => {
     } else {
       // Upload all images to local storage
       const uploadPromises = fileArray.map((file) =>
-        uploadToLocal(file.tempFilePath, {
+        uploadToLocal(file.path, {
           folder: 'images',
-          originalName: file.name,
+          originalName: file.originalname,
         })
       );
 
@@ -371,7 +448,7 @@ router.post('/upload/images', verifyToken, async (req, res) => {
     }
 
     // Clean up temporary files
-    fileArray.forEach((file) => removeTmp(file.tempFilePath));
+    fileArray.forEach((file) => removeTmp(file.path));
 
     await User.findByIdAndUpdate(req.user.id, {
       $inc: { storageUsed: totalFileSizeMB },
@@ -379,6 +456,10 @@ router.post('/upload/images', verifyToken, async (req, res) => {
 
     res.json({ images: uploadedImages });
   } catch (err) {
+    // Clean up files on error
+    if (req.files) {
+      req.files.forEach(file => removeTmp(file.path));
+    }
     return res
       .status(500)
       .json({ msg: err.message || 'Internal server error' });

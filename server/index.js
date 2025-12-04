@@ -2,7 +2,6 @@ import * as dotenv from 'dotenv';
 import express from 'express';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
-import fileUpload from 'express-fileupload';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -69,21 +68,8 @@ app.use(
   })
 );
 
-// File upload configuration - MUST come before express.json()
-app.use(
-  fileUpload({
-    useTempFiles: true,
-    tempFileDir: tempDir,
-    createParentPath: true,
-    limits: {
-      fileSize: 500 * 1024 * 1024, // 500MB max
-    },
-    abortOnLimit: true,
-    debug: false, // Disable debug to avoid logging non-file requests
-    uploadTimeout: 3600000, // 1 hour timeout for large files
-    parseNested: true,
-  })
-);
+// Multer is configured per-route for better control
+// No global file upload middleware needed
 
 // JSON parser - comes after file upload
 app.use(express.json({ limit: '50mb' }));
@@ -861,6 +847,25 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
+// Cleanup temp files periodically (every 6 hours)
+setInterval(() => {
+  const files = fs.readdirSync(tempDir);
+  const now = Date.now();
+  const maxAge = 6 * 60 * 60 * 1000; // 6 hours
+
+  files.forEach((file) => {
+    const filePath = path.join(tempDir, file);
+    try {
+      const stats = fs.statSync(filePath);
+      if (now - stats.mtimeMs > maxAge) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (err) {
+      // Ignore errors for cleanup
+    }
+  });
+}, 6 * 60 * 60 * 1000); // Run every 6 hours
 
 startServer();
 

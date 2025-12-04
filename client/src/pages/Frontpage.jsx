@@ -168,7 +168,7 @@ const SectionDescription = styled.p`
   font-size: 1.1rem;
   line-height: 1.6;
   color: #000;
-  margin-bottom: 40px;
+  margin-bottom: 0;
   text-align: ${(props) => props.$textAlign || 'center'};
 
   @media (max-width: 768px) {
@@ -185,7 +185,7 @@ const CodeSectionContainer = styled.div`
   max-width: 600px;
   width: 100%;
   margin: 0 auto;
-  margin-top: 30px;
+  margin-top: 10px;
   box-sizing: border-box;
 
   @media (max-width: 768px) {
@@ -444,7 +444,8 @@ const FooterFormSection = styled.div`
   background: ${(props) => props.$formBgColor || 'rgba(255, 255, 255, 0.05)'};
   padding: 30px;
   border-radius: 12px;
-  border: 1px solid ${(props) => props.$formBorderColor || 'rgba(255, 255, 255, 0.1)'};
+  border: 1px solid
+    ${(props) => props.$formBorderColor || 'rgba(255, 255, 255, 0.1)'};
 `;
 
 const FooterFormTitle = styled.h4`
@@ -462,7 +463,8 @@ const FooterForm = styled.form`
 
 const FooterFormInput = styled.input`
   padding: 12px 16px;
-  border: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
+  border: 1px solid
+    ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
   border-radius: 6px;
   background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.3)'};
   color: ${(props) => props.$textColor || '#ffffff'};
@@ -482,7 +484,8 @@ const FooterFormInput = styled.input`
 
 const FooterFormTextArea = styled.textarea`
   padding: 12px 16px;
-  border: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
+  border: 1px solid
+    ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
   border-radius: 6px;
   background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.3)'};
   color: ${(props) => props.$textColor || '#ffffff'};
@@ -505,7 +508,8 @@ const FooterFormTextArea = styled.textarea`
 
 const FooterFormSelect = styled.select`
   padding: 12px 16px;
-  border: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
+  border: 1px solid
+    ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
   border-radius: 6px;
   background: ${(props) => props.$inputBgColor || 'rgba(0, 0, 0, 0.3)'};
   color: ${(props) => props.$textColor || '#ffffff'};
@@ -551,7 +555,8 @@ const FooterCopyright = styled.div`
   text-align: center;
   padding-top: 30px;
   margin-top: 40px;
-  border-top: 1px solid ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.1)'};
+  border-top: 1px solid
+    ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.1)'};
   color: ${(props) => props.$color || 'rgba(255, 255, 255, 0.6)'};
   font-size: 0.9rem;
 `;
@@ -1015,7 +1020,7 @@ const Frontpage = () => {
 
   const handleHireFormSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!hireFormData.name || !hireFormData.email || !hireFormData.role) {
       alert('Please fill in all required fields');
       return;
@@ -1036,7 +1041,10 @@ const Frontpage = () => {
         message: '',
       });
     } catch (err) {
-      alert(err.response?.data?.message || 'Error submitting form. Please try again.');
+      alert(
+        err.response?.data?.message ||
+          'Error submitting form. Please try again.'
+      );
     } finally {
       setHireFormSubmitting(false);
     }
@@ -1222,7 +1230,9 @@ const Frontpage = () => {
                 {settings.footerSection.siteName || 'Company Name'}
               </FooterSiteName>
               {settings.footerSection.description && (
-                <FooterDescription $color={settings.footerSection.descriptionColor}>
+                <FooterDescription
+                  $color={settings.footerSection.descriptionColor}
+                >
                   {settings.footerSection.description}
                 </FooterDescription>
               )}
@@ -1270,39 +1280,55 @@ const Frontpage = () => {
               </FooterFormTitle>
               <FooterForm onSubmit={handleHireFormSubmit}>
                 <FooterFormInput
-                  type="text"
-                  placeholder="Your Name *"
+                  type='text'
+                  placeholder='Your Name *'
                   value={hireFormData.name}
-                  onChange={(e) => setHireFormData({ ...hireFormData, name: e.target.value })}
+                  onChange={(e) =>
+                    setHireFormData({ ...hireFormData, name: e.target.value })
+                  }
                   required
                   $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $inputBgColor={
+                    settings.footerSection.formInputBackgroundColor
+                  }
                   $textColor={settings.footerSection.formInputTextColor}
                   $focusColor={settings.footerSection.formInputFocusColor}
-                  $placeholderColor={settings.footerSection.formInputPlaceholderColor}
+                  $placeholderColor={
+                    settings.footerSection.formInputPlaceholderColor
+                  }
                 />
                 <FooterFormInput
-                  type="email"
-                  placeholder="Your Email *"
+                  type='email'
+                  placeholder='Your Email *'
                   value={hireFormData.email}
-                  onChange={(e) => setHireFormData({ ...hireFormData, email: e.target.value })}
+                  onChange={(e) =>
+                    setHireFormData({ ...hireFormData, email: e.target.value })
+                  }
                   required
                   $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $inputBgColor={
+                    settings.footerSection.formInputBackgroundColor
+                  }
                   $textColor={settings.footerSection.formInputTextColor}
                   $focusColor={settings.footerSection.formInputFocusColor}
-                  $placeholderColor={settings.footerSection.formInputPlaceholderColor}
+                  $placeholderColor={
+                    settings.footerSection.formInputPlaceholderColor
+                  }
                 />
                 <FooterFormSelect
                   value={hireFormData.role}
-                  onChange={(e) => setHireFormData({ ...hireFormData, role: e.target.value })}
+                  onChange={(e) =>
+                    setHireFormData({ ...hireFormData, role: e.target.value })
+                  }
                   required
                   $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $inputBgColor={
+                    settings.footerSection.formInputBackgroundColor
+                  }
                   $textColor={settings.footerSection.formInputTextColor}
                   $focusColor={settings.footerSection.formInputFocusColor}
                 >
-                  <option value="">Select Role *</option>
+                  <option value=''>Select Role *</option>
                   {settings.footerSection.roles?.map((role, index) => (
                     <option key={index} value={role}>
                       {role}
@@ -1310,22 +1336,33 @@ const Frontpage = () => {
                   ))}
                 </FooterFormSelect>
                 <FooterFormTextArea
-                  placeholder="Message (Optional)"
+                  placeholder='Message (Optional)'
                   value={hireFormData.message}
-                  onChange={(e) => setHireFormData({ ...hireFormData, message: e.target.value })}
+                  onChange={(e) =>
+                    setHireFormData({
+                      ...hireFormData,
+                      message: e.target.value,
+                    })
+                  }
                   $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={settings.footerSection.formInputBackgroundColor}
+                  $inputBgColor={
+                    settings.footerSection.formInputBackgroundColor
+                  }
                   $textColor={settings.footerSection.formInputTextColor}
                   $focusColor={settings.footerSection.formInputFocusColor}
-                  $placeholderColor={settings.footerSection.formInputPlaceholderColor}
+                  $placeholderColor={
+                    settings.footerSection.formInputPlaceholderColor
+                  }
                 />
                 <FooterFormButton
-                  type="submit"
+                  type='submit'
                   disabled={hireFormSubmitting}
                   $bgColor={settings.footerSection.formButtonBackgroundColor}
                   $textColor={settings.footerSection.formButtonTextColor}
                 >
-                  {hireFormSubmitting ? 'Submitting...' : settings.footerSection.formButtonText || 'Submit'}
+                  {hireFormSubmitting
+                    ? 'Submitting...'
+                    : settings.footerSection.formButtonText || 'Submit'}
                 </FooterFormButton>
               </FooterForm>
             </FooterFormSection>

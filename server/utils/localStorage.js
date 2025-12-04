@@ -114,11 +114,8 @@ export const uploadToLocal = async (tempFilePath, options = {}) => {
       
       // Generate thumbnail in background
       generateThumbnail(destinationPath, thumbnailPath)
-        .then(() => {
-          console.log('✅ Thumbnail generated:', thumbnailFilename);
-        })
-        .catch((thumbnailError) => {
-          console.error('❌ Failed to generate thumbnail:', thumbnailError.message);
+        .catch(() => {
+          // Silent error - thumbnail generation is optional
         });
       
       // Return thumbnail URL immediately (it will be available shortly)
