@@ -32,19 +32,22 @@ const storage = multer.diskStorage({
     cb(null, tempDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, 'upload-' + uniqueSuffix + path.extname(file.originalname));
-  }
+  },
 });
 
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB max
+    fileSize: 1000 * 1024 * 1024, // 500MB max
   },
   fileFilter: (req, file, cb) => {
     // Accept video and image files
-    if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
+    if (
+      file.mimetype.startsWith('video/') ||
+      file.mimetype.startsWith('image/')
+    ) {
       cb(null, true);
     } else {
       cb(new Error('Only video and image files are allowed'));
@@ -81,155 +84,160 @@ router.options('/upload', (req, res) => {
   res.status(200).end();
 });
 
-router.post('/upload', verifyToken, (req, res, next) => {
-  // Accept either 'video' or 'image' field
-  upload.fields([
-    { name: 'video', maxCount: 1 },
-    { name: 'image', maxCount: 1 }
-  ])(req, res, (err) => {
-    if (err) {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ msg: 'File size exceeds 500MB limit' });
+router.post(
+  '/upload',
+  verifyToken,
+  (req, res, next) => {
+    // Accept either 'video' or 'image' field
+    upload.fields([
+      { name: 'video', maxCount: 1 },
+      { name: 'image', maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res
+              .status(400)
+              .json({ msg: 'File size exceeds 1000MB limit' });
+          }
+          return res.status(400).json({ msg: `Upload error: ${err.message}` });
         }
-        return res.status(400).json({ msg: `Upload error: ${err.message}` });
+        return res.status(500).json({ msg: err.message || 'Upload failed' });
       }
-      return res.status(500).json({ msg: err.message || 'Upload failed' });
-    }
-    next();
-  });
-}, async (req, res) => {
-  try {
-    // Handle both 'video' and 'image' field names
-    const file = req.files?.video?.[0] || req.files?.image?.[0];
-    
-    if (!file)
-      return res.status(400).json({ msg: 'No file was uploaded.' });
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      // Handle both 'video' and 'image' field names
+      const file = req.files?.video?.[0] || req.files?.image?.[0];
 
-    // Get user's upload limit based on subscription
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      removeTmp(file.path);
-      return res.status(404).json({ msg: 'User not found' });
-    }
+      if (!file) return res.status(400).json({ msg: 'No file was uploaded.' });
 
-    // Determine if it's a video or image based on mimetype
-    const isVideo = file.mimetype.startsWith('video/');
+      // Get user's upload limit based on subscription
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        removeTmp(file.path);
+        return res.status(404).json({ msg: 'User not found' });
+      }
 
-    // Get storage settings
-    let settings = await Settings.findOne();
-    if (!settings) {
-      settings = await Settings.create({
-        storageProvider: 'local',
-        localStorageConfig: { enabled: true, maxSizeGB: 75 },
-        cloudinaryConfig: { enabled: true },
-        youtubeConfig: { enabled: false },
-      });
-    }
+      // Determine if it's a video or image based on mimetype
+      const isVideo = file.mimetype.startsWith('video/');
 
-    let provider = settings.storageProvider || 'local';
+      // Get storage settings
+      let settings = await Settings.findOne();
+      if (!settings) {
+        settings = await Settings.create({
+          storageProvider: 'local',
+          localStorageConfig: { enabled: true, maxSizeGB: 75 },
+          cloudinaryConfig: { enabled: true },
+          youtubeConfig: { enabled: false },
+        });
+      }
 
-    const totalStorageLimit = getTotalStorageLimit(user);
-    const storageUsed = user.storageUsed || 0;
-    const fileSizeMB = file.size / (1024 * 1024);
-    const availableStorage = totalStorageLimit - storageUsed;
+      let provider = settings.storageProvider || 'local';
 
-    if (fileSizeMB > availableStorage) {
-      removeTmp(file.path);
-      return res.status(403).json({
-        msg: `Not enough storage. File size: ${fileSizeMB.toFixed(2)}MB, Available: ${availableStorage.toFixed(2)}MB`,
-        exceedsLimit: true,
-        fileSize: fileSizeMB.toFixed(2),
-        storageUsed: storageUsed.toFixed(2),
-        totalStorageLimit: totalStorageLimit,
-        availableStorage: availableStorage.toFixed(2),
-        currentPlan: user.subscription?.plan || 'free',
-      });
-    }
+      const totalStorageLimit = getTotalStorageLimit(user);
+      const storageUsed = user.storageUsed || 0;
+      const fileSizeMB = file.size / (1024 * 1024);
+      const availableStorage = totalStorageLimit - storageUsed;
 
-    let result;
+      if (fileSizeMB > availableStorage) {
+        removeTmp(file.path);
+        return res.status(403).json({
+          msg: `Not enough storage. File size: ${fileSizeMB.toFixed(
+            2
+          )}MB, Available: ${availableStorage.toFixed(2)}MB`,
+          exceedsLimit: true,
+          fileSize: fileSizeMB.toFixed(2),
+          storageUsed: storageUsed.toFixed(2),
+          totalStorageLimit: totalStorageLimit,
+          availableStorage: availableStorage.toFixed(2),
+          currentPlan: user.subscription?.plan || 'free',
+        });
+      }
 
-    // For videos, use the configured provider
-    if (isVideo && provider === 'youtube' && isYouTubeConfigured()) {
-      try {
-        // Upload to YouTube
-        const youtubeResult = await uploadToYouTube(file.path, {
-          title: req.body.title || `Video by ${user.username}`,
-          description: req.body.description || 'Uploaded via Mysoov.TV',
-          tags: ['mysoov', user.username],
-          privacyStatus: settings.youtubeConfig?.defaultPrivacy || 'unlisted',
+      let result;
+
+      // For videos, use the configured provider
+      if (isVideo && provider === 'youtube' && isYouTubeConfigured()) {
+        try {
+          // Upload to YouTube
+          const youtubeResult = await uploadToYouTube(file.path, {
+            title: req.body.title || `Video by ${user.username}`,
+            description: req.body.description || 'Uploaded via Mysoov.TV',
+            tags: ['mysoov', user.username],
+            privacyStatus: settings.youtubeConfig?.defaultPrivacy || 'unlisted',
+          });
+
+          result = {
+            public_id: youtubeResult.videoId,
+            url: youtubeResult.embedUrl, // Use embed URL for iframe
+            provider: 'youtube',
+            videoId: youtubeResult.videoId,
+            thumbnailUrl: youtubeResult.thumbnailUrl,
+          };
+        } catch (youtubeError) {
+          provider = 'local';
+        }
+      }
+
+      // Upload to Cloudinary
+      if (!result && provider === 'cloudinary') {
+        try {
+          const cloudinaryResult = await cloudinary.uploader.upload(file.path, {
+            folder: isVideo ? 'videos' : 'images',
+            resource_type: isVideo ? 'video' : 'image',
+          });
+
+          result = {
+            public_id: cloudinaryResult.public_id,
+            url: cloudinaryResult.secure_url,
+            provider: 'cloudinary',
+          };
+        } catch (cloudinaryError) {
+          provider = 'local';
+        }
+      }
+
+      // Upload to local storage (default or fallback)
+      if (!result) {
+        const localResult = await uploadToLocal(file.path, {
+          folder: isVideo ? 'videos' : 'images',
+          originalName: file.originalname,
         });
 
         result = {
-          public_id: youtubeResult.videoId,
-          url: youtubeResult.embedUrl, // Use embed URL for iframe
-          provider: 'youtube',
-          videoId: youtubeResult.videoId,
-          thumbnailUrl: youtubeResult.thumbnailUrl,
+          public_id: localResult.public_id,
+          url: localResult.url,
+          provider: 'local',
         };
-      } catch (youtubeError) {
-        provider = 'local';
+
+        if (localResult.thumbnailUrl) {
+          result.thumbnailUrl = localResult.thumbnailUrl;
+        }
       }
-    }
 
-    // Upload to Cloudinary
-    if (!result && provider === 'cloudinary') {
-      try {
-        const cloudinaryResult = await cloudinary.uploader.upload(
-          file.path,
-          {
-            folder: isVideo ? 'videos' : 'images',
-            resource_type: isVideo ? 'video' : 'image',
-          }
-        );
+      // Clean up temporary file
+      removeTmp(file.path);
 
-        result = {
-          public_id: cloudinaryResult.public_id,
-          url: cloudinaryResult.secure_url,
-          provider: 'cloudinary',
-        };
-      } catch (cloudinaryError) {
-        provider = 'local';
-      }
-    }
-
-    // Upload to local storage (default or fallback)
-    if (!result) {
-      const localResult = await uploadToLocal(file.path, {
-        folder: isVideo ? 'videos' : 'images',
-        originalName: file.originalname,
+      await User.findByIdAndUpdate(req.user.id, {
+        $inc: { storageUsed: fileSizeMB },
       });
 
-      result = {
-        public_id: localResult.public_id,
-        url: localResult.url,
-        provider: 'local',
-      };
-
-      if (localResult.thumbnailUrl) {
-        result.thumbnailUrl = localResult.thumbnailUrl;
+      res.json({ ...result, fileSize: fileSizeMB });
+    } catch (err) {
+      // Clean up file on error
+      const file = req.files?.video?.[0] || req.files?.image?.[0];
+      if (file?.path) {
+        removeTmp(file.path);
       }
+      return res
+        .status(500)
+        .json({ msg: err.message || 'Internal server error' });
     }
-
-    // Clean up temporary file
-    removeTmp(file.path);
-
-    await User.findByIdAndUpdate(req.user.id, {
-      $inc: { storageUsed: fileSizeMB },
-    });
-
-    res.json({ ...result, fileSize: fileSizeMB });
-  } catch (err) {
-    // Clean up file on error
-    const file = req.files?.video?.[0] || req.files?.image?.[0];
-    if (file?.path) {
-      removeTmp(file.path);
-    }
-    return res
-      .status(500)
-      .json({ msg: err.message || 'Internal server error' });
   }
-});
+);
 
 // Handle preflight requests for image upload endpoint
 // Note: CORS is handled globally in index.js, but keep this for backward compatibility
@@ -292,179 +300,195 @@ router.post('/upload/signature', verifyToken, async (req, res) => {
 });
 
 // Upload profile image
-router.post('/upload/image', verifyToken, (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
-    if (err) {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ msg: 'File size exceeds limit' });
+router.post(
+  '/upload/image',
+  verifyToken,
+  (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ msg: 'File size exceeds limit' });
+          }
+          return res.status(400).json({ msg: `Upload error: ${err.message}` });
         }
-        return res.status(400).json({ msg: `Upload error: ${err.message}` });
+        return res.status(500).json({ msg: err.message || 'Upload failed' });
       }
-      return res.status(500).json({ msg: err.message || 'Upload failed' });
-    }
-    next();
-  });
-}, async (req, res) => {
-  try {
-    if (!req.file)
-      return res.status(400).json({ msg: 'No file was uploaded.' });
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      if (!req.file)
+        return res.status(400).json({ msg: 'No file was uploaded.' });
 
-    const file = req.file;
+      const file = req.file;
 
-    // ~5MB limit for avatars
-    if (file.size > 5 * 1024 * 1024) {
-      removeTmp(file.path);
-      return res.status(400).json({ msg: 'Image too large (max 5MB)' });
-    }
+      // ~5MB limit for avatars
+      if (file.size > 5 * 1024 * 1024) {
+        removeTmp(file.path);
+        return res.status(400).json({ msg: 'Image too large (max 5MB)' });
+      }
 
-    // Get storage settings
-    let settings = await Settings.findOne();
-    const provider = settings?.storageProvider || 'local';
+      // Get storage settings
+      let settings = await Settings.findOne();
+      const provider = settings?.storageProvider || 'local';
 
-    let result;
+      let result;
 
-    if (provider === 'cloudinary') {
-      const cloudinaryResult = await cloudinary.uploader.upload(
-        file.path,
-        {
+      if (provider === 'cloudinary') {
+        const cloudinaryResult = await cloudinary.uploader.upload(file.path, {
           folder: 'avatars',
           resource_type: 'image',
           transformation: [{ quality: 'auto', fetch_format: 'auto' }],
-        }
-      );
-      result = {
-        public_id: cloudinaryResult.public_id,
-        url: cloudinaryResult.secure_url,
-      };
-    } else {
-      // Use local storage
-      const localResult = await uploadToLocal(file.path, {
-        folder: 'avatars',
-        originalName: file.originalname,
-      });
-      result = { public_id: localResult.public_id, url: localResult.url };
-    }
+        });
+        result = {
+          public_id: cloudinaryResult.public_id,
+          url: cloudinaryResult.secure_url,
+        };
+      } else {
+        // Use local storage
+        const localResult = await uploadToLocal(file.path, {
+          folder: 'avatars',
+          originalName: file.originalname,
+        });
+        result = { public_id: localResult.public_id, url: localResult.url };
+      }
 
-    removeTmp(file.path);
+      removeTmp(file.path);
 
-    return res.json(result);
-  } catch (err) {
-    if (req.file?.path) {
-      removeTmp(req.file.path);
+      return res.json(result);
+    } catch (err) {
+      if (req.file?.path) {
+        removeTmp(req.file.path);
+      }
+      return res
+        .status(500)
+        .json({ msg: err.message || 'Internal server error' });
     }
-    return res.status(500).json({ msg: err.message || 'Internal server error' });
   }
-});
+);
 
 // Upload multiple images
-router.post('/upload/images', verifyToken, (req, res, next) => {
-  upload.array('images', 10)(req, res, (err) => {
-    if (err) {
-      if (err instanceof multer.MulterError) {
-        if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(400).json({ msg: 'One or more files exceed size limit' });
+router.post(
+  '/upload/images',
+  verifyToken,
+  (req, res, next) => {
+    upload.array('images', 10)(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res
+              .status(400)
+              .json({ msg: 'One or more files exceed size limit' });
+          }
+          if (err.code === 'LIMIT_FILE_COUNT') {
+            return res.status(400).json({ msg: 'Too many files (max 10)' });
+          }
+          return res.status(400).json({ msg: `Upload error: ${err.message}` });
         }
-        if (err.code === 'LIMIT_FILE_COUNT') {
-          return res.status(400).json({ msg: 'Too many files (max 10)' });
-        }
-        return res.status(400).json({ msg: `Upload error: ${err.message}` });
+        return res.status(500).json({ msg: err.message || 'Upload failed' });
       }
-      return res.status(500).json({ msg: err.message || 'Upload failed' });
-    }
-    next();
-  });
-}, async (req, res) => {
-  try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ msg: 'No files were uploaded.' });
-    }
-
-    const user = await User.findById(req.user.id);
-    if (!user) {
-      return res.status(404).json({ msg: 'User not found' });
-    }
-
-    const fileArray = req.files;
-
-    const totalStorageLimit = getTotalStorageLimit(user);
-    const storageUsed = user.storageUsed || 0;
-    const totalFileSizeMB = fileArray.reduce((sum, file) => sum + (file.size / (1024 * 1024)), 0);
-    const availableStorage = totalStorageLimit - storageUsed;
-
-    if (totalFileSizeMB > availableStorage) {
-      fileArray.forEach((f) => removeTmp(f.path));
-      return res.status(403).json({
-        msg: `Not enough storage. Total size: ${totalFileSizeMB.toFixed(2)}MB, Available: ${availableStorage.toFixed(2)}MB`,
-        exceedsLimit: true,
-        fileSize: totalFileSizeMB.toFixed(2),
-        storageUsed: storageUsed.toFixed(2),
-        totalStorageLimit: totalStorageLimit,
-        availableStorage: availableStorage.toFixed(2),
-        currentPlan: user.subscription?.plan || 'free',
-      });
-    }
-
-    // Get storage settings
-    let settings = await Settings.findOne();
-    const provider = settings?.storageProvider || 'local';
-
-    let uploadedImages;
-
-    if (provider === 'cloudinary') {
-      // Upload all images to Cloudinary
-      const uploadPromises = fileArray.map((file) =>
-        cloudinary.uploader.upload(file.path, {
-          folder: 'images',
-          resource_type: 'image',
-        })
-      );
-
-      const results = await Promise.all(uploadPromises);
-
-      // Format results
-      uploadedImages = results.map((result) => ({
-        public_id: result.public_id,
-        url: result.secure_url,
-        provider: 'cloudinary',
-      }));
-    } else {
-      // Upload all images to local storage
-      const uploadPromises = fileArray.map((file) =>
-        uploadToLocal(file.path, {
-          folder: 'images',
-          originalName: file.originalname,
-        })
-      );
-
-      const results = await Promise.all(uploadPromises);
-
-      // Format results
-      uploadedImages = results.map((result) => ({
-        public_id: result.public_id,
-        url: result.url,
-        provider: 'local',
-      }));
-    }
-
-    // Clean up temporary files
-    fileArray.forEach((file) => removeTmp(file.path));
-
-    await User.findByIdAndUpdate(req.user.id, {
-      $inc: { storageUsed: totalFileSizeMB },
+      next();
     });
+  },
+  async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ msg: 'No files were uploaded.' });
+      }
 
-    res.json({ images: uploadedImages });
-  } catch (err) {
-    // Clean up files on error
-    if (req.files) {
-      req.files.forEach(file => removeTmp(file.path));
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+
+      const fileArray = req.files;
+
+      const totalStorageLimit = getTotalStorageLimit(user);
+      const storageUsed = user.storageUsed || 0;
+      const totalFileSizeMB = fileArray.reduce(
+        (sum, file) => sum + file.size / (1024 * 1024),
+        0
+      );
+      const availableStorage = totalStorageLimit - storageUsed;
+
+      if (totalFileSizeMB > availableStorage) {
+        fileArray.forEach((f) => removeTmp(f.path));
+        return res.status(403).json({
+          msg: `Not enough storage. Total size: ${totalFileSizeMB.toFixed(
+            2
+          )}MB, Available: ${availableStorage.toFixed(2)}MB`,
+          exceedsLimit: true,
+          fileSize: totalFileSizeMB.toFixed(2),
+          storageUsed: storageUsed.toFixed(2),
+          totalStorageLimit: totalStorageLimit,
+          availableStorage: availableStorage.toFixed(2),
+          currentPlan: user.subscription?.plan || 'free',
+        });
+      }
+
+      // Get storage settings
+      let settings = await Settings.findOne();
+      const provider = settings?.storageProvider || 'local';
+
+      let uploadedImages;
+
+      if (provider === 'cloudinary') {
+        // Upload all images to Cloudinary
+        const uploadPromises = fileArray.map((file) =>
+          cloudinary.uploader.upload(file.path, {
+            folder: 'images',
+            resource_type: 'image',
+          })
+        );
+
+        const results = await Promise.all(uploadPromises);
+
+        // Format results
+        uploadedImages = results.map((result) => ({
+          public_id: result.public_id,
+          url: result.secure_url,
+          provider: 'cloudinary',
+        }));
+      } else {
+        // Upload all images to local storage
+        const uploadPromises = fileArray.map((file) =>
+          uploadToLocal(file.path, {
+            folder: 'images',
+            originalName: file.originalname,
+          })
+        );
+
+        const results = await Promise.all(uploadPromises);
+
+        // Format results
+        uploadedImages = results.map((result) => ({
+          public_id: result.public_id,
+          url: result.url,
+          provider: 'local',
+        }));
+      }
+
+      // Clean up temporary files
+      fileArray.forEach((file) => removeTmp(file.path));
+
+      await User.findByIdAndUpdate(req.user.id, {
+        $inc: { storageUsed: totalFileSizeMB },
+      });
+
+      res.json({ images: uploadedImages });
+    } catch (err) {
+      // Clean up files on error
+      if (req.files) {
+        req.files.forEach((file) => removeTmp(file.path));
+      }
+      return res
+        .status(500)
+        .json({ msg: err.message || 'Internal server error' });
     }
-    return res
-      .status(500)
-      .json({ msg: err.message || 'Internal server error' });
   }
-});
+);
 
 const removeTmp = (path) => {
   if (!path) return;
