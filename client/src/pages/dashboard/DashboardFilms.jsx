@@ -628,6 +628,7 @@ const DashboardFilms = () => {
         customerCode: formData.code,
         purchasePrice: parseFloat(formData.price) || 0,
         videoUrl: uploadResult,
+        thumbnail: uploadResult.thumbnailUrl || '',
         storageProvider: uploadResult.provider,
       };
 
