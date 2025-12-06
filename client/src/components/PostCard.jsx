@@ -2,6 +2,8 @@ import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
 import { VideoCard, VideoText, ImageSlider } from '../components/index';
 import { MdLock } from 'react-icons/md';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const Card = styled.div`
   background-color: rgba(255, 255, 255, 0.04);
@@ -138,10 +140,41 @@ const PostCard = ({
   enableVideoLink = false,
 }) => {
   const navigate = useNavigate();
+  const [currency, setCurrency] = useState('usd');
   const src = video?.videoUrl?.url;
   const images = video?.images || [];
   const isPrivate = video?.privacy === 'Private';
   const mediaType = video?.mediaType || 'video';
+
+  const getCurrencySymbol = (currencyCode) => {
+    const symbols = {
+      usd: '$',
+      eur: '€',
+      gbp: '£',
+      jpy: '¥',
+      cad: 'CA$',
+      aud: 'A$',
+      chf: 'CHF',
+      cny: '¥',
+      inr: '₹',
+    };
+    return symbols[currencyCode?.toLowerCase()] || '$';
+  };
+
+  useEffect(() => {
+    const fetchCurrency = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/public/stripe-settings`,
+          { withCredentials: true }
+        );
+        setCurrency(response.data.stripeConfig?.currency || 'usd');
+      } catch (err) {
+        console.error('Failed to fetch currency:', err);
+      }
+    };
+    fetchCurrency();
+  }, []);
 
   // Show buy button for films using TWO different systems:
   // System 1 (OLD): filmDirectoryId exists (folder-based films)
@@ -267,7 +300,7 @@ const PostCard = ({
       ) : null}
       {showBuyButton && (
         <BuyButton onClick={handleBuyClick}>
-          Buy Complete Ownership - ${purchasePrice.toFixed(2)}
+          Buy Complete Ownership - {getCurrencySymbol(currency)}{purchasePrice.toFixed(2)}
         </BuyButton>
       )}
     </>

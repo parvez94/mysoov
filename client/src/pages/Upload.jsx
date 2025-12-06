@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { updateUser } from '../redux/user/userSlice';
 import { ProgressBar } from '../components';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -322,6 +323,7 @@ const RemoveButton = styled.button`
 `;
 
 const Upload = () => {
+  const dispatch = useDispatch();
   const currentUser = useSelector((state) => state.user.currentUser);
 
   const [videoFile, setVideoFile] = useState(null); // server-returned {public_id, url}
@@ -386,10 +388,17 @@ const Upload = () => {
           data: {
             publicId: videoFile.public_id,
             provider: videoFile.provider,
+            fileSize: videoFile.fileSize,
           },
           withCredentials: true,
         });
         console.log('✅ File deleted from server:', videoFile.public_id);
+        
+        // Update user's storage usage in Redux after deletion
+        if (videoFile.fileSize && currentUser) {
+          const newStorageUsed = Math.max(0, (currentUser.storageUsed || 0) - videoFile.fileSize);
+          dispatch(updateUser({ storageUsed: newStorageUsed }));
+        }
       } catch (err) {
         console.error('Failed to delete file from server:', err);
         // Continue with local cleanup even if server delete fails
@@ -398,6 +407,7 @@ const Upload = () => {
 
     // Delete all images from server
     if (images.length > 0) {
+      let totalDeletedSize = 0;
       for (const image of images) {
         if (image?.public_id && image?.provider) {
           try {
@@ -407,15 +417,25 @@ const Upload = () => {
                 data: {
                   publicId: image.public_id,
                   provider: image.provider,
+                  fileSize: image.fileSize,
                 },
                 withCredentials: true,
               }
             );
             console.log('✅ Image deleted from server:', image.public_id);
+            if (image.fileSize) {
+              totalDeletedSize += image.fileSize;
+            }
           } catch (err) {
             console.error('Failed to delete image from server:', err);
           }
         }
+      }
+      
+      // Update user's storage usage in Redux after deleting all images
+      if (totalDeletedSize > 0 && currentUser) {
+        const newStorageUsed = Math.max(0, (currentUser.storageUsed || 0) - totalDeletedSize);
+        dispatch(updateUser({ storageUsed: newStorageUsed }));
       }
     }
 
@@ -437,10 +457,17 @@ const Upload = () => {
           data: {
             publicId: imageToRemove.public_id,
             provider: imageToRemove.provider,
+            fileSize: imageToRemove.fileSize,
           },
           withCredentials: true,
         });
         console.log('✅ Image deleted from server:', imageToRemove.public_id);
+        
+        // Update user's storage usage in Redux after deletion
+        if (imageToRemove.fileSize && currentUser) {
+          const newStorageUsed = Math.max(0, (currentUser.storageUsed || 0) - imageToRemove.fileSize);
+          dispatch(updateUser({ storageUsed: newStorageUsed }));
+        }
       } catch (err) {
         console.error('Failed to delete image from server:', err);
         // Continue with local removal even if server delete fails
@@ -523,6 +550,7 @@ const Upload = () => {
         public_id: res.data.public_id,
         url: res.data.url,
         provider: res.data.provider || 'local',
+        fileSize: res.data.fileSize,
       };
 
       // Include thumbnailUrl if server generated one (for local videos)
@@ -535,6 +563,12 @@ const Upload = () => {
       setUploading(false);
       setUploadProgress((prev) => (prev < 100 ? 100 : prev));
       controllerRef.current = null;
+
+      // Update user's storage usage in Redux
+      if (res.data.fileSize && currentUser) {
+        const newStorageUsed = (currentUser.storageUsed || 0) + res.data.fileSize;
+        dispatch(updateUser({ storageUsed: newStorageUsed }));
+      }
     } catch (err) {
       if (err?.code === 'ERR_CANCELED') {
         setStatus('canceled');
@@ -602,6 +636,12 @@ const Upload = () => {
       setStatus('success');
       setUploadProgress(100);
       setUploading(false);
+
+      // Update user's storage usage in Redux
+      if (res.data.totalSize && currentUser) {
+        const newStorageUsed = (currentUser.storageUsed || 0) + res.data.totalSize;
+        dispatch(updateUser({ storageUsed: newStorageUsed }));
+      }
     } catch (err) {
       if (err?.response?.status === 403 && err?.response?.data?.exceedsLimit) {
         setPricingError({
@@ -649,10 +689,13 @@ const Upload = () => {
         requestBody.thumbnailUrl = videoFile.thumbnailUrl;
       }
 
-      // If multiple images, include them
+      // Calculate and include total file size
+      let totalFileSize = videoFile?.fileSize || 0;
       if (images.length > 0) {
         requestBody.images = images;
+        totalFileSize = images.reduce((sum, img) => sum + (img.fileSize || 0), 0);
       }
+      requestBody.fileSize = totalFileSize;
 
       const response = await fetch(addUrl, {
         method: 'POST',

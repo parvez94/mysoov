@@ -455,6 +455,7 @@ const SaveButton = styled.button`
   transition: all 0.2s;
   font-family: var(--secondary-fonts);
   min-height: 42px;
+  margin-top: 20px;
 
   &:hover {
     background: #45a049;
@@ -728,9 +729,10 @@ const DashboardSettings = () => {
       name: 'Basic',
       price: 9.99,
       totalStorageLimit: 1024,
+      additionalStorageLimit: 1024,
       description: 'Great for casual creators',
       features: [
-        '1GB total storage',
+        '1GB additional storage',
         'HD video quality',
         'Priority support',
         'No ads',
@@ -740,9 +742,10 @@ const DashboardSettings = () => {
       name: 'Pro',
       price: 19.99,
       totalStorageLimit: 5120,
+      additionalStorageLimit: 5120,
       description: 'For professional content creators',
       features: [
-        '5GB total storage',
+        '5GB additional storage',
         '4K video quality',
         'Advanced analytics',
         'Priority support',
@@ -753,9 +756,10 @@ const DashboardSettings = () => {
       name: 'Premium',
       price: 29.99,
       totalStorageLimit: 10240,
+      additionalStorageLimit: 10240,
       description: 'Ultimate plan for power users',
       features: [
-        '10GB total storage',
+        '10GB additional storage',
         '4K video quality',
         'Advanced analytics',
         'Dedicated support',
@@ -1281,9 +1285,10 @@ const DashboardSettings = () => {
           name: 'Free',
           price: 0,
           totalStorageLimit: storageLimit,
+          additionalStorageLimit: 0,
           description: 'Perfect for getting started',
           features: [
-            `${storageLimit}MB total storage`,
+            `${storageLimit}MB storage`,
             'Basic features',
             'Community support',
           ],
@@ -1332,9 +1337,10 @@ const DashboardSettings = () => {
           name: 'Free',
           price: 0,
           totalStorageLimit: freeStorageLimit,
+          additionalStorageLimit: 0,
           description: 'Perfect for getting started',
           features: [
-            `${freeStorageLimit}MB total storage`,
+            `${freeStorageLimit}MB storage`,
             'Basic features',
             'Community support',
           ],
@@ -2569,7 +2575,11 @@ const DashboardSettings = () => {
                   min='1'
                   value={plan.totalStorageLimit}
                   onChange={(e) =>
-                    handlePricingChange(planId, 'totalStorageLimit', e.target.value)
+                    handlePricingChange(
+                      planId,
+                      'totalStorageLimit',
+                      e.target.value
+                    )
                   }
                 />
               </FormGroup>

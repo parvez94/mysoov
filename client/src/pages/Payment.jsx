@@ -810,8 +810,24 @@ const Payment = () => {
   const [stripePromise, setStripePromise] = useState(null);
   const [paymentEnabled, setPaymentEnabled] = useState(false);
   const [loadingStripe, setLoadingStripe] = useState(true);
+  const [currency, setCurrency] = useState('usd');
 
   const { currentUser } = useSelector((state) => state.user);
+
+  const getCurrencySymbol = (currencyCode) => {
+    const symbols = {
+      usd: '$',
+      eur: '€',
+      gbp: '£',
+      jpy: '¥',
+      cad: 'CA$',
+      aud: 'A$',
+      chf: 'CHF',
+      cny: '¥',
+      inr: '₹',
+    };
+    return symbols[currencyCode?.toLowerCase()] || '$';
+  };
 
   // Validate film purchase parameters and auto-redirect if invalid
   useEffect(() => {
@@ -874,6 +890,11 @@ const Payment = () => {
             setStripePromise(stripe);
             setPaymentEnabled(true);
           }
+          
+          // Set currency from config
+          if (data.stripeConfig.currency) {
+            setCurrency(data.stripeConfig.currency);
+          }
         }
       } catch (err) {
         console.error('Failed to load Stripe:', err);
@@ -931,7 +952,7 @@ const Payment = () => {
       </Title>
       <Subtitle>
         {type === 'film'
-          ? `Purchase full ownership of this film for $${filmPrice.toFixed(
+          ? `Purchase full ownership of this film for ${getCurrencySymbol(currency)}${filmPrice.toFixed(
               2
             )} - Yours permanently!`
           : 'Upgrade your account and unlock premium features'}
@@ -974,7 +995,7 @@ const Payment = () => {
           <PlanHeader>
             <PlanName>{filmName || 'Film Purchase'}</PlanName>
             <PlanPrice>
-              ${filmPrice.toFixed(2)}
+              {getCurrencySymbol(currency)}{filmPrice.toFixed(2)}
               <span>/one-time</span>
             </PlanPrice>
           </PlanHeader>
@@ -1043,7 +1064,7 @@ const Payment = () => {
                   <Button
                     primary
                     onClick={() => {
-                      window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Film Purchase Request&body=Film: ${filmName}%0APrice: $${filmPrice}`;
+                      window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Film Purchase Request&body=Film: ${filmName}%0APrice: ${getCurrencySymbol(currency)}${filmPrice}`;
                     }}
                   >
                     Contact Support

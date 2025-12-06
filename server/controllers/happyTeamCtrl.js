@@ -118,7 +118,27 @@ export const deleteOwnContent = async (req, res, next) => {
     });
 
     if (film) {
+      // Get all videos that will be deleted to update user storage
+      const videosToDelete = await Video.find({ sourceFilmId: film._id });
+      
+      // Update storage for each user
+      for (const video of videosToDelete) {
+        if (video.fileSize && video.userId) {
+          await User.findByIdAndUpdate(video.userId, {
+            $inc: { storageUsed: -video.fileSize },
+          });
+        }
+      }
+      
       await Video.deleteMany({ sourceFilmId: film._id });
+      
+      // Update storage for the film itself
+      if (film.fileSize && film.userId) {
+        await User.findByIdAndUpdate(film.userId, {
+          $inc: { storageUsed: -film.fileSize },
+        });
+      }
+      
       await Video.findByIdAndDelete(film._id);
     }
 

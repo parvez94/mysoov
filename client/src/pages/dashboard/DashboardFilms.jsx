@@ -508,6 +508,7 @@ const DashboardFilms = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [currency, setCurrency] = useState('usd');
 
   // Upload form state
   const [uploadFile, setUploadFile] = useState(null);
@@ -525,9 +526,37 @@ const DashboardFilms = () => {
     return <Navigate to='/' replace />;
   }
 
+  const getCurrencySymbol = (currencyCode) => {
+    const symbols = {
+      usd: '$',
+      eur: '€',
+      gbp: '£',
+      jpy: '¥',
+      cad: 'CA$',
+      aud: 'A$',
+      chf: 'CHF',
+      cny: '¥',
+      inr: '₹',
+    };
+    return symbols[currencyCode?.toLowerCase()] || '$';
+  };
+
   useEffect(() => {
     fetchFilms();
+    fetchCurrency();
   }, []);
+
+  const fetchCurrency = async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/v1/admin/stripe-settings`,
+        { withCredentials: true }
+      );
+      setCurrency(response.data.stripeConfig?.currency || 'usd');
+    } catch (err) {
+      console.error('Failed to fetch currency:', err);
+    }
+  };
 
   const fetchFilms = async () => {
     try {
@@ -769,7 +798,7 @@ const DashboardFilms = () => {
                   </Td>
                   <Td>
                     <PriceBadge>
-                      ${film.purchasePrice?.toFixed(2) || '0.00'}
+                      {getCurrencySymbol(currency)}{film.purchasePrice?.toFixed(2) || '0.00'}
                     </PriceBadge>
                   </Td>
                   <Td>{formatDate(film.createdAt)}</Td>

@@ -40,7 +40,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 1000 * 1024 * 1024, // 500MB max
+    fileSize: 1000 * 1024 * 1024, // 1000MB max
   },
   fileFilter: (req, file, cb) => {
     // Accept video and image files
@@ -445,11 +445,12 @@ router.post(
 
         const results = await Promise.all(uploadPromises);
 
-        // Format results
-        uploadedImages = results.map((result) => ({
+        // Format results with file sizes
+        uploadedImages = results.map((result, index) => ({
           public_id: result.public_id,
           url: result.secure_url,
           provider: 'cloudinary',
+          fileSize: fileArray[index].size / (1024 * 1024),
         }));
       } else {
         // Upload all images to local storage
@@ -462,11 +463,12 @@ router.post(
 
         const results = await Promise.all(uploadPromises);
 
-        // Format results
-        uploadedImages = results.map((result) => ({
+        // Format results with file sizes
+        uploadedImages = results.map((result, index) => ({
           public_id: result.public_id,
           url: result.url,
           provider: 'local',
+          fileSize: fileArray[index].size / (1024 * 1024),
         }));
       }
 
@@ -477,7 +479,7 @@ router.post(
         $inc: { storageUsed: totalFileSizeMB },
       });
 
-      res.json({ images: uploadedImages });
+      res.json({ images: uploadedImages, totalSize: totalFileSizeMB });
     } catch (err) {
       // Clean up files on error
       if (req.files) {
@@ -500,7 +502,7 @@ const removeTmp = (path) => {
 // Delete uploaded file (when user cancels)
 router.delete('/upload', verifyToken, async (req, res) => {
   try {
-    const { publicId, provider } = req.body;
+    const { publicId, provider, fileSize } = req.body;
 
     if (!publicId) {
       return res.status(400).json({ msg: 'Missing publicId' });
@@ -544,6 +546,14 @@ router.delete('/upload', verifyToken, async (req, res) => {
           console.log(`✅ Deleted from local storage: ${publicId}`);
         }
         break;
+    }
+
+    // Decrement user's storage usage if file was deleted and fileSize was provided
+    if (deleted && fileSize && req.user?.id) {
+      await User.findByIdAndUpdate(req.user.id, {
+        $inc: { storageUsed: -fileSize },
+      });
+      console.log(`✅ Decremented storage for user ${req.user.id} by ${fileSize}MB`);
     }
 
     res.json({

@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateUser } from '../redux/user/userSlice';
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -192,6 +194,9 @@ const Button = styled.button`
 `;
 
 const VideoOptionsMenu = ({ video, onVideoUpdate, onVideoDelete }) => {
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state) => state.user.currentUser);
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -238,6 +243,13 @@ const VideoOptionsMenu = ({ video, onVideoUpdate, onVideoDelete }) => {
         await axios.delete(`${API}/api/v1/videos/${video._id}`, {
           withCredentials: true,
         });
+        
+        // Update user's storage usage in Redux after deletion
+        if (video?.fileSize && currentUser) {
+          const newStorageUsed = Math.max(0, (currentUser.storageUsed || 0) - video.fileSize);
+          dispatch(updateUser({ storageUsed: newStorageUsed }));
+        }
+        
         onVideoDelete?.(video._id);
       } catch (error) {
         alert('Failed to delete video. Please try again.');

@@ -198,6 +198,13 @@ export const deleteVideo = async (req, res, next) => {
 
     await Video.findByIdAndDelete(videoId);
 
+    // Decrement user's storage usage if fileSize is present
+    if (video.fileSize && video.userId) {
+      await User.findByIdAndUpdate(video.userId, {
+        $inc: { storageUsed: -video.fileSize },
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: 'Video deleted successfully',
@@ -603,9 +610,20 @@ export const updatePricingPlans = async (req, res, next) => {
 
     const config = pricingConfig || defaultConfig;
 
+    // Ensure additionalStorageLimit is set for all plans
+    const normalizedPlans = { ...pricingPlans };
+    Object.keys(normalizedPlans).forEach(key => {
+      if (!normalizedPlans[key].additionalStorageLimit && key !== 'free') {
+        normalizedPlans[key].additionalStorageLimit = normalizedPlans[key].totalStorageLimit;
+      }
+      if (key === 'free' && !normalizedPlans[key].additionalStorageLimit) {
+        normalizedPlans[key].additionalStorageLimit = 0;
+      }
+    });
+
     // Generate the new file content
     const fileContent = `export const pricingPlans = ${JSON.stringify(
-      pricingPlans,
+      normalizedPlans,
       null,
       2
     )};
@@ -615,14 +633,18 @@ export const pricingConfig = ${JSON.stringify(config, null, 2)};
 
 export const getTotalStorageLimit = (user) => {
   if (user.role === 'admin') {
-    return 102400;
+    return Infinity;
   }
 
   if (user.subscription?.isPaid && user.subscription?.plan) {
-    return pricingPlans[user.subscription.plan]?.totalStorageLimit || 100;
+    const plan = pricingPlans[user.subscription.plan];
+    const freeStorage = pricingPlans.free.totalStorageLimit;
+    if (plan) {
+      return freeStorage + plan.additionalStorageLimit;
+    }
   }
 
-  return pricingPlans.free?.totalStorageLimit || 100;
+  return pricingPlans.free.totalStorageLimit;
 };
 `;
 

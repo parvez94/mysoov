@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useSelector } from 'react-redux';
 import SoundToggle from '../components/settings/SoundToggle';
+import { getStorageInfo } from '../utils/storageUtils';
 
 const Container = styled.div`
   max-width: 800px;
@@ -100,7 +102,77 @@ const ComingSoon = styled.div`
   border: 1px solid rgba(255, 255, 255, 0.1);
 `;
 
+const StorageContainer = styled.div`
+  margin-top: 20px;
+`;
+
+const StorageBar = styled.div`
+  width: 100%;
+  height: 12px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+`;
+
+const StorageProgress = styled.div`
+  height: 100%;
+  background: ${props => 
+    props.percentage > 90 ? 'linear-gradient(90deg, #ff4757, #ff6348)' :
+    props.percentage > 70 ? 'linear-gradient(90deg, #ffa502, #ff6348)' :
+    'linear-gradient(90deg, #1e90ff, #00d2ff)'
+  };
+  width: ${props => props.percentage}%;
+  transition: width 0.3s ease;
+  box-shadow: 0 0 10px rgba(30, 144, 255, 0.3);
+`;
+
+const StorageStats = styled.div`
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+`;
+
+const StorageStat = styled.div`
+  flex: 1;
+  min-width: 150px;
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+`;
+
+const StatLabel = styled.div`
+  font-family: var(--primary-fonts);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 6px;
+`;
+
+const StatValue = styled.div`
+  font-family: var(--secondary-fonts);
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+`;
+
+const PlanBadge = styled.div`
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  font-family: var(--secondary-fonts);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  margin-top: 8px;
+`;
+
 const Settings = () => {
+  const { currentUser } = useSelector((state) => state.user);
+  const storageInfo = getStorageInfo(currentUser);
   return (
     <Container>
       <Header>
@@ -123,6 +195,45 @@ const Settings = () => {
           </SettingLabel>
           <SoundToggle showLabel={false} />
         </SettingItem>
+      </Section>
+
+      <Section>
+        <SectionTitle>💾 Storage</SectionTitle>
+        <SectionDescription>
+          Monitor your storage usage and manage your subscription plan.
+        </SectionDescription>
+
+        <StorageContainer>
+          {!storageInfo.isUnlimited && (
+            <StorageBar>
+              <StorageProgress percentage={storageInfo.percentage} />
+            </StorageBar>
+          )}
+
+          <StorageStats>
+            <StorageStat>
+              <StatLabel>Used</StatLabel>
+              <StatValue>{storageInfo.usedFormatted}</StatValue>
+            </StorageStat>
+
+            {!storageInfo.isUnlimited && (
+              <StorageStat>
+                <StatLabel>Remaining</StatLabel>
+                <StatValue>{storageInfo.remainingFormatted}</StatValue>
+              </StorageStat>
+            )}
+
+            <StorageStat>
+              <StatLabel>Total Storage</StatLabel>
+              <StatValue>{storageInfo.limitFormatted}</StatValue>
+              <PlanBadge>
+                {currentUser?.role === 'admin'
+                  ? 'admin'
+                  : currentUser?.subscription?.plan || 'free'}
+              </PlanBadge>
+            </StorageStat>
+          </StorageStats>
+        </StorageContainer>
       </Section>
 
       <Section>

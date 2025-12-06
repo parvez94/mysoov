@@ -392,7 +392,7 @@ const FooterContainer = styled.div`
 const FooterInfoSection = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 5px;
 `;
 
 const FooterSiteName = styled.h3`
@@ -413,7 +413,7 @@ const FooterContactList = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 30px;
 `;
 
 const FooterContactItem = styled.div`
@@ -889,6 +889,7 @@ const Frontpage = () => {
   const [codeInput, setCodeInput] = useState('');
   const [showFilmModal, setShowFilmModal] = useState(false);
   const [redeemedFilm, setRedeemedFilm] = useState(null);
+  const [currency, setCurrency] = useState('usd');
   const [hireFormData, setHireFormData] = useState({
     name: '',
     email: '',
@@ -899,6 +900,21 @@ const Frontpage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { currentUser } = useSelector((state) => state.user);
+
+  const getCurrencySymbol = (currencyCode) => {
+    const symbols = {
+      usd: '$',
+      eur: '€',
+      gbp: '£',
+      jpy: '¥',
+      cad: 'CA$',
+      aud: 'A$',
+      chf: 'CHF',
+      cny: '¥',
+      inr: '₹',
+    };
+    return symbols[currencyCode?.toLowerCase()] || '$';
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -914,7 +930,20 @@ const Frontpage = () => {
       }
     };
 
+    const fetchCurrency = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/public/stripe-settings`,
+          { withCredentials: true }
+        );
+        setCurrency(response.data.stripeConfig?.currency || 'usd');
+      } catch (err) {
+        console.error('Failed to fetch currency:', err);
+      }
+    };
+
     fetchSettings();
+    fetchCurrency();
   }, []);
 
   // Auto-redeem pending code after login/signup
@@ -1415,7 +1444,7 @@ const Frontpage = () => {
 
                 <FilmPriceRow>
                   <FilmPrice>
-                    ${redeemedFilm.purchasePrice?.toFixed(2) || '0.00'}
+                    {getCurrencySymbol(currency)}{redeemedFilm.purchasePrice?.toFixed(2) || '0.00'}
                     <span>Purchase Price</span>
                   </FilmPrice>
                   <FilmBuyButton onClick={handleBuyFilm}>
