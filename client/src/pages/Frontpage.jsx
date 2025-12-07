@@ -98,7 +98,7 @@ const Dot = styled.div`
 const HappyViewsSection = styled.section`
   background-color: ${(props) => props.$bgColor || '#FF8C00'};
   color: ${(props) => props.$textColor || '#ffffff'};
-  padding: 20px 20px 35px 20px;
+  padding: 20px 20px 20px 20px;
   text-align: center;
   width: 100%;
   box-sizing: border-box;
@@ -139,6 +139,7 @@ const SectionHeading = styled.h2`
   @media (max-width: 768px) {
     font-size: 1.6rem;
     gap: 10px;
+    margin-bottom: 0px;
   }
 `;
 
@@ -189,7 +190,7 @@ const CodeSectionContainer = styled.div`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    margin-top: 15px;
+    margin-top: 0;
   }
 `;
 
@@ -243,7 +244,7 @@ const CodeInput = styled.input`
 
   @media (max-width: 768px) {
     width: 70%;
-    padding: 14px 15px;
+    padding: 12px 15px;
     font-size: 0.95rem;
     background: white;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -281,7 +282,7 @@ const CodeSubmitButton = styled.button`
 
 // Section 5: Happy Team
 const HappyTeamSection = styled.section`
-  padding: 20px 20px 35px 20px;
+  padding: 20px 20px 20px 20px;
   background-color: ${(props) => props.$bgColor || 'var(--tertiary-color)'};
   color: ${(props) => props.$textColor || '#ffffff'};
   width: 100%;
@@ -368,7 +369,7 @@ const RegisterButton = styled.button`
 
 // Footer Section
 const FooterSection = styled.footer`
-  padding: 60px 20px 40px 20px;
+  padding: 20px 20px 20px 20px;
   background-color: ${(props) => props.$bgColor || '#1a1a1a'};
   color: ${(props) => props.$textColor || '#ffffff'};
   width: 100%;
@@ -461,7 +462,17 @@ const FooterForm = styled.form`
   gap: 15px;
 `;
 
+const FooterFormRow = styled.div`
+  display: flex;
+  gap: 15px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
 const FooterFormInput = styled.input`
+  flex: 1;
   padding: 12px 16px;
   border: 1px solid
     ${(props) => props.$borderColor || 'rgba(255, 255, 255, 0.2)'};
@@ -894,7 +905,6 @@ const Frontpage = () => {
     name: '',
     email: '',
     role: '',
-    message: '',
   });
   const [hireFormSubmitting, setHireFormSubmitting] = useState(false);
   const dispatch = useDispatch();
@@ -1067,7 +1077,6 @@ const Frontpage = () => {
         name: '',
         email: '',
         role: '',
-        message: '',
       });
     } catch (err) {
       alert(
@@ -1308,42 +1317,47 @@ const Frontpage = () => {
                 {settings.footerSection.formTitle || 'Hire Us'}
               </FooterFormTitle>
               <FooterForm onSubmit={handleHireFormSubmit}>
-                <FooterFormInput
-                  type='text'
-                  placeholder='Your Name *'
-                  value={hireFormData.name}
-                  onChange={(e) =>
-                    setHireFormData({ ...hireFormData, name: e.target.value })
-                  }
-                  required
-                  $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={
-                    settings.footerSection.formInputBackgroundColor
-                  }
-                  $textColor={settings.footerSection.formInputTextColor}
-                  $focusColor={settings.footerSection.formInputFocusColor}
-                  $placeholderColor={
-                    settings.footerSection.formInputPlaceholderColor
-                  }
-                />
-                <FooterFormInput
-                  type='email'
-                  placeholder='Your Email *'
-                  value={hireFormData.email}
-                  onChange={(e) =>
-                    setHireFormData({ ...hireFormData, email: e.target.value })
-                  }
-                  required
-                  $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={
-                    settings.footerSection.formInputBackgroundColor
-                  }
-                  $textColor={settings.footerSection.formInputTextColor}
-                  $focusColor={settings.footerSection.formInputFocusColor}
-                  $placeholderColor={
-                    settings.footerSection.formInputPlaceholderColor
-                  }
-                />
+                <FooterFormRow>
+                  <FooterFormInput
+                    type='text'
+                    placeholder='Name *'
+                    value={hireFormData.name}
+                    onChange={(e) =>
+                      setHireFormData({ ...hireFormData, name: e.target.value })
+                    }
+                    required
+                    $borderColor={settings.footerSection.formInputBorderColor}
+                    $inputBgColor={
+                      settings.footerSection.formInputBackgroundColor
+                    }
+                    $textColor={settings.footerSection.formInputTextColor}
+                    $focusColor={settings.footerSection.formInputFocusColor}
+                    $placeholderColor={
+                      settings.footerSection.formInputPlaceholderColor
+                    }
+                  />
+                  <FooterFormInput
+                    type='email'
+                    placeholder='Email *'
+                    value={hireFormData.email}
+                    onChange={(e) =>
+                      setHireFormData({
+                        ...hireFormData,
+                        email: e.target.value,
+                      })
+                    }
+                    required
+                    $borderColor={settings.footerSection.formInputBorderColor}
+                    $inputBgColor={
+                      settings.footerSection.formInputBackgroundColor
+                    }
+                    $textColor={settings.footerSection.formInputTextColor}
+                    $focusColor={settings.footerSection.formInputFocusColor}
+                    $placeholderColor={
+                      settings.footerSection.formInputPlaceholderColor
+                    }
+                  />
+                </FooterFormRow>
                 <FooterFormSelect
                   value={hireFormData.role}
                   onChange={(e) =>
@@ -1364,25 +1378,6 @@ const Frontpage = () => {
                     </option>
                   ))}
                 </FooterFormSelect>
-                <FooterFormTextArea
-                  placeholder='Message (Optional)'
-                  value={hireFormData.message}
-                  onChange={(e) =>
-                    setHireFormData({
-                      ...hireFormData,
-                      message: e.target.value,
-                    })
-                  }
-                  $borderColor={settings.footerSection.formInputBorderColor}
-                  $inputBgColor={
-                    settings.footerSection.formInputBackgroundColor
-                  }
-                  $textColor={settings.footerSection.formInputTextColor}
-                  $focusColor={settings.footerSection.formInputFocusColor}
-                  $placeholderColor={
-                    settings.footerSection.formInputPlaceholderColor
-                  }
-                />
                 <FooterFormButton
                   type='submit'
                   disabled={hireFormSubmitting}
@@ -1444,7 +1439,8 @@ const Frontpage = () => {
 
                 <FilmPriceRow>
                   <FilmPrice>
-                    {getCurrencySymbol(currency)}{redeemedFilm.purchasePrice?.toFixed(2) || '0.00'}
+                    {getCurrencySymbol(currency)}
+                    {redeemedFilm.purchasePrice?.toFixed(2) || '0.00'}
                     <span>Purchase Price</span>
                   </FilmPrice>
                   <FilmBuyButton onClick={handleBuyFilm}>
