@@ -198,6 +198,10 @@ export const addShare = async (req, res, next) => {
 
 export const randomVideos = async (req, res, next) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
     let pipeline = [];
 
     // Safely check if user is authenticated
@@ -216,7 +220,10 @@ export const randomVideos = async (req, res, next) => {
         $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
       },
     });
-    pipeline.push({ $sample: { size: 10 } });
+    
+    pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limit });
 
     const videos = await Video.aggregate(pipeline);
 
@@ -281,6 +288,10 @@ export const trend = async (req, res, next) => {
 
 export const videoFeeds = async (req, res, next) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
     const user = await User.findById(req.user.id);
     // Ensure unique followings to avoid duplicate fetches
     // Remove self and ensure unique followings to avoid duplicate/self fetches
@@ -333,7 +344,8 @@ export const videoFeeds = async (req, res, next) => {
             $or: [{ accessCode: null }, { accessCode: { $exists: false } }],
           },
         },
-        { $sample: { size: 20 } },
+        { $sort: { createdAt: -1 } },
+        { $limit: 100 },
       ]);
     }
 
@@ -350,8 +362,11 @@ export const videoFeeds = async (req, res, next) => {
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
 
+    // Apply pagination
+    const paginatedPosts = sortedPosts.slice(skip, skip + limit);
+
     // Attach dynamic comment counts to feed videos (exclude orphan replies)
-    const ids = sortedPosts.map((v) => String(v._id));
+    const ids = paginatedPosts.map((v) => String(v._id));
     const comments = await Comment.find(
       { videoId: { $in: ids } },
       { _id: 1, parentId: 1, videoId: 1 }
@@ -377,7 +392,7 @@ export const videoFeeds = async (req, res, next) => {
       }
     }
 
-    const enriched = sortedPosts.map((v) => ({
+    const enriched = paginatedPosts.map((v) => ({
       ...(typeof v.toObject === 'function' ? v.toObject() : v),
       commentsCount: countMap[String(v._id)] || 0,
     }));

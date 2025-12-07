@@ -124,6 +124,9 @@ router.post(
       // Determine if it's a video or image based on mimetype
       const isVideo = file.mimetype.startsWith('video/');
 
+      // Check if this is a film upload (films don't count toward profile storage)
+      const isFilmUpload = req.body.isFilm === 'true' || req.body.isFilm === true;
+
       // Get storage settings
       let settings = await Settings.findOne();
       if (!settings) {
@@ -137,24 +140,28 @@ router.post(
 
       let provider = settings.storageProvider || 'local';
 
-      const totalStorageLimit = getTotalStorageLimit(user);
-      const storageUsed = user.storageUsed || 0;
       const fileSizeMB = file.size / (1024 * 1024);
-      const availableStorage = totalStorageLimit - storageUsed;
 
-      if (fileSizeMB > availableStorage) {
-        removeTmp(file.path);
-        return res.status(403).json({
-          msg: `Not enough storage. File size: ${fileSizeMB.toFixed(
-            2
-          )}MB, Available: ${availableStorage.toFixed(2)}MB`,
-          exceedsLimit: true,
-          fileSize: fileSizeMB.toFixed(2),
-          storageUsed: storageUsed.toFixed(2),
-          totalStorageLimit: totalStorageLimit,
-          availableStorage: availableStorage.toFixed(2),
-          currentPlan: user.subscription?.plan || 'free',
-        });
+      // Only check storage limits for non-film uploads
+      if (!isFilmUpload) {
+        const totalStorageLimit = getTotalStorageLimit(user);
+        const storageUsed = user.storageUsed || 0;
+        const availableStorage = totalStorageLimit - storageUsed;
+
+        if (fileSizeMB > availableStorage) {
+          removeTmp(file.path);
+          return res.status(403).json({
+            msg: `Not enough storage. File size: ${fileSizeMB.toFixed(
+              2
+            )}MB, Available: ${availableStorage.toFixed(2)}MB`,
+            exceedsLimit: true,
+            fileSize: fileSizeMB.toFixed(2),
+            storageUsed: storageUsed.toFixed(2),
+            totalStorageLimit: totalStorageLimit,
+            availableStorage: availableStorage.toFixed(2),
+            currentPlan: user.subscription?.plan || 'free',
+          });
+        }
       }
 
       let result;
@@ -221,9 +228,12 @@ router.post(
       // Clean up temporary file
       removeTmp(file.path);
 
-      await User.findByIdAndUpdate(req.user.id, {
-        $inc: { storageUsed: fileSizeMB },
-      });
+      // Only increment storageUsed for non-film uploads
+      if (!isFilmUpload) {
+        await User.findByIdAndUpdate(req.user.id, {
+          $inc: { storageUsed: fileSizeMB },
+        });
+      }
 
       res.json({ ...result, fileSize: fileSizeMB });
     } catch (err) {

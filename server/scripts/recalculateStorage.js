@@ -47,8 +47,15 @@ async function runRecalculation() {
 
     for (const user of users) {
       // Calculate total storage used by this user
+      // EXCLUDE films (isFilm: true) from storage calculation since they use app storage
       const userVideos = await videosCollection
-        .find({ userId: user._id.toString() })
+        .find({ 
+          userId: user._id.toString(),
+          $or: [
+            { isFilm: { $exists: false } },
+            { isFilm: false }
+          ]
+        })
         .toArray();
 
       // Sum up all fileSize values (only for videos that have fileSize)

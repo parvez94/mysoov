@@ -170,22 +170,8 @@ export const deleteFilmDirectory = async (req, res, next) => {
       return next(createError(404, 'Film directory not found'));
     }
 
-    // Get all original films that will be deleted to update user storage
-    const filmsToDelete = await Video.find({
-      filmDirectoryId: directoryId,
-      isFilm: true,
-    });
-    
-    // Update storage for each user whose film is being deleted
-    for (const film of filmsToDelete) {
-      if (film.fileSize && film.userId) {
-        await User.findByIdAndUpdate(film.userId, {
-          $inc: { storageUsed: -film.fileSize },
-        });
-      }
-    }
-    
     // Delete ORIGINAL films in the folder (isFilm: true)
+    // Note: Films don't use profile storage, so no need to update storageUsed
     await Video.deleteMany({
       filmDirectoryId: directoryId,
       isFilm: true,

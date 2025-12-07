@@ -8,7 +8,12 @@ import {
 } from 'react-router-dom';
 import styled from 'styled-components';
 import { createPortal } from 'react-dom';
-import { IoClose, IoCamera } from 'react-icons/io5';
+import {
+  IoClose,
+  IoCamera,
+  IoGiftOutline,
+  IoCalendarOutline,
+} from 'react-icons/io5';
 import { loginSuccess } from '../redux/user/userSlice';
 import {
   FollowButton,
@@ -40,12 +45,27 @@ const CoverImageWrapper = styled.div`
   margin-bottom: 20px;
   height: 250px;
   background: ${(props) =>
-    props.$src ? `url(${props.$src})` : 'rgba(255, 255, 255, 0.1)'};
-  background-size: cover;
+    props.$src
+      ? `url(${props.$src})`
+      : 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)'};
+  background-size: ${(props) => (props.$src ? 'cover' : '400% 400%')};
   background-position: center ${(props) => props.$position || 50}%;
   border-radius: 0;
   overflow: hidden;
   cursor: ${(props) => (props.$isDraggable ? 'grab' : 'default')};
+  animation: ${(props) => (props.$src ? 'none' : 'gradientShift 15s ease infinite')};
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
 
   &:active {
     cursor: ${(props) => (props.$isDraggable ? 'grabbing' : 'default')};
@@ -187,9 +207,9 @@ const DisplayName = styled.h3`
   }
 `;
 
-const UserName = styled.h5`
+const UserName = styled.span`
   font-family: var(--secondary-fonts);
-  color: rgba(255, 255, 255, 0.6);
+  color: rgb(113, 118, 123);
   font-size: 15px;
   margin-bottom: 16px;
 `;
@@ -238,11 +258,34 @@ const Dot = styled.span`
 `;
 
 const UserBio = styled.div`
-  margin-top: 8px;
+  margin-top: 20px;
   font-family: var(--secondary-fonts);
   color: var(--secondary-color);
   font-size: 14px;
   white-space: pre-wrap;
+`;
+
+const UserDateInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-family: var(--secondary-fonts);
+  color: rgb(113, 118, 123);
+  font-size: 14px;
+  flex-wrap: wrap;
+`;
+
+const DateItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
 `;
 
 const VideosWrapper = styled.div`
@@ -758,7 +801,7 @@ const PublicProfile = () => {
     [channel?.displayImage]
   );
   const coverUrl = useMemo(
-    () => resolveImageUrl(channel?.coverImage),
+    () => channel?.coverImage ? resolveImageUrl(channel.coverImage, '') : null,
     [channel?.coverImage]
   );
   const displayName = channel?.displayName || channel?.username || username;
@@ -1119,6 +1162,33 @@ const PublicProfile = () => {
           <UserName>@{channel?.username}</UserName>
         </UserInfo>
         <UserBio>{channel?.bio || ''}</UserBio>
+        <UserDateInfo>
+          {channel?.dateOfBirth && (
+            <DateItem>
+              <IoGiftOutline />
+              <span>
+                Born{' '}
+                {new Date(channel.dateOfBirth).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </span>
+            </DateItem>
+          )}
+          {channel?.createdAt && (
+            <DateItem>
+              <IoCalendarOutline />
+              <span>
+                Joined{' '}
+                {new Date(channel.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                })}
+              </span>
+            </DateItem>
+          )}
+        </UserDateInfo>
         <UserStats>
           <ClickableStat onClick={() => setFollowersModalOpen(true)}>
             <strong>{followersCount}</strong> Followers
