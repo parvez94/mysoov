@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import axios from 'axios';
 import { Spinner, VerifiedBadge } from '../../components/index';
@@ -234,6 +234,7 @@ const ErrorMessage = styled.div`
 
 const DashboardUsers = () => {
   const { currentUser } = useSelector((state) => state.user);
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -380,7 +381,9 @@ const DashboardUsers = () => {
               <Text>{user.videos?.length || 0}</Text>
               <Text>{formatDate(user.createdAt)}</Text>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <ActionButton>View</ActionButton>
+                <ActionButton onClick={() => navigate(`/${user.username}`)}>
+                  View
+                </ActionButton>
                 <ActionButton
                   className='delete'
                   onClick={() => handleDeleteUser(user._id, user.username)}
