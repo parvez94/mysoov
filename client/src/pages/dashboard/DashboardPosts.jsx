@@ -947,7 +947,6 @@ const DashboardPosts = () => {
                 <Th>Caption</Th>
                 <Th>Uploaded</Th>
                 <Th>Status</Th>
-                <Th>Likes</Th>
                 <Th>Actions</Th>
               </Tr>
             </Thead>
@@ -1003,7 +1002,6 @@ const DashboardPosts = () => {
                         )}
                       </StatusContainer>
                     </Td>
-                    <Td>{video.likes?.length || 0}</Td>
                     <Td>
                       <ActionButtons>
                         <ViewLink to={`/post/${video._id}`} title='View post'>
