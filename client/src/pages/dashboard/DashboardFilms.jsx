@@ -317,7 +317,7 @@ const FormGroup = styled.div`
 const Label = styled.label`
   display: block;
   font-family: var(--primary-fonts);
-  color: var(--primary-color);
+  color: var(--secondary-color);
   font-size: 14px;
   margin-bottom: 8px;
   font-weight: 500;
@@ -329,7 +329,7 @@ const Input = styled.input`
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  color: var(--primary-color);
+  color: #fff;
   font-family: var(--primary-fonts);
   font-size: 14px;
 
@@ -339,7 +339,7 @@ const Input = styled.input`
   }
 
   &::placeholder {
-    color: var(--secondary-color);
+    color: rgb(113, 118, 123);
   }
 `;
 
@@ -359,16 +359,12 @@ const Button = styled.button`
   cursor: pointer;
   transition: all 0.2s ease;
   background: ${(props) =>
-    props.$primary
-      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      : 'rgba(255, 255, 255, 0.1)'};
-  color: var(--primary-color);
+    props.$primary ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.1)'};
+  color: var(--secondary-color);
 
   &:hover {
     background: ${(props) =>
-      props.$primary
-        ? 'linear-gradient(135deg, #764ba2 0%, #667eea 100%)'
-        : 'rgba(255, 255, 255, 0.15)'};
+      props.$primary ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.15)'};
   }
 
   &:disabled {
@@ -798,7 +794,8 @@ const DashboardFilms = () => {
                   </Td>
                   <Td>
                     <PriceBadge>
-                      {getCurrencySymbol(currency)}{film.purchasePrice?.toFixed(2) || '0.00'}
+                      {getCurrencySymbol(currency)}
+                      {film.purchasePrice?.toFixed(2) || '0.00'}
                     </PriceBadge>
                   </Td>
                   <Td>{formatDate(film.createdAt)}</Td>
