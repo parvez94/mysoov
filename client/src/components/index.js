@@ -20,3 +20,6 @@ export { default as Spinner } from './Spinner';
 export { default as ProgressBar } from './ProgressBar';
 export { default as VerifiedBadge } from './VerifiedBadge';
 export { default as ImageSlider } from './ImageSlider';
+export { default as ImageEditor } from './ImageEditor';
+export { default as VideoEditor } from './VideoEditor';
+export { default as EditPanel } from './EditPanel';

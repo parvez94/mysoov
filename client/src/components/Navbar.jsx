@@ -555,7 +555,7 @@ const Navbar = () => {
             )}
           </SearchContainer>
           <ButtonWrapper>
-            {currentUser && (
+            {currentUser && currentUser.accountType !== 'happy-team' && (
               <>
                 <Link to='/upload'>
                   <UploadButton>

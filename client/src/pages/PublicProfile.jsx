@@ -579,6 +579,13 @@ const PublicProfile = () => {
   // Username availability check
   const usernameCheck = useUsernameCheck(usernameEdit, currentUser?.username);
 
+  // Redirect happy-team users if they try to access their own profile
+  useEffect(() => {
+    if (currentUser?.accountType === 'happy-team' && currentUser?.username === username) {
+      navigate('/dashboard/happy-team', { replace: true });
+    }
+  }, [currentUser, username, navigate]);
+
   // Video management handlers
   const handleVideoUpdate = (updatedVideo) => {
     setVideos((prevVideos) =>

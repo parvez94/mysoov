@@ -83,7 +83,7 @@ export const register = async (req, res, next) => {
     });
 
     const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
+      { id: newUser._id, role: newUser.role, accountType: newUser.accountType },
       process.env.SECRET_KEY
     );
 
@@ -183,7 +183,7 @@ export const registerEditor = async (req, res, next) => {
     });
 
     const token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
+      { id: newUser._id, role: newUser.role, accountType: newUser.accountType },
       process.env.SECRET_KEY
     );
 
@@ -224,7 +224,7 @@ export const login = async (req, res, next) => {
     if (!isCorrect) return next(createError(400, 'Invalid credentials.'));
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, accountType: user.accountType },
       process.env.SECRET_KEY
     );
 

@@ -3,16 +3,106 @@ import User from '../models/User.js';
 import Comment from '../models/Comment.js';
 import { createError } from '../utils/error.js';
 import { deleteFromLocal } from '../utils/localStorage.js';
+import { processVideo } from '../utils/videoProcessor.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const addVideo = async (req, res, next) => {
-  const newVideo = new Video({ userId: req.user.id, ...req.body });
   try {
+    // Prevent happy-team users from posting directly to their profile
+    if (req.user.accountType === 'happy-team') {
+      return next(createError(403, 'Happy team members cannot post directly to their profile. Please use the Happy Team content upload system.'));
+    }
+
+    const { videoMetadata, ...videoData } = req.body;
+    const newVideo = new Video({ userId: req.user.id, ...videoData });
+    
     const savedVideo = await newVideo.save();
+    
+    // If video has editing metadata, process it in the background
+    if (videoMetadata && videoData.mediaType === 'video' && videoData.videoUrl) {
+      processVideoInBackground(savedVideo._id, videoData.videoUrl, videoMetadata);
+    }
+    
     res.status(200).json(savedVideo);
   } catch (err) {
     next(err);
   }
 };
+
+// Process video in background (non-blocking)
+async function processVideoInBackground(videoId, videoUrl, metadata) {
+  try {
+    console.log('🎬 Starting video processing for:', videoId);
+    
+    // Get video file path from URL
+    const videoPath = getLocalPathFromUrl(videoUrl.url || videoUrl);
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      console.error('❌ Video file not found:', videoPath);
+      return;
+    }
+    
+    // Prepare output path
+    const outputFilename = `processed_${Date.now()}_${path.basename(videoPath)}`;
+    const outputPath = path.join(path.dirname(videoPath), outputFilename);
+    
+    // Handle background music upload if provided
+    let musicPath = null;
+    if (metadata.backgroundMusic) {
+      // Music file should be uploaded separately or provided as path
+      musicPath = metadata.backgroundMusic;
+    }
+    
+    console.log('📝 Video processing metadata:', metadata);
+    console.log('📝 Trim settings - Start:', metadata.trimStart, 'End:', metadata.trimEnd);
+    
+    // Process video with FFmpeg
+    const processedPath = await processVideo(videoPath, {
+      ...metadata,
+      backgroundMusic: musicPath
+    }, outputPath);
+    
+    // Update video document with processed video URL
+    const port = process.env.PORT || 5000;
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${port}`;
+    const relativePath = processedPath.replace(path.join(__dirname, '..', 'uploads'), '/uploads');
+    const processedUrl = `${backendUrl}${relativePath}`;
+    
+    await Video.findByIdAndUpdate(videoId, {
+      'videoUrl.url': processedUrl,
+      'videoUrl.processed': true
+    });
+    
+    // Delete original video file to save space
+    if (fs.existsSync(videoPath)) {
+      fs.unlinkSync(videoPath);
+      console.log('🗑️ Deleted original video:', videoPath);
+    }
+    
+    console.log('✅ Video processing completed:', videoId);
+  } catch (err) {
+    console.error('❌ Background video processing failed:', err);
+    // Video stays with original URL if processing fails
+  }
+}
+
+// Helper function to convert URL to local file path
+function getLocalPathFromUrl(url) {
+  try {
+    const uploadsIndex = url.indexOf('/uploads/');
+    if (uploadsIndex === -1) return null;
+    
+    const relativePath = url.substring(uploadsIndex);
+    const localPath = path.join(__dirname, '..', relativePath);
+    return localPath;
+  } catch (err) {
+    return null;
+  }
+}
 
 export const getVideo = async (req, res, next) => {
   try {
@@ -49,6 +139,11 @@ export const getVideo = async (req, res, next) => {
 
 export const updateVideo = async (req, res, next) => {
   try {
+    // Prevent happy-team users from updating videos on their profile
+    if (req.user.accountType === 'happy-team') {
+      return next(createError(403, 'Happy team members cannot update videos on their profile.'));
+    }
+
     const video = await Video.findById(req.params.id);
 
     if (!video) return next(createError(404, 'Video not found'));
@@ -109,6 +204,11 @@ export const updateVideo = async (req, res, next) => {
 
 export const deleteVideo = async (req, res, next) => {
   try {
+    // Prevent happy-team users from deleting videos on their profile
+    if (req.user.accountType === 'happy-team') {
+      return next(createError(403, 'Happy team members cannot delete videos on their profile.'));
+    }
+
     const video = await Video.findById(req.params.id);
 
     if (!video) return next(createError(404, 'Video not found'));

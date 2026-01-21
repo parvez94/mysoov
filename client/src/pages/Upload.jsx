@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { updateUser } from '../redux/user/userSlice';
 import { ProgressBar } from '../components';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import PricingModal from '../components/modal/PricingModal';
+import EditPanel from '../components/EditPanel';
 
 const Container = styled.div`
   padding: 20px;
@@ -322,9 +324,43 @@ const RemoveButton = styled.button`
   cursor: pointer;
 `;
 
+const EditButton = styled.button`
+  position: absolute;
+  top: 10px;
+  right: 50px;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(168, 85, 247, 0.8);
+  color: #ffffff;
+  font-size: 14px;
+  font-family: var(--secondary-fonts);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(168, 85, 247, 1);
+  }
+`;
+
 const Upload = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const currentUser = useSelector((state) => state.user.currentUser);
+
+  useEffect(() => {
+    if (currentUser?.accountType === 'happy-team') {
+      navigate('/dashboard/happy-team', { replace: true });
+    }
+  }, [currentUser, navigate]);
+
+  if (currentUser?.accountType === 'happy-team') {
+    return null;
+  }
 
   const [videoFile, setVideoFile] = useState(null); // server-returned {public_id, url}
   const [images, setImages] = useState([]); // Array of uploaded images for multi-image posts
@@ -335,6 +371,7 @@ const Upload = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [status, setStatus] = useState('idle'); // 'idle' | 'uploading' | 'success' | 'error' | 'indeterminate' | 'canceled'
   const [mediaType, setMediaType] = useState('video'); // 'video' | 'image'
+  const [videoMetadata, setVideoMetadata] = useState(null); // Store video editing metadata
 
   // Pricing modal state
   const [showPricingModal, setShowPricingModal] = useState(false);
@@ -344,6 +381,11 @@ const Upload = () => {
   const [showEmojis, setShowEmojis] = useState(false);
   const captionRef = useRef(null);
   const wrapperRef = useRef(null);
+
+  // Edit panel state
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [originalMediaUrl, setOriginalMediaUrl] = useState(null);
 
   const controllerRef = useRef(null);
   const isSubmittedRef = useRef(false); // Track if form was successfully submitted
@@ -377,6 +419,7 @@ const Upload = () => {
     setUploadProgress(0);
     setStatus('idle');
     setMediaType('video');
+    setVideoMetadata(null);
   };
 
   // Remove current uploaded video and allow choosing another
@@ -444,6 +487,7 @@ const Upload = () => {
     setFileName('');
     setUploadProgress(0);
     setStatus('idle');
+    setVideoMetadata(null);
   };
 
   // Remove a specific image from the array
@@ -667,6 +711,116 @@ const Upload = () => {
     abortIfRunning();
   };
 
+  const handleEdit = (index = null) => {
+    if (images.length > 0 && index !== null) {
+      setEditingIndex(index);
+      setOriginalMediaUrl(images[index].url);
+    } else if (videoFile) {
+      setEditingIndex(null);
+      setOriginalMediaUrl(videoFile.url);
+    }
+    setShowEditPanel(true);
+  };
+
+  const handleSaveEdit = async (editedData, editedUrl) => {
+    try {
+      if (mediaType === 'image') {
+        const formData = new FormData();
+        formData.append('image', editedData);
+
+        const res = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+          formData,
+          {
+            withCredentials: true,
+          }
+        );
+
+        const newImageData = {
+          public_id: res.data.public_id,
+          url: res.data.url,
+          provider: res.data.provider || 'local',
+          fileSize: res.data.fileSize,
+        };
+
+        if (editingIndex !== null && images.length > 0) {
+          const oldImage = images[editingIndex];
+          if (oldImage?.public_id && oldImage?.provider) {
+            await axios.delete(`${import.meta.env.VITE_API_URL}/api/v1/upload`, {
+              data: {
+                publicId: oldImage.public_id,
+                provider: oldImage.provider,
+                fileSize: oldImage.fileSize,
+              },
+              withCredentials: true,
+            });
+          }
+
+          const newImages = [...images];
+          newImages[editingIndex] = newImageData;
+          setImages(newImages);
+          if (editingIndex === 0) {
+            setVideoFile(newImageData);
+          }
+        } else {
+          const oldVideo = videoFile;
+          if (oldVideo?.public_id && oldVideo?.provider) {
+            await axios.delete(`${import.meta.env.VITE_API_URL}/api/v1/upload`, {
+              data: {
+                publicId: oldVideo.public_id,
+                provider: oldVideo.provider,
+                fileSize: oldVideo.fileSize,
+              },
+              withCredentials: true,
+            });
+          }
+
+          setVideoFile(newImageData);
+        }
+
+        if (res.data.fileSize && currentUser) {
+          const newStorageUsed = (currentUser.storageUsed || 0) + res.data.fileSize;
+          dispatch(updateUser({ storageUsed: newStorageUsed }));
+        }
+      } else if (mediaType === 'video') {
+        console.log('Video edit data:', editedData);
+        
+        // Upload background music if provided
+        if (editedData.backgroundMusic) {
+          try {
+            const formData = new FormData();
+            formData.append('audio', editedData.backgroundMusic);
+            
+            const res = await axios.post(
+              `${import.meta.env.VITE_API_URL}/api/v1/upload/audio`,
+              formData,
+              {
+                withCredentials: true,
+              }
+            );
+            
+            // Replace File object with server path
+            editedData.backgroundMusic = res.data.path;
+          } catch (err) {
+            console.error('Failed to upload background music:', err);
+            alert('Failed to upload background music');
+            return;
+          }
+        }
+        
+        setVideoMetadata(editedData);
+        alert('Video edits saved! The video will be processed when you post.');
+      }
+
+      setShowEditPanel(false);
+      setEditingIndex(null);
+      setOriginalMediaUrl(null);
+    } catch (err) {
+      console.error('Failed to save edited media:', err);
+      alert('Failed to save changes. Please try again.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!videoFile && images.length === 0) {
@@ -687,6 +841,11 @@ const Upload = () => {
       // Include thumbnailUrl if available (for local storage videos)
       if (videoFile?.thumbnailUrl) {
         requestBody.thumbnailUrl = videoFile.thumbnailUrl;
+      }
+
+      // Include video metadata if available (trim points, audio settings)
+      if (videoMetadata && mediaType === 'video') {
+        requestBody.videoMetadata = videoMetadata;
       }
 
       // Calculate and include total file size
@@ -1104,6 +1263,18 @@ const Upload = () => {
                           objectFit: 'cover',
                         }}
                       />
+                      <EditButton
+                        onClick={() => handleEdit(index)}
+                        aria-label={`Edit image ${index + 1}`}
+                        style={{
+                          top: '5px',
+                          right: '35px',
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                        }}
+                      >
+                        ✏️ Edit
+                      </EditButton>
                       <RemoveButton
                         onClick={() => removeImage(index)}
                         aria-label={`Remove image ${index + 1}`}
@@ -1127,6 +1298,24 @@ const Upload = () => {
                     <VideoPreview src={videoFile.url} controls playsInline />
                   ) : (
                     <ImagePreview src={videoFile.url} alt='Preview' />
+                  )}
+                  <EditButton onClick={() => handleEdit()} aria-label='Edit media'>
+                    ✏️ Edit
+                  </EditButton>
+                  {videoMetadata && mediaType === 'video' && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '10px',
+                      left: '10px',
+                      padding: '4px 8px',
+                      background: 'rgba(168, 85, 247, 0.9)',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      color: '#fff',
+                      fontFamily: 'var(--secondary-fonts)',
+                    }}>
+                      ✓ Edited
+                    </div>
                   )}
                   <RemoveButton
                     onClick={removeUploadedVideo}
@@ -1223,6 +1412,19 @@ const Upload = () => {
           setPricingError(null);
         }}
         errorInfo={pricingError}
+      />
+
+      {/* Edit Panel */}
+      <EditPanel
+        isOpen={showEditPanel}
+        onClose={() => {
+          setShowEditPanel(false);
+          setEditingIndex(null);
+          setOriginalMediaUrl(null);
+        }}
+        mediaType={mediaType}
+        mediaUrl={originalMediaUrl}
+        onSave={handleSaveEdit}
       />
     </Container>
   );

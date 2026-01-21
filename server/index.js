@@ -20,8 +20,13 @@ if (!fs.existsSync(tempDir)) {
 
 // Middleware
 app.use(express.static('public'));
-// Serve uploaded files from local storage
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded files from local storage with CORS headers
+app.use('/uploads', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
 app.use(cookieParser());
 
 // CORS configuration

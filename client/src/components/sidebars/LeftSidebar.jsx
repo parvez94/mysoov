@@ -248,21 +248,21 @@ const LeftSidebar = () => {
             )}
           </NavItem>
         </Link>
-        {currentUser ? (
+        {currentUser && currentUser.accountType !== 'happy-team' ? (
           <Link to={`/${currentUser.username}`}>
             <NavItem>
               <LuUser />
               <span>Profile</span>
             </NavItem>
           </Link>
-        ) : (
+        ) : !currentUser ? (
           <Link to='profile' onClick={guardClick}>
             <NavItem>
               <LuUser />
               <span>Profile</span>
             </NavItem>
           </Link>
-        )}
+        ) : null}
 
         {/* Blog Menu */}
 

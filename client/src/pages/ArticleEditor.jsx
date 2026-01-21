@@ -226,6 +226,11 @@ const ArticleEditor = () => {
     return <Navigate to='/' replace />;
   }
 
+  // Redirect happy-team users
+  if (currentUser?.accountType === 'happy-team') {
+    return <Navigate to='/dashboard/happy-team' replace />;
+  }
+
   useEffect(() => {
     if (isEditMode) {
       fetchArticle();

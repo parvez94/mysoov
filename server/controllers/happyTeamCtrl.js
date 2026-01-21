@@ -157,17 +157,53 @@ export const approveContent = async (req, res, next) => {
       return next(createError(403, 'Only admins can approve content'));
     }
 
+    const { price, code } = req.body;
+
+    if (price === undefined || price < 0) {
+      return next(createError(400, 'Valid price is required'));
+    }
+
+    if (!code || code.trim() === '') {
+      return next(createError(400, 'Access code is required'));
+    }
+
     const content = await HappyTeamContent.findById(req.params.id);
 
     if (!content) {
       return next(createError(404, 'Content not found'));
     }
 
+    const normalizedCode = code.trim().toUpperCase();
+
+    const existingContent = await HappyTeamContent.findOne({
+      code: normalizedCode,
+      _id: { $ne: content._id }
+    });
+
+    if (existingContent) {
+      return next(createError(400, 'Access code already in use'));
+    }
+
+    const existingFilm = await Video.findOne({
+      customerCode: normalizedCode
+    });
+
+    if (existingFilm && content.status !== 'approved') {
+      return next(createError(400, 'Access code already in use by another film'));
+    }
+
+    content.price = price;
+    content.code = normalizedCode;
+
     let film = await Video.findOne({ 
-      customerCode: content.code.trim().toUpperCase() 
+      customerCode: normalizedCode
     });
     
     if (content.status === 'approved' && film) {
+      film.purchasePrice = price;
+      await film.save();
+      content.status = 'approved';
+      await content.save();
       await content.populate('userId', 'displayName username email editorRole');
       return res.status(200).json({
         ...content.toObject(),
@@ -180,8 +216,8 @@ export const approveContent = async (req, res, next) => {
     if (!film) {
       film = await Video.create({
         caption: content.title || 'Happy Team Content',
-        customerCode: content.code.trim().toUpperCase(),
-        purchasePrice: content.price || 0,
+        customerCode: normalizedCode,
+        purchasePrice: price,
         videoUrl: { url: content.fileUrl },
         thumbnailUrl: content.thumbnailUrl || '',
         userId: content.userId,
@@ -190,6 +226,9 @@ export const approveContent = async (req, res, next) => {
         mediaType: content.type,
         storageProvider: 'local',
       });
+    } else {
+      film.purchasePrice = price;
+      await film.save();
     }
 
     content.status = 'approved';

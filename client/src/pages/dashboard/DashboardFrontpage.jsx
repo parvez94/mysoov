@@ -168,7 +168,7 @@ const Input = styled.input`
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--tertiary-color);
-  color: var(--text-primary);
+  color: var(--secondary-color);
   font-size: 1rem;
 
   &:focus {
@@ -183,7 +183,7 @@ const TextArea = styled.textarea`
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--tertiary-color);
-  color: var(--text-primary);
+  color: var(--secondary-color);
   font-size: 1rem;
   min-height: 100px;
   resize: vertical;
@@ -247,7 +247,7 @@ const HexInput = styled.input`
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--tertiary-color);
-  color: var(--text-primary);
+  color: var(--secondary-color);
   font-size: 0.9rem;
   font-family: monospace;
   text-transform: uppercase;
@@ -258,7 +258,7 @@ const HexInput = styled.input`
   }
 
   &::placeholder {
-    color: var(--text-secondary);
+    color: rgb(113, 118, 123);
     text-transform: none;
   }
 `;
@@ -316,7 +316,7 @@ const StrokeWidthInput = styled.input`
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--tertiary-color);
-  color: var(--text-primary);
+  color: var(--secondary-color);
   font-size: 1rem;
 
   &:focus {
@@ -869,8 +869,6 @@ const DashboardFrontpage = () => {
     }
   };
 
-
-
   if (loading) {
     return (
       <Container>
@@ -929,7 +927,10 @@ const DashboardFrontpage = () => {
                 <SliderItem key={item._id || index}>
                   <SliderItemPreview>
                     {item.type === 'video' ? (
-                      <video src={item.url} onContextMenu={(e) => e.preventDefault()} />
+                      <video
+                        src={item.url}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
                     ) : (
                       <img src={item.url} alt={item.alt} />
                     )}
@@ -1219,7 +1220,8 @@ const DashboardFrontpage = () => {
                   <ColorInput
                     type='color'
                     value={
-                      settings.happyViewsSection?.buttonBackgroundColor || '#FF0000'
+                      settings.happyViewsSection?.buttonBackgroundColor ||
+                      '#FF0000'
                     }
                     onChange={(e) =>
                       updateSectionField(
@@ -1251,7 +1253,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.happyViewsSection?.buttonTextColor || '#ffffff'}
+                    value={
+                      settings.happyViewsSection?.buttonTextColor || '#ffffff'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'happyViewsSection',
@@ -1303,7 +1307,10 @@ const DashboardFrontpage = () => {
                 <SliderItem key={item._id || index}>
                   <SliderItemPreview>
                     {item.type === 'video' ? (
-                      <video src={item.url} onContextMenu={(e) => e.preventDefault()} />
+                      <video
+                        src={item.url}
+                        onContextMenu={(e) => e.preventDefault()}
+                      />
                     ) : (
                       <img src={item.url} alt={item.alt} />
                     )}
@@ -1592,7 +1599,8 @@ const DashboardFrontpage = () => {
                   <ColorInput
                     type='color'
                     value={
-                      settings.happyTeamSection?.loginButtonBackgroundColor || '#FF0000'
+                      settings.happyTeamSection?.loginButtonBackgroundColor ||
+                      '#FF0000'
                     }
                     onChange={(e) =>
                       updateSectionField(
@@ -1605,7 +1613,8 @@ const DashboardFrontpage = () => {
                   <HexInput
                     type='text'
                     value={
-                      settings.happyTeamSection?.loginButtonBackgroundColor || ''
+                      settings.happyTeamSection?.loginButtonBackgroundColor ||
+                      ''
                     }
                     onChange={(e) =>
                       updateSectionField(
@@ -1624,7 +1633,10 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.happyTeamSection?.loginButtonTextColor || '#ffffff'}
+                    value={
+                      settings.happyTeamSection?.loginButtonTextColor ||
+                      '#ffffff'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
@@ -1635,7 +1647,9 @@ const DashboardFrontpage = () => {
                   />
                   <HexInput
                     type='text'
-                    value={settings.happyTeamSection?.loginButtonTextColor || ''}
+                    value={
+                      settings.happyTeamSection?.loginButtonTextColor || ''
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
@@ -1659,7 +1673,8 @@ const DashboardFrontpage = () => {
                   <ColorInput
                     type='color'
                     value={
-                      settings.happyTeamSection?.signupButtonBackgroundColor || '#FF0000'
+                      settings.happyTeamSection?.signupButtonBackgroundColor ||
+                      '#FF0000'
                     }
                     onChange={(e) =>
                       updateSectionField(
@@ -1672,7 +1687,8 @@ const DashboardFrontpage = () => {
                   <HexInput
                     type='text'
                     value={
-                      settings.happyTeamSection?.signupButtonBackgroundColor || ''
+                      settings.happyTeamSection?.signupButtonBackgroundColor ||
+                      ''
                     }
                     onChange={(e) =>
                       updateSectionField(
@@ -1691,7 +1707,10 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.happyTeamSection?.signupButtonTextColor || '#ffffff'}
+                    value={
+                      settings.happyTeamSection?.signupButtonTextColor ||
+                      '#ffffff'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
@@ -1702,7 +1721,9 @@ const DashboardFrontpage = () => {
                   />
                   <HexInput
                     type='text'
-                    value={settings.happyTeamSection?.signupButtonTextColor || ''}
+                    value={
+                      settings.happyTeamSection?.signupButtonTextColor || ''
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'happyTeamSection',
@@ -1728,11 +1749,7 @@ const DashboardFrontpage = () => {
             $enabled={settings.footerSection?.enabled}
             onClick={() => toggleSection('footerSection')}
           >
-            {settings.footerSection?.enabled ? (
-              <FaToggleOn />
-            ) : (
-              <FaToggleOff />
-            )}
+            {settings.footerSection?.enabled ? <FaToggleOn /> : <FaToggleOff />}
             {settings.footerSection?.enabled ? 'Enabled' : 'Disabled'}
           </ToggleButton>
         </SectionHeader>
@@ -1744,9 +1761,7 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={
-                      settings.footerSection?.backgroundColor || '#1a1a1a'
-                    }
+                    value={settings.footerSection?.backgroundColor || '#1a1a1a'}
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -1757,9 +1772,7 @@ const DashboardFrontpage = () => {
                   />
                   <HexInput
                     type='text'
-                    value={
-                      settings.footerSection?.backgroundColor || '#1a1a1a'
-                    }
+                    value={settings.footerSection?.backgroundColor || '#1a1a1a'}
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -1809,11 +1822,7 @@ const DashboardFrontpage = () => {
               type='text'
               value={settings.footerSection?.siteName || ''}
               onChange={(e) =>
-                updateSectionField(
-                  'footerSection',
-                  'siteName',
-                  e.target.value
-                )
+                updateSectionField('footerSection', 'siteName', e.target.value)
               }
               placeholder='Company Name'
             />
@@ -1899,11 +1908,7 @@ const DashboardFrontpage = () => {
                   type='text'
                   value={settings.footerSection?.phone || ''}
                   onChange={(e) =>
-                    updateSectionField(
-                      'footerSection',
-                      'phone',
-                      e.target.value
-                    )
+                    updateSectionField('footerSection', 'phone', e.target.value)
                   }
                   placeholder='+1 (555) 123-4567'
                 />
@@ -1914,11 +1919,7 @@ const DashboardFrontpage = () => {
                   type='email'
                   value={settings.footerSection?.email || ''}
                   onChange={(e) =>
-                    updateSectionField(
-                      'footerSection',
-                      'email',
-                      e.target.value
-                    )
+                    updateSectionField('footerSection', 'email', e.target.value)
                   }
                   placeholder='contact@company.com'
                 />
@@ -1948,7 +1949,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.contactTextColor || '#ffffff'}
+                    value={
+                      settings.footerSection?.contactTextColor || '#ffffff'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -1977,7 +1980,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.contactIconColor || '#ff0000'}
+                    value={
+                      settings.footerSection?.contactIconColor || '#ff0000'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2009,11 +2014,7 @@ const DashboardFrontpage = () => {
               type='text'
               value={settings.footerSection?.formTitle || ''}
               onChange={(e) =>
-                updateSectionField(
-                  'footerSection',
-                  'formTitle',
-                  e.target.value
-                )
+                updateSectionField('footerSection', 'formTitle', e.target.value)
               }
               placeholder='Hire Us'
             />
@@ -2095,7 +2096,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formBackgroundColor || '#0f0f0f'}
+                    value={
+                      settings.footerSection?.formBackgroundColor || '#0f0f0f'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2158,7 +2161,10 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formInputBackgroundColor || '#000000'}
+                    value={
+                      settings.footerSection?.formInputBackgroundColor ||
+                      '#000000'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2169,7 +2175,9 @@ const DashboardFrontpage = () => {
                   />
                   <HexInput
                     type='text'
-                    value={settings.footerSection?.formInputBackgroundColor || ''}
+                    value={
+                      settings.footerSection?.formInputBackgroundColor || ''
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2187,7 +2195,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formInputTextColor || '#ffffff'}
+                    value={
+                      settings.footerSection?.formInputTextColor || '#ffffff'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2216,7 +2226,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formInputBorderColor || '#333333'}
+                    value={
+                      settings.footerSection?.formInputBorderColor || '#333333'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2249,7 +2261,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formInputFocusColor || '#ff0000'}
+                    value={
+                      settings.footerSection?.formInputFocusColor || '#ff0000'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2278,7 +2292,10 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formInputPlaceholderColor || '#666666'}
+                    value={
+                      settings.footerSection?.formInputPlaceholderColor ||
+                      '#666666'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2289,7 +2306,9 @@ const DashboardFrontpage = () => {
                   />
                   <HexInput
                     type='text'
-                    value={settings.footerSection?.formInputPlaceholderColor || ''}
+                    value={
+                      settings.footerSection?.formInputPlaceholderColor || ''
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2327,7 +2346,10 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formButtonBackgroundColor || '#ff0000'}
+                    value={
+                      settings.footerSection?.formButtonBackgroundColor ||
+                      '#ff0000'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2338,7 +2360,9 @@ const DashboardFrontpage = () => {
                   />
                   <HexInput
                     type='text'
-                    value={settings.footerSection?.formButtonBackgroundColor || ''}
+                    value={
+                      settings.footerSection?.formButtonBackgroundColor || ''
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2356,7 +2380,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.formButtonTextColor || '#ffffff'}
+                    value={
+                      settings.footerSection?.formButtonTextColor || '#ffffff'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2405,7 +2431,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.copyrightTextColor || '#999999'}
+                    value={
+                      settings.footerSection?.copyrightTextColor || '#999999'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2434,7 +2462,9 @@ const DashboardFrontpage = () => {
                 <ColorInputRow>
                   <ColorInput
                     type='color'
-                    value={settings.footerSection?.copyrightBorderColor || '#333333'}
+                    value={
+                      settings.footerSection?.copyrightBorderColor || '#333333'
+                    }
                     onChange={(e) =>
                       updateSectionField(
                         'footerSection',
@@ -2535,7 +2565,13 @@ const DashboardFrontpage = () => {
               {newSliderItem.url && (
                 <ImagePreview>
                   {newSliderItem.type === 'video' ? (
-                    <video src={newSliderItem.url} controls controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} />
+                    <video
+                      src={newSliderItem.url}
+                      controls
+                      controlsList='nodownload'
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
+                    />
                   ) : (
                     <img src={newSliderItem.url} alt='Preview' />
                   )}
@@ -2650,7 +2686,13 @@ const DashboardFrontpage = () => {
               {newBannerItem.url && (
                 <ImagePreview>
                   {newBannerItem.type === 'video' ? (
-                    <video src={newBannerItem.url} controls controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()} />
+                    <video
+                      src={newBannerItem.url}
+                      controls
+                      controlsList='nodownload'
+                      disablePictureInPicture
+                      onContextMenu={(e) => e.preventDefault()}
+                    />
                   ) : (
                     <img src={newBannerItem.url} alt='Preview' />
                   )}

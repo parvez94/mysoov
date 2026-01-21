@@ -43,14 +43,15 @@ const upload = multer({
     fileSize: 1000 * 1024 * 1024, // 1000MB max
   },
   fileFilter: (req, file, cb) => {
-    // Accept video and image files
+    // Accept video, image, and audio files
     if (
       file.mimetype.startsWith('video/') ||
-      file.mimetype.startsWith('image/')
+      file.mimetype.startsWith('image/') ||
+      file.mimetype.startsWith('audio/')
     ) {
       cb(null, true);
     } else {
-      cb(new Error('Only video and image files are allowed'));
+      cb(new Error('Only video, image, and audio files are allowed'));
     }
   },
 });
@@ -581,5 +582,49 @@ router.delete('/upload', verifyToken, async (req, res) => {
     });
   }
 });
+
+// Audio upload endpoint for background music
+router.post(
+  '/upload/audio',
+  verifyToken,
+  (req, res, next) => {
+    upload.single('audio')(req, res, (err) => {
+      if (err) {
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            return res
+              .status(400)
+              .json({ msg: 'Audio file size exceeds limit' });
+          }
+        }
+        return res.status(400).json({ msg: err.message });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ msg: 'No audio file uploaded' });
+      }
+
+      // Audio files are kept in temp directory and will be used during video processing
+      const audioPath = req.file.path;
+      
+      res.json({
+        success: true,
+        path: audioPath,
+        filename: req.file.filename,
+        msg: 'Audio file uploaded successfully'
+      });
+    } catch (err) {
+      console.error('Error uploading audio:', err);
+      return res.status(500).json({
+        msg: 'Failed to upload audio file',
+        error: err.message,
+      });
+    }
+  }
+);
 
 export default router;
