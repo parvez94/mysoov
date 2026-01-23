@@ -41,11 +41,6 @@ export const uploadContent = async (req, res, next) => {
       return next(createError(400, 'Valid price is required'));
     }
 
-    const existingCode = await HappyTeamContent.findOne({ code });
-    if (existingCode) {
-      return next(createError(400, 'Code already exists. Please use a unique code.'));
-    }
-
     const newContent = new HappyTeamContent({
       userId: req.user.id,
       type,
@@ -112,34 +107,41 @@ export const deleteOwnContent = async (req, res, next) => {
     deleteFileFromDisk(content.fileUrl);
     deleteFileFromDisk(content.thumbnailUrl);
 
-    const film = await Video.findOne({
-      customerCode: content.code.trim().toUpperCase(),
-      isFilm: true,
-    });
+    if (content.status === 'approved') {
+      const film = await Video.findOne({
+        customerCode: content.code.trim().toUpperCase(),
+        isFilm: true,
+      });
 
-    if (film) {
-      // Get all videos that will be deleted to update user storage
-      const videosToDelete = await Video.find({ sourceFilmId: film._id });
-      
-      // Update storage for each user
-      for (const video of videosToDelete) {
-        if (video.fileSize && video.userId) {
-          await User.findByIdAndUpdate(video.userId, {
-            $inc: { storageUsed: -video.fileSize },
-          });
+      if (film) {
+        const otherContentWithSameCode = await HappyTeamContent.countDocuments({
+          code: content.code,
+          status: 'approved',
+          _id: { $ne: content._id }
+        });
+
+        if (otherContentWithSameCode === 0) {
+          const videosToDelete = await Video.find({ sourceFilmId: film._id });
+          
+          for (const video of videosToDelete) {
+            if (video.fileSize && video.userId) {
+              await User.findByIdAndUpdate(video.userId, {
+                $inc: { storageUsed: -video.fileSize },
+              });
+            }
+          }
+          
+          await Video.deleteMany({ sourceFilmId: film._id });
+          
+          if (film.fileSize && film.userId) {
+            await User.findByIdAndUpdate(film.userId, {
+              $inc: { storageUsed: -film.fileSize },
+            });
+          }
+          
+          await Video.findByIdAndDelete(film._id);
         }
       }
-      
-      await Video.deleteMany({ sourceFilmId: film._id });
-      
-      // Update storage for the film itself
-      if (film.fileSize && film.userId) {
-        await User.findByIdAndUpdate(film.userId, {
-          $inc: { storageUsed: -film.fileSize },
-        });
-      }
-      
-      await Video.findByIdAndDelete(film._id);
     }
 
     await HappyTeamContent.findByIdAndDelete(req.params.id);
@@ -174,23 +176,7 @@ export const approveContent = async (req, res, next) => {
     }
 
     const normalizedCode = code.trim().toUpperCase();
-
-    const existingContent = await HappyTeamContent.findOne({
-      code: normalizedCode,
-      _id: { $ne: content._id }
-    });
-
-    if (existingContent) {
-      return next(createError(400, 'Access code already in use'));
-    }
-
-    const existingFilm = await Video.findOne({
-      customerCode: normalizedCode
-    });
-
-    if (existingFilm && content.status !== 'approved') {
-      return next(createError(400, 'Access code already in use by another film'));
-    }
+    const currentTempCode = content.code;
 
     content.price = price;
     content.code = normalizedCode;
@@ -214,20 +200,40 @@ export const approveContent = async (req, res, next) => {
     }
 
     if (!film) {
-      film = await Video.create({
+      const filmData = {
         caption: content.title || 'Happy Team Content',
         customerCode: normalizedCode,
         purchasePrice: price,
-        videoUrl: { url: content.fileUrl },
         thumbnailUrl: content.thumbnailUrl || '',
         userId: content.userId,
         privacy: 'Private',
         isFilm: true,
         mediaType: content.type,
         storageProvider: 'local',
-      });
+      };
+
+      if (content.type === 'video') {
+        filmData.videoUrl = { url: content.fileUrl };
+        filmData.images = [];
+      } else {
+        filmData.videoUrl = { url: content.fileUrl };
+        filmData.images = [{ url: content.fileUrl }];
+      }
+
+      film = await Video.create(filmData);
     } else {
       film.purchasePrice = price;
+      
+      if (content.type === 'image') {
+        if (!film.images) {
+          film.images = [];
+        }
+        const alreadyExists = film.images.some(img => img.url === content.fileUrl);
+        if (!alreadyExists) {
+          film.images.push({ url: content.fileUrl });
+        }
+      }
+      
       await film.save();
     }
 
@@ -339,35 +345,38 @@ export const redeemContent = async (req, res, next) => {
       return next(createError(400, 'Code is required'));
     }
 
-    const content = await HappyTeamContent.findOne({ 
-      code: code.trim(),
+    const normalizedCode = code.trim().toUpperCase();
+    
+    const contents = await HappyTeamContent.find({ 
+      code: normalizedCode,
       status: 'approved' 
     }).populate('userId', 'displayName username editorRole');
 
-    if (!content) {
+    if (!contents || contents.length === 0) {
       return next(createError(404, 'Content not found or not available'));
     }
 
     const userId = req.user.id;
-    const alreadyPurchased = content.purchasedBy.some(
+    const firstContent = contents[0];
+    const alreadyPurchased = firstContent.purchasedBy.some(
       id => id.toString() === userId
     );
 
     if (alreadyPurchased) {
       const userFilm = await Video.findOne({
         userId: userId,
-        customerCode: content.code.trim().toUpperCase(),
+        customerCode: normalizedCode,
       });
 
       return res.status(200).json({
-        ...content.toObject(),
+        ...firstContent.toObject(),
         alreadyPurchased: true,
         filmId: userFilm?._id,
       });
     }
 
     const film = await Video.findOne({
-      customerCode: code.trim().toUpperCase(),
+      customerCode: normalizedCode,
       isFilm: true,
     });
 
@@ -396,13 +405,18 @@ export const redeemContent = async (req, res, next) => {
       await filmCopy.save();
     }
 
-    content.purchasedBy.push(userId);
-    await content.save();
+    for (const content of contents) {
+      if (!content.purchasedBy.includes(userId)) {
+        content.purchasedBy.push(userId);
+        await content.save();
+      }
+    }
 
     res.status(200).json({
-      ...content.toObject(),
+      ...firstContent.toObject(),
       alreadyPurchased: false,
       filmId: film._id,
+      totalItems: contents.length,
     });
   } catch (err) {
     next(err);

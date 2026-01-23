@@ -363,6 +363,14 @@ const Label = styled.label`
   font-family: var(--secondary-fonts);
 `;
 
+const Helper = styled.p`
+  color: var(--secondary-color);
+  opacity: 0.7;
+  font-size: 0.85rem;
+  font-family: var(--secondary-fonts);
+  margin: 0;
+`;
+
 const Input = styled.input`
   padding: 12px 14px;
   border-radius: 8px;
@@ -520,40 +528,542 @@ const MediaModal = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.95);
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
   padding: 20px;
+  animation: fadeIn 0.2s ease;
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 `;
 
 const MediaModalContent = styled.div`
-  max-width: 90vw;
-  max-height: 90vh;
-  position: relative;
+  max-width: 900px;
+  width: 100%;
+  background: var(--tertiary-color);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  max-height: 85vh;
+  animation: slideUp 0.3s ease;
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    max-width: 700px;
+  }
+`;
 
+const MediaPreviewSection = styled.div`
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 400px;
+  
   img,
   video {
     max-width: 100%;
-    max-height: 90vh;
+    max-height: 85vh;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
+  }
+  
+  @media (max-width: 1024px) {
+    max-height: 50vh;
   }
 `;
 
 const CloseButton = styled.button`
   position: absolute;
-  top: -40px;
-  right: 0;
-  background: transparent;
-  border: none;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
   color: white;
-  font-size: 2rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  padding: 10px;
+  padding: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: all 0.2s ease;
   
   &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: rotate(90deg);
+  }
+`;
+
+const MediaInfoBar = styled.div`
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  
+  @media (max-width: 1024px) {
+    max-height: none;
+  }
+`;
+
+const MediaHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const MediaTitle = styled.h3`
+  color: var(--secondary-color);
+  font-family: var(--primary-fonts);
+  font-size: 1.4rem;
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.3;
+`;
+
+const MediaDescription = styled.p`
+  color: var(--secondary-color);
+  opacity: 0.75;
+  font-family: var(--secondary-fonts);
+  font-size: 0.95rem;
+  margin: 0;
+  line-height: 1.6;
+`;
+
+const MediaMetaSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const MediaMetaRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+`;
+
+const MediaMetaLabel = styled.span`
+  color: var(--secondary-color);
+  opacity: 0.7;
+  font-family: var(--secondary-fonts);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+`;
+
+const MediaMetaValue = styled.span`
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const MediaActionButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const MediaActionButton = styled.button`
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  font-family: var(--secondary-fonts);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  
+  ${props => props.$variant === 'approve' ? `
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.35);
+    }
+  ` : `
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.25);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(244, 67, 54, 0.35);
+    }
+  `}
+  
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const DragDropZone = styled.div`
+  border: 2px dashed ${props => props.$isDragging ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.2)'};
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: ${props => props.$isDragging ? 'rgba(0, 123, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)'};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+
+  &:hover {
+    border-color: var(--primary-color);
+    background: rgba(0, 123, 255, 0.05);
+  }
+
+  input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+`;
+
+const DragDropText = styled.div`
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  
+  h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: ${props => props.$isDragging ? 'var(--primary-color)' : 'var(--secondary-color)'};
+  }
+
+  p {
+    font-size: 0.9rem;
     opacity: 0.7;
+    margin-bottom: 4px;
+  }
+
+  .icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+    color: var(--primary-color);
+  }
+`;
+
+const FilePreviewGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+`;
+
+const FilePreviewItem = styled.div`
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  
+  img, video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const RemoveFileButton = styled.button`
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(244, 67, 54, 0.9);
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(244, 67, 54, 1);
+    transform: scale(1.1);
+  }
+`;
+
+const FileCount = styled.div`
+  margin-top: 12px;
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.9rem;
+  opacity: 0.8;
+  
+  strong {
+    color: var(--primary-color);
+  }
+`;
+
+const TableContainer = styled.div`
+  background-color: var(--tertiary-color);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+`;
+
+const BulkActionBar = styled.div`
+  padding: 16px 24px;
+  background: rgba(0, 123, 255, 0.08);
+  border-bottom: 1px solid rgba(0, 123, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+`;
+
+const BulkActionText = styled.div`
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.95rem;
+  
+  strong {
+    color: var(--primary-color);
+    font-weight: 600;
+  }
+`;
+
+const BulkActionButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
+
+const BulkButton = styled.button`
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  font-family: var(--secondary-fonts);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  
+  ${props => props.$variant === 'approve' ? `
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.35);
+    }
+  ` : `
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--secondary-color);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+  `}
+  
+  @media (max-width: 768px) {
+    flex: 1;
+    justify-content: center;
+  }
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+`;
+
+const Thead = styled.thead`
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+`;
+
+const Th = styled.th`
+  padding: 16px;
+  text-align: left;
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
+  
+  &:first-child {
+    width: 40px;
+  }
+  
+  &:last-child {
+    width: 100px;
+    text-align: center;
+  }
+`;
+
+const Tbody = styled.tbody``;
+
+const Tr = styled.tr`
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+  
+  ${props => props.$selected && `
+    background: rgba(0, 123, 255, 0.08);
+    
+    &:hover {
+      background: rgba(0, 123, 255, 0.12);
+    }
+  `}
+`;
+
+const Td = styled.td`
+  padding: 16px;
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.95rem;
+  vertical-align: middle;
+`;
+
+const Checkbox = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+`;
+
+const ThumbnailCell = styled.div`
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  
+  img, video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const TitleCell = styled.div`
+  font-weight: 600;
+  color: var(--secondary-color);
+  margin-bottom: 4px;
+`;
+
+const DescriptionCell = styled.div`
+  font-size: 0.85rem;
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+`;
+
+const TypeBadge = styled.span`
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  
+  ${props => props.$type === 'image' ? `
+    background: rgba(156, 39, 176, 0.2);
+    color: #ce93d8;
+    border: 1px solid rgba(156, 39, 176, 0.3);
+  ` : `
+    background: rgba(33, 150, 243, 0.2);
+    color: #64b5f6;
+    border: 1px solid rgba(33, 150, 243, 0.3);
+  `}
+`;
+
+const ActionButton = styled.button`
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 123, 255, 0.12);
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--secondary-fonts);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(0, 123, 255, 0.2);
+    transform: translateY(-1px);
   }
 `;
 
@@ -574,10 +1084,14 @@ const HappyTeamDashboard = () => {
 
   const [formData, setFormData] = useState({
     type: 'image',
-    file: null,
+    files: [],
     title: '',
     description: '',
   });
+
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [viewingMedia, setViewingMedia] = useState(null);
 
   useEffect(() => {
     // Wait for user state to load before checking access
@@ -604,12 +1118,46 @@ const HappyTeamDashboard = () => {
         { withCredentials: true }
       );
       setContent(res.data);
+      setSelectedItems([]);
     } catch (err) {
       console.error('Error fetching content:', err);
       alert('Error loading content');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedItems(content.map(item => item._id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const handleSelectItem = (itemId) => {
+    setSelectedItems(prev => {
+      if (prev.includes(itemId)) {
+        return prev.filter(id => id !== itemId);
+      } else {
+        return [...prev, itemId];
+      }
+    });
+  };
+
+  const handleBulkApprove = () => {
+    if (selectedItems.length === 0) {
+      alert('Please select at least one item to approve');
+      return;
+    }
+    setApprovalContentId(selectedItems);
+    setApprovalPrice('');
+    setApprovalCode('');
+    setShowApprovalModal(true);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedItems([]);
   };
 
   // Show loading while checking user permissions
@@ -623,53 +1171,111 @@ const HappyTeamDashboard = () => {
     );
   }
 
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
+    }
+  };
+
+  const handleFiles = (fileList) => {
+    const filesArray = Array.from(fileList);
+    const validFiles = filesArray.filter(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
+      return formData.type === 'image' ? isImage : isVideo;
+    });
+
+    if (validFiles.length === 0) {
+      alert(`Please select valid ${formData.type} files`);
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      files: [...prev.files, ...validFiles]
+    }));
+  };
+
+  const removeFile = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.file) {
-      alert('Please select a file');
+    if (formData.files.length === 0) {
+      alert('Please select at least one file');
       return;
     }
 
     setUploading(true);
 
     try {
-      // First upload the file
-      const uploadFormData = new FormData();
-      // Upload endpoint expects 'video' or 'image' as the field name
-      const fieldName = formData.type === 'video' ? 'video' : 'image';
-      uploadFormData.append(fieldName, formData.file);
+      const uploadedContents = [];
+      const tempCode = `TEMP-${Date.now()}`;
+      
+      for (let i = 0; i < formData.files.length; i++) {
+        const file = formData.files[i];
+        
+        const uploadFormData = new FormData();
+        const fieldName = formData.type === 'video' ? 'video' : 'image';
+        uploadFormData.append(fieldName, file);
 
-      const uploadRes = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/upload`,
-        uploadFormData,
-        {
-          withCredentials: true,
-          headers: { 'Content-Type': 'multipart/form-data' },
-        }
-      );
+        const uploadRes = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+          uploadFormData,
+          {
+            withCredentials: true,
+            headers: { 'Content-Type': 'multipart/form-data' },
+          }
+        );
 
-      const fileUrl = uploadRes.data.url;
+        const fileUrl = uploadRes.data.url;
 
-      // Then create the content entry
-      const contentData = {
-        type: formData.type,
-        fileUrl,
-        title: formData.title,
-        description: formData.description,
-        code: `TEMP-${Date.now()}`,
-        price: 0,
-      };
+        const contentData = {
+          type: formData.type,
+          fileUrl,
+          title: formData.files.length > 1 ? `${formData.title} (${i + 1})` : formData.title,
+          description: formData.description,
+          code: tempCode,
+          price: 0,
+        };
 
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/v1/happy-team/upload`,
-        contentData,
-        { withCredentials: true }
-      );
+        const contentRes = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/v1/happy-team/upload`,
+          contentData,
+          { withCredentials: true }
+        );
+        
+        uploadedContents.push(contentRes.data);
+      }
 
-      alert('Content uploaded successfully! Waiting for admin approval.');
+      alert(`${uploadedContents.length} file(s) uploaded successfully! Waiting for admin approval.`);
       setShowUploadModal(false);
-      setFormData({ type: 'image', file: null, title: '', description: '' });
+      setFormData({ type: 'image', files: [], title: '', description: '' });
       fetchContent();
     } catch (err) {
       console.error('Error uploading:', err);
@@ -738,6 +1344,97 @@ const HappyTeamDashboard = () => {
               : 'Upload your first content to get started.'}
           </p>
         </EmptyState>
+      ) : currentUser.role === 'admin' ? (
+        <TableContainer>
+          {selectedItems.length > 0 && (
+            <BulkActionBar>
+              <BulkActionText>
+                <strong>{selectedItems.length}</strong> item{selectedItems.length !== 1 ? 's' : ''} selected
+              </BulkActionText>
+              <BulkActionButtons>
+                <BulkButton onClick={handleClearSelection}>
+                  <FaTimes /> Clear
+                </BulkButton>
+                <BulkButton $variant="approve" onClick={handleBulkApprove}>
+                  <FaCheck /> Approve Selected
+                </BulkButton>
+              </BulkActionButtons>
+            </BulkActionBar>
+          )}
+          <Table>
+            <Thead>
+              <Tr>
+                <Th>
+                  <Checkbox
+                    type="checkbox"
+                    checked={selectedItems.length === content.length && content.length > 0}
+                    onChange={handleSelectAll}
+                  />
+                </Th>
+                <Th>Title</Th>
+                <Th>Type</Th>
+                <Th>Uploader</Th>
+                <Th>Status</Th>
+                <Th>Code</Th>
+                <Th>Price</Th>
+                <Th style={{ textAlign: 'center' }}>Action</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {content.map((item) => (
+                <Tr key={item._id} $selected={selectedItems.includes(item._id)}>
+                  <Td>
+                    <Checkbox
+                      type="checkbox"
+                      checked={selectedItems.includes(item._id)}
+                      onChange={() => handleSelectItem(item._id)}
+                    />
+                  </Td>
+                  <Td>
+                    <TitleCell>{item.title || 'Untitled'}</TitleCell>
+                    {item.description && (
+                      <DescriptionCell>{item.description}</DescriptionCell>
+                    )}
+                  </Td>
+                  <Td>
+                    <TypeBadge $type={item.type}>{item.type}</TypeBadge>
+                  </Td>
+                  <Td>
+                    <div style={{ fontSize: '0.9rem' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '2px' }}>
+                        {item.userId?.displayName}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', opacity: '0.7' }}>
+                        {item.userId?.email}
+                      </div>
+                    </div>
+                  </Td>
+                  <Td>
+                    <StatusBadge $status={item.status}>
+                      {getStatusIcon(item.status)}
+                      {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                    </StatusBadge>
+                  </Td>
+                  <Td>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      {item.code || '-'}
+                    </span>
+                  </Td>
+                  <Td>
+                    <span style={{ fontWeight: '600' }}>
+                      ${item.price?.toFixed(2) || '0.00'}
+                    </span>
+                  </Td>
+                  <Td style={{ textAlign: 'center' }}>
+                    <ActionButton onClick={() => setViewingMedia(item)}>
+                      <FaImage /> View
+                    </ActionButton>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
       ) : (
         <ContentGrid>
           {content.map((item) => (
@@ -771,53 +1468,11 @@ const HappyTeamDashboard = () => {
                 {item.description && (
                   <ContentDescription>{item.description}</ContentDescription>
                 )}
-                {currentUser.role === 'admin' && (
-                  <MetaInfo>
-                    <MetaItem>
-                      <strong>Access Code:</strong> <span>{item.code}</span>
-                    </MetaItem>
-                    <MetaItem>
-                      <strong>Price:</strong> <span>${item.price?.toFixed(2)}</span>
-                    </MetaItem>
-                  </MetaInfo>
-                )}
-                {currentUser.role === 'admin' && (
-                  <UserInfo>
-                    <UserInfoItem>
-                      <FaUser />
-                      <span>
-                        {item.userId?.displayName}
-                        {item.userId?.editorRole && ` (${item.userId.editorRole})`}
-                      </span>
-                    </UserInfoItem>
-                    <UserInfoItem>
-                      <FaEnvelope />
-                      <span>{item.userId?.email}</span>
-                    </UserInfoItem>
-                  </UserInfo>
-                )}
                 <StatusBadge $status={item.status}>
                   {getStatusIcon(item.status)}
                   {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
                 </StatusBadge>
-                {item.status === 'pending' && currentUser.role === 'editor' && (
-                  <ActionButtons>
-                    <DeleteButton onClick={() => handleDelete(item._id)}>
-                      <FaTrash /> Delete
-                    </DeleteButton>
-                  </ActionButtons>
-                )}
-                {currentUser.role === 'admin' && item.status === 'pending' && (
-                  <ActionButtons>
-                    <Button onClick={() => openApprovalModal(item._id)}>
-                      <FaCheck /> Approve
-                    </Button>
-                    <DeleteButton onClick={() => handleReject(item._id)}>
-                      <FaTimes /> Reject
-                    </DeleteButton>
-                  </ActionButtons>
-                )}
-                {currentUser.role === 'admin' && item.status === 'approved' && (
+                {item.status === 'pending' && (
                   <ActionButtons>
                     <DeleteButton onClick={() => handleDelete(item._id)}>
                       <FaTrash /> Delete
@@ -839,24 +1494,60 @@ const HappyTeamDashboard = () => {
                 <Label>Type</Label>
                 <Select
                   value={formData.type}
-                  onChange={(e) =>
-                    setFormData({ ...formData, type: e.target.value })
-                  }
+                  onChange={(e) => {
+                    setFormData({ type: e.target.value, files: [], title: formData.title, description: formData.description });
+                  }}
                 >
                   <option value='image'>Image</option>
                   <option value='video'>Video</option>
                 </Select>
               </FormGroup>
               <FormGroup>
-                <Label>File</Label>
-                <Input
-                  type='file'
-                  accept={formData.type === 'image' ? 'image/*' : 'video/*'}
-                  onChange={(e) =>
-                    setFormData({ ...formData, file: e.target.files[0] })
-                  }
-                  required
-                />
+                <Label>Files (Drag & Drop or Click to Browse)</Label>
+                <DragDropZone
+                  $isDragging={dragActive}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    type='file'
+                    accept={formData.type === 'image' ? 'image/*' : 'video/*'}
+                    onChange={handleFileInput}
+                    multiple
+                  />
+                  <DragDropText $isDragging={dragActive}>
+                    <div className="icon">
+                      <FaUpload />
+                    </div>
+                    <h4>{dragActive ? 'Drop files here' : 'Drag & drop files here'}</h4>
+                    <p>or click to browse</p>
+                    <p>Multiple {formData.type}s allowed</p>
+                  </DragDropText>
+                </DragDropZone>
+                
+                {formData.files.length > 0 && (
+                  <>
+                    <FileCount>
+                      <strong>{formData.files.length}</strong> file{formData.files.length !== 1 ? 's' : ''} selected
+                    </FileCount>
+                    <FilePreviewGrid>
+                      {formData.files.map((file, index) => (
+                        <FilePreviewItem key={index}>
+                          {formData.type === 'image' ? (
+                            <img src={URL.createObjectURL(file)} alt={`Preview ${index + 1}`} />
+                          ) : (
+                            <video src={URL.createObjectURL(file)} />
+                          )}
+                          <RemoveFileButton onClick={() => removeFile(index)} type="button">
+                            <FaTimes />
+                          </RemoveFileButton>
+                        </FilePreviewItem>
+                      ))}
+                    </FilePreviewGrid>
+                  </>
+                )}
               </FormGroup>
               <FormGroup>
                 <Label>Title</Label>
@@ -883,12 +1574,15 @@ const HappyTeamDashboard = () => {
                 <Button
                   type='button'
                   $variant='cancel'
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setFormData({ type: 'image', files: [], title: '', description: '' });
+                  }}
                 >
                   Cancel
                 </Button>
-                <Button type='submit' disabled={uploading}>
-                  {uploading ? 'Uploading...' : 'Upload'}
+                <Button type='submit' disabled={uploading || formData.files.length === 0}>
+                  {uploading ? `Uploading... (${formData.files.length} files)` : 'Upload'}
                 </Button>
               </ButtonGroup>
             </Form>
@@ -902,29 +1596,198 @@ const HappyTeamDashboard = () => {
             <CloseButton onClick={() => setSelectedMedia(null)}>
               <MdClose />
             </CloseButton>
-            {selectedMedia.type === 'image' ? (
-              <img
-                src={
-                  selectedMedia.fileUrl?.startsWith('http')
-                    ? selectedMedia.fileUrl
-                    : `${import.meta.env.VITE_API_URL}${selectedMedia.fileUrl}`
-                }
-                alt={selectedMedia.title}
-              />
-            ) : (
-              <video
-                src={
-                  selectedMedia.fileUrl?.startsWith('http')
-                    ? selectedMedia.fileUrl
-                    : `${import.meta.env.VITE_API_URL}${selectedMedia.fileUrl}`
-                }
-                controls
-                controlsList="nodownload"
-                disablePictureInPicture
-                autoPlay
-                onContextMenu={(e) => e.preventDefault()}
-              />
-            )}
+            <MediaPreviewSection>
+              {selectedMedia.type === 'image' ? (
+                <img
+                  src={
+                    selectedMedia.fileUrl?.startsWith('http')
+                      ? selectedMedia.fileUrl
+                      : `${import.meta.env.VITE_API_URL}${selectedMedia.fileUrl}`
+                  }
+                  alt={selectedMedia.title}
+                />
+              ) : (
+                <video
+                  src={
+                    selectedMedia.fileUrl?.startsWith('http')
+                      ? selectedMedia.fileUrl
+                      : `${import.meta.env.VITE_API_URL}${selectedMedia.fileUrl}`
+                  }
+                  controls
+                  controlsList="nodownload"
+                  disablePictureInPicture
+                  autoPlay
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+              )}
+            </MediaPreviewSection>
+            <MediaInfoBar>
+              <MediaHeader>
+                <MediaTitle>{selectedMedia.title || 'Untitled'}</MediaTitle>
+                {selectedMedia.description && (
+                  <MediaDescription>{selectedMedia.description}</MediaDescription>
+                )}
+              </MediaHeader>
+              
+              <MediaMetaSection>
+                <MediaMetaRow>
+                  <MediaMetaLabel>Type</MediaMetaLabel>
+                  <MediaMetaValue>
+                    <TypeBadge $type={selectedMedia.type}>{selectedMedia.type}</TypeBadge>
+                  </MediaMetaValue>
+                </MediaMetaRow>
+                
+                <MediaMetaRow>
+                  <MediaMetaLabel>Status</MediaMetaLabel>
+                  <MediaMetaValue>
+                    <StatusBadge $status={selectedMedia.status}>
+                      {getStatusIcon(selectedMedia.status)}
+                      {selectedMedia.status.charAt(0).toUpperCase() + selectedMedia.status.slice(1)}
+                    </StatusBadge>
+                  </MediaMetaValue>
+                </MediaMetaRow>
+              </MediaMetaSection>
+              
+              {selectedMedia.status === 'pending' && (
+                <MediaActionButtons>
+                  <MediaActionButton 
+                    $variant="reject"
+                    onClick={() => {
+                      setSelectedMedia(null);
+                      handleDelete(selectedMedia._id);
+                    }}
+                  >
+                    <FaTrash /> Delete
+                  </MediaActionButton>
+                </MediaActionButtons>
+              )}
+            </MediaInfoBar>
+          </MediaModalContent>
+        </MediaModal>
+      )}
+
+      {viewingMedia && (
+        <MediaModal onClick={() => setViewingMedia(null)}>
+          <MediaModalContent onClick={(e) => e.stopPropagation()}>
+            <CloseButton onClick={() => setViewingMedia(null)}>
+              <MdClose />
+            </CloseButton>
+            <MediaPreviewSection>
+              {viewingMedia.type === 'image' ? (
+                <img
+                  src={
+                    viewingMedia.fileUrl?.startsWith('http')
+                      ? viewingMedia.fileUrl
+                      : `${import.meta.env.VITE_API_URL}${viewingMedia.fileUrl}`
+                  }
+                  alt={viewingMedia.title}
+                />
+              ) : (
+                <video
+                  src={
+                    viewingMedia.fileUrl?.startsWith('http')
+                      ? viewingMedia.fileUrl
+                      : `${import.meta.env.VITE_API_URL}${viewingMedia.fileUrl}`
+                  }
+                  controls
+                  controlsList="nodownload"
+                  disablePictureInPicture
+                  autoPlay
+                  onContextMenu={(e) => e.preventDefault()}
+                />
+              )}
+            </MediaPreviewSection>
+            <MediaInfoBar>
+              <MediaHeader>
+                <MediaTitle>{viewingMedia.title || 'Untitled'}</MediaTitle>
+                {viewingMedia.description && (
+                  <MediaDescription>{viewingMedia.description}</MediaDescription>
+                )}
+              </MediaHeader>
+              
+              <MediaMetaSection>
+                <MediaMetaRow>
+                  <MediaMetaLabel>Type</MediaMetaLabel>
+                  <MediaMetaValue>
+                    <TypeBadge $type={viewingMedia.type}>{viewingMedia.type}</TypeBadge>
+                  </MediaMetaValue>
+                </MediaMetaRow>
+                
+                <MediaMetaRow>
+                  <MediaMetaLabel>Status</MediaMetaLabel>
+                  <MediaMetaValue>
+                    <StatusBadge $status={viewingMedia.status}>
+                      {getStatusIcon(viewingMedia.status)}
+                      {viewingMedia.status.charAt(0).toUpperCase() + viewingMedia.status.slice(1)}
+                    </StatusBadge>
+                  </MediaMetaValue>
+                </MediaMetaRow>
+                
+                {currentUser.role === 'admin' && (
+                  <>
+                    <MediaMetaRow>
+                      <MediaMetaLabel>Code</MediaMetaLabel>
+                      <MediaMetaValue style={{ fontFamily: 'monospace' }}>
+                        {viewingMedia.code || '-'}
+                      </MediaMetaValue>
+                    </MediaMetaRow>
+                    
+                    <MediaMetaRow>
+                      <MediaMetaLabel>Price</MediaMetaLabel>
+                      <MediaMetaValue>
+                        ${viewingMedia.price?.toFixed(2) || '0.00'}
+                      </MediaMetaValue>
+                    </MediaMetaRow>
+                  </>
+                )}
+                
+                {viewingMedia.userId && (
+                  <MediaMetaRow>
+                    <MediaMetaLabel>Uploader</MediaMetaLabel>
+                    <MediaMetaValue>
+                      <FaUser />
+                      {viewingMedia.userId.displayName}
+                    </MediaMetaValue>
+                  </MediaMetaRow>
+                )}
+              </MediaMetaSection>
+              
+              {currentUser.role === 'admin' && viewingMedia.status === 'pending' && (
+                <MediaActionButtons>
+                  <MediaActionButton 
+                    $variant="approve" 
+                    onClick={() => {
+                      setViewingMedia(null);
+                      openApprovalModal(viewingMedia._id);
+                    }}
+                  >
+                    <FaCheck /> Approve
+                  </MediaActionButton>
+                  <MediaActionButton 
+                    $variant="reject"
+                    onClick={() => {
+                      setViewingMedia(null);
+                      handleReject(viewingMedia._id);
+                    }}
+                  >
+                    <FaTimes /> Reject
+                  </MediaActionButton>
+                </MediaActionButtons>
+              )}
+              {currentUser.role === 'admin' && viewingMedia.status === 'approved' && (
+                <MediaActionButtons>
+                  <MediaActionButton 
+                    $variant="reject"
+                    onClick={() => {
+                      setViewingMedia(null);
+                      handleDelete(viewingMedia._id);
+                    }}
+                  >
+                    <FaTrash /> Delete
+                  </MediaActionButton>
+                </MediaActionButtons>
+              )}
+            </MediaInfoBar>
           </MediaModalContent>
         </MediaModal>
       )}
@@ -932,7 +1795,11 @@ const HappyTeamDashboard = () => {
       {showApprovalModal && (
         <UploadModal onClick={() => setShowApprovalModal(false)}>
           <ModalContent onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>Set Details & Approve Content</ModalTitle>
+            <ModalTitle>
+              {Array.isArray(approvalContentId) 
+                ? `Approve ${approvalContentId.length} Items` 
+                : 'Set Details & Approve Content'}
+            </ModalTitle>
             <Form onSubmit={(e) => { e.preventDefault(); handleApprove(); }}>
               <FormGroup>
                 <Label>Access Code *</Label>
@@ -944,6 +1811,11 @@ const HappyTeamDashboard = () => {
                   required
                   autoFocus
                 />
+                {Array.isArray(approvalContentId) && approvalContentId.length > 1 && (
+                  <Helper style={{ marginTop: '8px', fontSize: '0.85rem' }}>
+                    All items will use the same code: {approvalCode.trim().toUpperCase() || 'UNIQUE-CODE'}
+                  </Helper>
+                )}
               </FormGroup>
               <FormGroup>
                 <Label>Price (USD) *</Label>
@@ -956,6 +1828,11 @@ const HappyTeamDashboard = () => {
                   placeholder='9.99'
                   required
                 />
+                {Array.isArray(approvalContentId) && (
+                  <Helper style={{ marginTop: '8px', fontSize: '0.85rem' }}>
+                    Same price will be applied to all items
+                  </Helper>
+                )}
               </FormGroup>
               <ButtonGroup>
                 <Button
@@ -966,7 +1843,9 @@ const HappyTeamDashboard = () => {
                   Cancel
                 </Button>
                 <Button type='submit'>
-                  Approve
+                  {Array.isArray(approvalContentId) 
+                    ? `Approve ${approvalContentId.length} Items` 
+                    : 'Approve'}
                 </Button>
               </ButtonGroup>
             </Form>
@@ -996,15 +1875,49 @@ const HappyTeamDashboard = () => {
     }
 
     try {
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/v1/happy-team/${approvalContentId}/approve`,
-        { 
-          price: parseFloat(approvalPrice),
-          code: approvalCode.trim().toUpperCase()
-        },
-        { withCredentials: true }
-      );
-      alert('Content approved!');
+      const isBulk = Array.isArray(approvalContentId);
+      
+      if (isBulk) {
+        let successCount = 0;
+        let failedCount = 0;
+        const normalizedCode = approvalCode.trim().toUpperCase();
+        
+        for (let i = 0; i < approvalContentId.length; i++) {
+          const contentId = approvalContentId[i];
+          
+          try {
+            await axios.put(
+              `${import.meta.env.VITE_API_URL}/api/v1/happy-team/${contentId}/approve`,
+              { 
+                price: parseFloat(approvalPrice),
+                code: normalizedCode
+              },
+              { withCredentials: true }
+            );
+            successCount++;
+          } catch (err) {
+            console.error(`Error approving ${contentId}:`, err);
+            failedCount++;
+          }
+        }
+        
+        if (successCount > 0) {
+          alert(`${successCount} item(s) approved successfully!${failedCount > 0 ? ` ${failedCount} failed.` : ''}`);
+        } else {
+          alert('Failed to approve items');
+        }
+      } else {
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/api/v1/happy-team/${approvalContentId}/approve`,
+          { 
+            price: parseFloat(approvalPrice),
+            code: approvalCode.trim().toUpperCase()
+          },
+          { withCredentials: true }
+        );
+        alert('Content approved!');
+      }
+      
       setShowApprovalModal(false);
       setApprovalContentId(null);
       setApprovalPrice('');
