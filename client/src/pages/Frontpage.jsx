@@ -29,6 +29,8 @@ import {
   FaPhone,
   FaEnvelope,
   FaMapMarkerAlt,
+  FaFolder,
+  FaImages,
 } from 'react-icons/fa';
 import { MdClose } from 'react-icons/md';
 
@@ -670,6 +672,33 @@ const FilmVideoWrapper = styled.div`
   }
 `;
 
+const FolderIconWrapper = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  
+  svg {
+    font-size: 80px;
+    color: #667eea;
+    opacity: 0.8;
+  }
+  
+  p {
+    color: var(--secondary-color);
+    font-family: var(--primary-fonts);
+    font-size: 16px;
+    opacity: 0.8;
+  }
+`;
+
 const CopyrightOverlay = styled.div`
   position: absolute;
   top: 50%;
@@ -969,12 +998,11 @@ const Frontpage = () => {
           const res = await axios.post(
             `${
               import.meta.env.VITE_API_URL
-            }/api/v1/films/redeem/${pendingCode}`,
-            {},
+            }/api/v1/happy-team/redeem`,
+            { code: pendingCode },
             { withCredentials: true }
           );
 
-          // Show the film modal with the redeemed film
           setRedeemedFilm(res.data.film);
           setShowFilmModal(true);
         } catch (err) {
@@ -1010,12 +1038,11 @@ const Frontpage = () => {
         const res = await axios.post(
           `${
             import.meta.env.VITE_API_URL
-          }/api/v1/films/redeem/${codeInput.trim()}`,
-          {},
+          }/api/v1/happy-team/redeem`,
+          { code: codeInput.trim() },
           { withCredentials: true }
         );
 
-        // Show the film modal with the redeemed film
         setRedeemedFilm(res.data.film);
         setShowFilmModal(true);
         setCodeInput('');
@@ -1049,7 +1076,7 @@ const Frontpage = () => {
     if (!redeemedFilm) return;
 
     const filmId = redeemedFilm.sourceFilmId || redeemedFilm._id;
-    const price = redeemedFilm.purchasePrice || 0;
+    const price = redeemedFilm.purchasePrice ?? 0;
     const filmName = encodeURIComponent(redeemedFilm.caption || 'Film');
 
     navigate(
@@ -1415,7 +1442,12 @@ const Frontpage = () => {
 
             <FilmModalBody>
               <FilmVideoWrapper>
-                {getVideoUrl(redeemedFilm) && (
+                {redeemedFilm.mediaType === 'image' ? (
+                  <FolderIconWrapper>
+                    <FaFolder />
+                    <p>Image Gallery</p>
+                  </FolderIconWrapper>
+                ) : getVideoUrl(redeemedFilm) ? (
                   <>
                     <video
                       src={getVideoUrl(redeemedFilm)}
@@ -1428,13 +1460,15 @@ const Frontpage = () => {
                     />
                     <CopyrightOverlay>MYSOOV.TV</CopyrightOverlay>
                   </>
-                )}
+                ) : null}
               </FilmVideoWrapper>
 
               <FilmInfoSection>
                 <SuccessMessage>
                   <FaCheck />
-                  Film successfully added to your profile!
+                  {redeemedFilm.mediaType === 'image' 
+                    ? 'Images successfully added to your profile!'
+                    : 'Film successfully added to your profile!'}
                 </SuccessMessage>
 
                 <FilmPriceRow>

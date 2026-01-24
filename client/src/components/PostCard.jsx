@@ -194,12 +194,12 @@ const PostCard = ({
   // 1. sourceFilmId.purchasePrice (new system)
   // 2. filmDirectory.price (old system)
   // 3. video.purchasePrice (fallback)
-  // 4. default to 9.99
+  // 4. default to 0
   const purchasePrice =
-    video?.sourceFilmId?.purchasePrice ||
-    video?.filmDirectoryId?.price ||
-    video?.purchasePrice ||
-    9.99;
+    video?.sourceFilmId?.purchasePrice ??
+    video?.filmDirectoryId?.price ??
+    video?.purchasePrice ??
+    0;
 
   // Check if video is from YouTube
   const isYouTubeVideo =

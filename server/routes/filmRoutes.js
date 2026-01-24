@@ -17,6 +17,11 @@ import {
   createFilm,
   deleteFilm,
   searchFilmByCode,
+  // Film image gallery system
+  uploadImagesToDirectory,
+  getDirectoryImages,
+  deleteImageFromDirectory,
+  getImagesByAccessCode,
 } from '../controllers/filmCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
@@ -94,5 +99,32 @@ router.get('/search/:code', verifyToken, searchFilmDirectory);
 router.get('/details/:directoryId', verifyToken, getFilmDirectoryDetails);
 router.post('/add-to-profile', verifyToken, addFilmToProfile);
 router.post('/purchase', verifyToken, purchaseFilm);
+
+// ========================================
+// FILM IMAGE GALLERY SYSTEM
+// ========================================
+
+// Admin routes for image galleries
+router.post(
+  '/admin/directories/:directoryId/images',
+  verifyToken,
+  verifyAdmin,
+  uploadImagesToDirectory
+);
+router.get(
+  '/admin/directories/:directoryId/images',
+  verifyToken,
+  verifyAdmin,
+  getDirectoryImages
+);
+router.delete(
+  '/admin/images/:imageId',
+  verifyToken,
+  verifyAdmin,
+  deleteImageFromDirectory
+);
+
+// User routes for image galleries
+router.get('/gallery/:code', verifyToken, getImagesByAccessCode);
 
 export default router;

@@ -2,8 +2,16 @@ import FilmDirectory from '../models/FilmDirectory.js';
 import Video from '../models/Video.js';
 import User from '../models/User.js';
 import Settings from '../models/Settings.js';
+import FilmImage from '../models/FilmImage.js';
 import { createError } from '../utils/error.js';
 import { sendPurchaseConfirmationEmail } from '../services/emailService.js';
+import { createWatermarkedCopy } from '../utils/watermark.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Admin: Get all film directories
 export const getAllFilmDirectories = async (req, res, next) => {
@@ -63,7 +71,7 @@ export const createFilmDirectory = async (req, res, next) => {
     const directory = await FilmDirectory.create({
       folderName,
       description: description || '',
-      price: price || 9.99,
+      price: price ?? 0,
       createdBy: req.user.id,
       films: [],
     });
@@ -563,7 +571,7 @@ export const createFilm = async (req, res, next) => {
     const film = await Video.create({
       caption,
       customerCode: customerCode.trim().toUpperCase(),
-      purchasePrice: purchasePrice || 0,
+      purchasePrice: purchasePrice ?? 0,
       videoUrl: videoUrl || {},
       thumbnail: thumbnail || '',
       userId: req.user.id,
@@ -672,6 +680,190 @@ export const searchFilmByCode = async (req, res, next) => {
         originalTitle: film.caption,
         purchasePrice: film.purchasePrice,
         customerCode: film.customerCode,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ========================================
+// FILM IMAGE GALLERY SYSTEM
+// ========================================
+
+// Admin: Upload images to film directory
+export const uploadImagesToDirectory = async (req, res, next) => {
+  try {
+    const { directoryId } = req.params;
+    const { images } = req.body;
+
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return next(createError(400, 'No images provided'));
+    }
+
+    const directory = await FilmDirectory.findById(directoryId);
+    if (!directory) {
+      return next(createError(404, 'Film directory not found'));
+    }
+
+    const uploadedImages = [];
+
+    for (const imageData of images) {
+      const { url, publicId, provider, fileSize } = imageData;
+
+      if (!url) {
+        continue;
+      }
+
+      let watermarkedUrl = url;
+      
+      if (provider === 'local' && url.includes('/uploads/images/')) {
+        try {
+          let urlPath = url;
+          if (urlPath.startsWith('http')) {
+            const urlObj = new URL(urlPath);
+            urlPath = urlObj.pathname;
+          }
+          urlPath = urlPath.replace(/^\//, '');
+          
+          const imagePath = path.join(process.cwd(), urlPath);
+          
+          if (fs.existsSync(imagePath)) {
+            const originalFileName = path.basename(url);
+            const watermarkResult = await createWatermarkedCopy(imagePath, originalFileName);
+            watermarkedUrl = watermarkResult.url;
+          } else {
+            console.error('Image file not found:', imagePath);
+          }
+        } catch (watermarkError) {
+          console.error('Watermark creation failed:', watermarkError);
+        }
+      }
+
+      const filmImage = await FilmImage.create({
+        filmDirectoryId: directoryId,
+        imageUrl: url,
+        watermarkedUrl: watermarkedUrl,
+        fileSize: fileSize || 0,
+        storageProvider: provider || 'local',
+        publicId: publicId || '',
+        uploadedBy: req.user.id,
+      });
+
+      uploadedImages.push(filmImage);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${uploadedImages.length} image(s) uploaded successfully`,
+      images: uploadedImages,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Get all images in a film directory
+export const getDirectoryImages = async (req, res, next) => {
+  try {
+    const { directoryId } = req.params;
+
+    const directory = await FilmDirectory.findById(directoryId);
+    if (!directory) {
+      return next(createError(404, 'Film directory not found'));
+    }
+
+    const images = await FilmImage.find({ filmDirectoryId: directoryId })
+      .populate('uploadedBy', 'username displayName')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      images,
+      total: images.length,
+      directory: {
+        _id: directory._id,
+        folderName: directory.folderName,
+        description: directory.description,
+        price: directory.price,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Delete image from film directory
+export const deleteImageFromDirectory = async (req, res, next) => {
+  try {
+    const { imageId } = req.params;
+
+    const image = await FilmImage.findById(imageId);
+    if (!image) {
+      return next(createError(404, 'Image not found'));
+    }
+
+    if (image.storageProvider === 'local') {
+      const deleteFile = (url) => {
+        if (!url || !url.includes('/uploads/')) return;
+        
+        const filePath = path.join(process.cwd(), url.replace(/^\//, '').replace(/^uploads\//, 'uploads/'));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      };
+
+      deleteFile(image.imageUrl);
+      deleteFile(image.watermarkedUrl);
+    }
+
+    await FilmImage.findByIdAndDelete(imageId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Image deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// User: Get images by access code (shows watermarked versions until purchased)
+export const getImagesByAccessCode = async (req, res, next) => {
+  try {
+    const { code } = req.params;
+
+    if (!code) {
+      return next(createError(400, 'Access code is required'));
+    }
+
+    const directory = await FilmDirectory.findOne({
+      folderName: { $regex: new RegExp(`^${code}$`, 'i') },
+    });
+
+    if (!directory) {
+      return next(createError(404, 'Gallery not found'));
+    }
+
+    const images = await FilmImage.find({ filmDirectoryId: directory._id })
+      .select('watermarkedUrl title description createdAt')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      images: images.map(img => ({
+        _id: img._id,
+        imageUrl: img.watermarkedUrl,
+        title: img.title,
+        description: img.description,
+        createdAt: img.createdAt,
+      })),
+      gallery: {
+        _id: directory._id,
+        folderName: directory.folderName,
+        description: directory.description,
+        price: directory.price,
+        imageCount: images.length,
       },
     });
   } catch (error) {

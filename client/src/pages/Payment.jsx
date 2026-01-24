@@ -792,7 +792,8 @@ const Payment = () => {
       : directoryIdParam;
   const isNewFilmSystem = directoryId === 'new-system';
   const filmName = searchParams.get('filmName');
-  const filmPrice = parseFloat(searchParams.get('price')) || 9.99;
+  const priceParam = searchParams.get('price');
+  const filmPrice = isNaN(parseFloat(priceParam)) ? 0 : parseFloat(priceParam);
 
   // Use state to hold pricing data so it can be updated
   const [pricingPlans, setPricingPlans] = useState(defaultPricingPlans);

@@ -16,6 +16,10 @@ const happyTeamContentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    watermarkedUrl: {
+      type: String,
+      default: null,
+    },
     thumbnailUrl: {
       type: String,
       default: null,

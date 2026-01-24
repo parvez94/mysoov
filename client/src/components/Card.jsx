@@ -397,7 +397,7 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
       }
     });
 
-  const isUnpurchasedFilm = video?.sourceFilmId != null;
+  const isUnpurchasedFilm = video?.isFilm === true;
 
   return (
     <Container>
@@ -428,14 +428,20 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
             ) : mediaType === 'image' ? (
               // Check if there are multiple images
               images && images.length > 0 ? (
-                <ImageSlider images={images} caption={caption} />
+                <>
+                  <ImageSlider images={images} caption={caption} />
+                  {isUnpurchasedFilm && <WatermarkOverlay />}
+                </>
               ) : (
-                <Image
-                  src={videoUrl.url}
-                  alt={caption || 'Post image'}
-                  onLoad={handleImageLoad}
-                  data-aspect-ratio={aspectRatio}
-                />
+                <>
+                  <Image
+                    src={videoUrl.url}
+                    alt={caption || 'Post image'}
+                    onLoad={handleImageLoad}
+                    data-aspect-ratio={aspectRatio}
+                  />
+                  {isUnpurchasedFilm && <WatermarkOverlay />}
+                </>
               )
             ) : isYouTubeVideo ? (
               <>

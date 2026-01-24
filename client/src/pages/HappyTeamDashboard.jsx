@@ -847,10 +847,52 @@ const FileCount = styled.div`
   font-family: var(--secondary-fonts);
   font-size: 0.9rem;
   opacity: 0.8;
+  strong {
+    color: var(--primary-color);
+  }
+`;
+
+const UploadProgressContainer = styled.div`
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(0, 123, 255, 0.05);
+  border: 1px solid rgba(0, 123, 255, 0.2);
+  border-radius: 8px;
+`;
+
+const ProgressText = styled.div`
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.9rem;
+  margin-bottom: 10px;
   
   strong {
     color: var(--primary-color);
   }
+`;
+
+const ProgressBarContainer = styled.div`
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+`;
+
+const ProgressBarFill = styled.div`
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-color) 0%, #0056b3 100%);
+  transition: width 0.3s ease;
+  width: ${props => props.$progress}%;
+`;
+
+const CurrentFileText = styled.div`
+  color: var(--secondary-color);
+  font-family: var(--secondary-fonts);
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-top: 4px;
 `;
 
 const TableContainer = styled.div`
@@ -909,24 +951,35 @@ const BulkButton = styled.button`
   gap: 8px;
   transition: all 0.3s ease;
   
-  ${props => props.$variant === 'approve' ? `
-    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.35);
-    }
-  ` : `
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--secondary-color);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    
-    &:hover {
-      background: rgba(255, 255, 255, 0.12);
-    }
-  `}
+  ${props => 
+    props.$variant === 'approve' ? `
+      background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.35);
+      }
+    ` : props.$variant === 'delete' ? `
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.25);
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(244, 67, 54, 0.35);
+      }
+    ` : `
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--secondary-color);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+    `
+  }
   
   @media (max-width: 768px) {
     flex: 1;
@@ -1092,6 +1145,7 @@ const HappyTeamDashboard = () => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [viewingMedia, setViewingMedia] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, currentFile: '' });
 
   useEffect(() => {
     // Wait for user state to load before checking access
@@ -1160,6 +1214,46 @@ const HappyTeamDashboard = () => {
     setSelectedItems([]);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) {
+      alert('Please select at least one item to delete');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedItems.length} selected item(s)?`)) {
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const id of selectedItems) {
+        try {
+          await axios.delete(
+            `${import.meta.env.VITE_API_URL}/api/v1/happy-team/${id}`,
+            { withCredentials: true }
+          );
+          successCount++;
+        } catch (err) {
+          console.error(`Error deleting item ${id}:`, err);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`Successfully deleted ${successCount} item(s)${failCount > 0 ? `. Failed to delete ${failCount} item(s).` : ''}`);
+        setSelectedItems([]);
+        fetchContent();
+      } else {
+        alert('Failed to delete selected items');
+      }
+    } catch (err) {
+      console.error('Error in bulk delete:', err);
+      alert('Error deleting selected items');
+    }
+  };
+
   // Show loading while checking user permissions
   if (userLoading || !currentUser) {
     return (
@@ -1187,6 +1281,7 @@ const HappyTeamDashboard = () => {
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      console.log('Dropped files count:', e.dataTransfer.files.length);
       handleFiles(e.dataTransfer.files);
     }
   };
@@ -1199,15 +1294,23 @@ const HappyTeamDashboard = () => {
 
   const handleFiles = (fileList) => {
     const filesArray = Array.from(fileList);
+    console.log('Total files received:', filesArray.length);
+    
     const validFiles = filesArray.filter(file => {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       return formData.type === 'image' ? isImage : isVideo;
     });
 
+    console.log('Valid files after filter:', validFiles.length);
+
     if (validFiles.length === 0) {
       alert(`Please select valid ${formData.type} files`);
       return;
+    }
+
+    if (validFiles.length < filesArray.length) {
+      alert(`${filesArray.length - validFiles.length} file(s) were skipped (wrong type). ${validFiles.length} valid ${formData.type}(s) added.`);
     }
 
     setFormData(prev => ({
@@ -1232,6 +1335,7 @@ const HappyTeamDashboard = () => {
     }
 
     setUploading(true);
+    setUploadProgress({ current: 0, total: formData.files.length, currentFile: '' });
 
     try {
       const uploadedContents = [];
@@ -1239,6 +1343,12 @@ const HappyTeamDashboard = () => {
       
       for (let i = 0; i < formData.files.length; i++) {
         const file = formData.files[i];
+        
+        setUploadProgress({ 
+          current: i + 1, 
+          total: formData.files.length, 
+          currentFile: file.name 
+        });
         
         const uploadFormData = new FormData();
         const fieldName = formData.type === 'video' ? 'video' : 'image';
@@ -1276,6 +1386,7 @@ const HappyTeamDashboard = () => {
       alert(`${uploadedContents.length} file(s) uploaded successfully! Waiting for admin approval.`);
       setShowUploadModal(false);
       setFormData({ type: 'image', files: [], title: '', description: '' });
+      setUploadProgress({ current: 0, total: 0, currentFile: '' });
       fetchContent();
     } catch (err) {
       console.error('Error uploading:', err);
@@ -1286,6 +1397,7 @@ const HappyTeamDashboard = () => {
         err.message ||
         'Error uploading content';
       alert(`Upload failed: ${errorMsg}`);
+      setUploadProgress({ current: 0, total: 0, currentFile: '' });
     } finally {
       setUploading(false);
     }
@@ -1354,6 +1466,9 @@ const HappyTeamDashboard = () => {
               <BulkActionButtons>
                 <BulkButton onClick={handleClearSelection}>
                   <FaTimes /> Clear
+                </BulkButton>
+                <BulkButton $variant="delete" onClick={handleBulkDelete}>
+                  <FaTrash /> Delete Selected
                 </BulkButton>
                 <BulkButton $variant="approve" onClick={handleBulkApprove}>
                   <FaCheck /> Approve Selected
@@ -1570,6 +1685,21 @@ const HappyTeamDashboard = () => {
                   placeholder='Enter description'
                 />
               </FormGroup>
+              
+              {uploading && uploadProgress.total > 0 && (
+                <UploadProgressContainer>
+                  <ProgressText>
+                    Uploading <strong>{uploadProgress.current}</strong> of <strong>{uploadProgress.total}</strong> files
+                  </ProgressText>
+                  <ProgressBarContainer>
+                    <ProgressBarFill $progress={(uploadProgress.current / uploadProgress.total) * 100} />
+                  </ProgressBarContainer>
+                  <CurrentFileText>
+                    Current file: {uploadProgress.currentFile}
+                  </CurrentFileText>
+                </UploadProgressContainer>
+              )}
+              
               <ButtonGroup>
                 <Button
                   type='button'
@@ -1578,11 +1708,12 @@ const HappyTeamDashboard = () => {
                     setShowUploadModal(false);
                     setFormData({ type: 'image', files: [], title: '', description: '' });
                   }}
+                  disabled={uploading}
                 >
                   Cancel
                 </Button>
                 <Button type='submit' disabled={uploading || formData.files.length === 0}>
-                  {uploading ? `Uploading... (${formData.files.length} files)` : 'Upload'}
+                  {uploading ? `Uploading...` : 'Upload'}
                 </Button>
               </ButtonGroup>
             </Form>

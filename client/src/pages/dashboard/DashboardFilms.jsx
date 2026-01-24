@@ -11,6 +11,9 @@ import {
   FaFilm,
   FaUpload,
   FaPlay,
+  FaImage,
+  FaFolder,
+  FaArrowLeft,
 } from 'react-icons/fa';
 
 const Container = styled.div`
@@ -497,14 +500,161 @@ const ProgressText = styled.p`
   text-align: center;
 `;
 
+const TabButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+`;
+
+const TabButton = styled.button`
+  padding: 12px 24px;
+  background: ${props => props.$active ? 'rgba(102, 126, 234, 0.2)' : 'transparent'};
+  border: none;
+  border-bottom: 2px solid ${props => props.$active ? '#667eea' : 'transparent'};
+  color: ${props => props.$active ? '#667eea' : 'var(--secondary-color)'};
+  font-family: var(--primary-fonts);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+
+  &:hover {
+    background: rgba(102, 126, 234, 0.1);
+  }
+`;
+
+const GalleryGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+`;
+
+const ImageCard = styled.div`
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const DeleteImageButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 6px;
+  background: rgba(244, 67, 54, 0.9);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+
+  ${ImageCard}:hover & {
+    opacity: 1;
+  }
+
+  &:hover {
+    background: rgba(244, 67, 54, 1);
+    transform: scale(1.1);
+  }
+`;
+
+const DragDropZone = styled.div`
+  border: 2px dashed ${props => props.$isDragging ? '#667eea' : 'rgba(255, 255, 255, 0.2)'};
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: ${props => props.$isDragging ? 'rgba(102, 126, 234, 0.05)' : 'rgba(255, 255, 255, 0.02)'};
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+
+  &:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+`;
+
+const DragDropText = styled.div`
+  color: var(--secondary-color);
+  font-family: var(--primary-fonts);
+  
+  h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: ${props => props.$isDragging ? '#667eea' : 'var(--secondary-color)'};
+  }
+
+  p {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+
+  .icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+    color: #667eea;
+  }
+`;
+
+const BackButton = styled.button`
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: var(--secondary-color);
+  font-family: var(--primary-fonts);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  margin-bottom: 20px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+`;
+
 const DashboardFilms = () => {
   const { currentUser } = useSelector((state) => state.user);
   const [films, setFilms] = useState([]);
+  const [directories, setDirectories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [currency, setCurrency] = useState('usd');
+  const [activeTab, setActiveTab] = useState('films');
 
   // Upload form state
   const [uploadFile, setUploadFile] = useState(null);
@@ -516,6 +666,22 @@ const DashboardFilms = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const abortControllerRef = useRef(null);
+
+  // Image gallery state
+  const [selectedDirectory, setSelectedDirectory] = useState(null);
+  const [directoryImages, setDirectoryImages] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const fileInputRef = useRef(null);
+  
+  // Directory creation state
+  const [showDirectoryModal, setShowDirectoryModal] = useState(false);
+  const [directoryFormData, setDirectoryFormData] = useState({
+    folderName: '',
+    description: '',
+    price: 0,
+  });
 
   // Redirect if not admin
   if (!currentUser || currentUser.role !== 'admin') {
@@ -538,9 +704,13 @@ const DashboardFilms = () => {
   };
 
   useEffect(() => {
-    fetchFilms();
+    if (activeTab === 'films') {
+      fetchFilms();
+    } else if (activeTab === 'galleries') {
+      fetchDirectories();
+    }
     fetchCurrency();
-  }, []);
+  }, [activeTab]);
 
   const fetchCurrency = async () => {
     try {
@@ -567,6 +737,43 @@ const DashboardFilms = () => {
       setFilms(response.data.films || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load films');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDirectories = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories`,
+        {
+          withCredentials: true,
+        }
+      );
+      setDirectories(response.data.directories || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load directories');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchDirectoryImages = async (directoryId) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${directoryId}/images`,
+        {
+          withCredentials: true,
+        }
+      );
+      setDirectoryImages(response.data.images || []);
+      setSelectedDirectory(response.data.directory);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to load images');
     } finally {
       setIsLoading(false);
     }
@@ -651,7 +858,7 @@ const DashboardFilms = () => {
       const filmData = {
         caption: formData.title,
         customerCode: formData.code,
-        purchasePrice: parseFloat(formData.price) || 0,
+        purchasePrice: isNaN(parseFloat(formData.price)) ? 0 : parseFloat(formData.price),
         videoUrl: uploadResult,
         thumbnail: uploadResult.thumbnailUrl || '',
         storageProvider: uploadResult.provider,
@@ -724,6 +931,176 @@ const DashboardFilms = () => {
     });
   };
 
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleImageFiles(e.dataTransfer.files);
+    }
+  };
+
+  const handleImageInput = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleImageFiles(e.target.files);
+    }
+  };
+
+  const handleImageFiles = (fileList) => {
+    const filesArray = Array.from(fileList);
+    const imageFiles = filesArray.filter(file => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      setError('Please select valid image files');
+      return;
+    }
+
+    setSelectedImages(prev => [...prev, ...imageFiles]);
+  };
+
+  const removeSelectedImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUploadImages = async () => {
+    if (!selectedDirectory || selectedImages.length === 0) {
+      setError('Please select images to upload');
+      return;
+    }
+
+    try {
+      setUploadingImages(true);
+      setError(null);
+      setUploadProgress(0);
+
+      const uploadedImageData = [];
+
+      for (let i = 0; i < selectedImages.length; i++) {
+        const file = selectedImages[i];
+        
+        setUploadProgress(Math.floor((i / selectedImages.length) * 90));
+
+        const uploadFormData = new FormData();
+        uploadFormData.append('image', file);
+
+        const uploadResponse = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/v1/upload`,
+          uploadFormData,
+          {
+            withCredentials: true,
+            headers: { 'Content-Type': 'multipart/form-data' },
+          }
+        );
+
+        uploadedImageData.push({
+          url: uploadResponse.data.url,
+          publicId: uploadResponse.data.public_id,
+          provider: uploadResponse.data.provider || 'local',
+          fileSize: uploadResponse.data.fileSize || 0,
+        });
+      }
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${selectedDirectory._id}/images`,
+        { images: uploadedImageData },
+        { withCredentials: true }
+      );
+
+      setSuccess(`${selectedImages.length} image(s) uploaded successfully!`);
+      setSelectedImages([]);
+      setUploadProgress(100);
+      await fetchDirectoryImages(selectedDirectory._id);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to upload images');
+    } finally {
+      setUploadingImages(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDeleteImage = async (imageId) => {
+    if (!window.confirm('Are you sure you want to delete this image?')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/images/${imageId}`,
+        { withCredentials: true }
+      );
+      setSuccess('Image deleted successfully!');
+      await fetchDirectoryImages(selectedDirectory._id);
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete image');
+    }
+  };
+
+  const handleViewGallery = (directory) => {
+    fetchDirectoryImages(directory._id);
+  };
+
+  const handleBackToDirectories = () => {
+    setSelectedDirectory(null);
+    setDirectoryImages([]);
+    setSelectedImages([]);
+  };
+
+  const handleCreateDirectory = async () => {
+    if (!directoryFormData.folderName) {
+      setError('Folder name is required');
+      return;
+    }
+
+    try {
+      setError(null);
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories`,
+        directoryFormData,
+        { withCredentials: true }
+      );
+      setSuccess('Directory created successfully!');
+      setShowDirectoryModal(false);
+      setDirectoryFormData({ folderName: '', description: '', price: 0 });
+      await fetchDirectories();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create directory');
+    }
+  };
+
+  const handleDeleteDirectory = async (directoryId) => {
+    if (!window.confirm('Are you sure you want to delete this directory? All images in it will be deleted.')) {
+      return;
+    }
+
+    try {
+      setError(null);
+      await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/admin/directories/${directoryId}`,
+        { withCredentials: true }
+      );
+      setSuccess('Directory deleted successfully!');
+      await fetchDirectories();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete directory');
+    }
+  };
+
   if (isLoading) {
     return (
       <Container>
@@ -738,27 +1115,55 @@ const DashboardFilms = () => {
         <TitleSection>
           <Title>Films Management</Title>
           <Subtitle>
-            Upload videos with customer codes for frontpage redemption
+            {activeTab === 'films' 
+              ? 'Upload videos with customer codes for frontpage redemption'
+              : 'Manage image galleries for film directories'}
           </Subtitle>
         </TitleSection>
-        <UploadButton onClick={() => setShowUploadModal(true)}>
-          <FaPlus />
-          Upload New Film
-        </UploadButton>
+        {activeTab === 'films' ? (
+          <UploadButton onClick={() => setShowUploadModal(true)}>
+            <FaPlus />
+            Upload New Film
+          </UploadButton>
+        ) : !selectedDirectory && (
+          <UploadButton onClick={() => setShowDirectoryModal(true)}>
+            <FaPlus />
+            Create Directory
+          </UploadButton>
+        )}
       </Header>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {success && <SuccessMessage>{success}</SuccessMessage>}
 
-      <StatsGrid>
-        <StatCard>
-          <StatLabel>Total Films</StatLabel>
-          <StatValue>{films.length}</StatValue>
-        </StatCard>
-      </StatsGrid>
+      {!selectedDirectory && (
+        <TabButtons>
+          <TabButton 
+            $active={activeTab === 'films'} 
+            onClick={() => setActiveTab('films')}
+          >
+            <FaFilm /> Films
+          </TabButton>
+          <TabButton 
+            $active={activeTab === 'galleries'} 
+            onClick={() => setActiveTab('galleries')}
+          >
+            <FaFolder /> Image Galleries
+          </TabButton>
+        </TabButtons>
+      )}
 
-      <TableWrapper>
-        <Table>
+      {activeTab === 'films' ? (
+        <>
+          <StatsGrid>
+            <StatCard>
+              <StatLabel>Total Films</StatLabel>
+              <StatValue>{films.length}</StatValue>
+            </StatCard>
+          </StatsGrid>
+
+          <TableWrapper>
+            <Table>
           <Thead>
             <Tr>
               <Th>Title</Th>
@@ -823,8 +1228,267 @@ const DashboardFilms = () => {
           </Tbody>
         </Table>
       </TableWrapper>
+        </>
+      ) : selectedDirectory ? (
+        <>
+          <BackButton onClick={handleBackToDirectories}>
+            <FaArrowLeft /> Back to Directories
+          </BackButton>
 
-      {/* Upload Modal */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ color: 'var(--primary-color)', marginBottom: '8px' }}>
+              {selectedDirectory.folderName}
+            </h3>
+            <p style={{ color: 'var(--secondary-color)', fontSize: '14px' }}>
+              {selectedDirectory.description || 'No description'}
+            </p>
+          </div>
+
+          <DragDropZone
+            $isDragging={dragActive}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleImageInput}
+            />
+            <DragDropText $isDragging={dragActive}>
+              <div className="icon">
+                <FaImage />
+              </div>
+              <h4>Drag & Drop Images Here</h4>
+              <p>or click to browse</p>
+              <p>Multiple images supported</p>
+            </DragDropText>
+          </DragDropZone>
+
+          {selectedImages.length > 0 && (
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '12px' 
+              }}>
+                <p style={{ color: 'var(--secondary-color)' }}>
+                  {selectedImages.length} image(s) selected
+                </p>
+                <Button 
+                  $primary 
+                  onClick={handleUploadImages}
+                  disabled={uploadingImages}
+                >
+                  {uploadingImages ? 'Uploading...' : 'Upload Images'}
+                </Button>
+              </div>
+
+              {uploadingImages && (
+                <UploadProgress>
+                  <ProgressBarContainer>
+                    <ProgressBarFill $progress={uploadProgress} />
+                  </ProgressBarContainer>
+                  <ProgressText>Uploading... {uploadProgress}%</ProgressText>
+                </UploadProgress>
+              )}
+
+              <GalleryGrid>
+                {selectedImages.map((file, index) => (
+                  <ImageCard key={index}>
+                    <img src={URL.createObjectURL(file)} alt={`Preview ${index}`} />
+                    <DeleteImageButton onClick={() => removeSelectedImage(index)}>
+                      <FaTimes />
+                    </DeleteImageButton>
+                  </ImageCard>
+                ))}
+              </GalleryGrid>
+            </div>
+          )}
+
+          <div style={{ marginTop: '30px' }}>
+            <h4 style={{ color: 'var(--primary-color)', marginBottom: '16px' }}>
+              Uploaded Images ({directoryImages.length})
+            </h4>
+            {directoryImages.length === 0 ? (
+              <EmptyState>
+                <EmptyIcon><FaImage /></EmptyIcon>
+                <EmptyText>No images yet</EmptyText>
+                <EmptySubtext>Upload images to get started</EmptySubtext>
+              </EmptyState>
+            ) : (
+              <GalleryGrid>
+                {directoryImages.map((image) => (
+                  <ImageCard key={image._id}>
+                    <img 
+                      src={image.imageUrl?.startsWith('http') 
+                        ? image.imageUrl 
+                        : `${import.meta.env.VITE_API_URL}${image.imageUrl}`
+                      } 
+                      alt={image.title || 'Image'} 
+                    />
+                    <DeleteImageButton onClick={() => handleDeleteImage(image._id)}>
+                      <FaTrash />
+                    </DeleteImageButton>
+                  </ImageCard>
+                ))}
+              </GalleryGrid>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <StatsGrid>
+            <StatCard>
+              <StatLabel>Total Directories</StatLabel>
+              <StatValue>{directories.length}</StatValue>
+            </StatCard>
+          </StatsGrid>
+
+          <TableWrapper>
+            <Table>
+              <Thead>
+                <Tr>
+                  <Th>Folder Name (Access Code)</Th>
+                  <Th>Description</Th>
+                  <Th>Price</Th>
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {directories.length === 0 ? (
+                  <tr>
+                    <td colSpan='4'>
+                      <EmptyState>
+                        <EmptyIcon><FaFolder /></EmptyIcon>
+                        <EmptyText>No directories yet</EmptyText>
+                        <EmptySubtext>
+                          Create a directory first to upload images
+                        </EmptySubtext>
+                      </EmptyState>
+                    </td>
+                  </tr>
+                ) : (
+                  directories.map((directory) => (
+                    <Tr key={directory._id}>
+                      <Td>
+                        <CodeBadge>{directory.folderName}</CodeBadge>
+                      </Td>
+                      <Td>{directory.description || 'No description'}</Td>
+                      <Td>
+                        <PriceBadge>
+                          {getCurrencySymbol(currency)}
+                          {directory.price?.toFixed(2) || '0.00'}
+                        </PriceBadge>
+                      </Td>
+                      <Td>
+                        <ActionButtons>
+                          <IconButton
+                            color='#667eea'
+                            onClick={() => handleViewGallery(directory)}
+                            title='Manage Images'
+                          >
+                            <FaFolder />
+                          </IconButton>
+                          <IconButton
+                            color='#f44336'
+                            onClick={() => handleDeleteDirectory(directory._id)}
+                            title='Delete Directory'
+                          >
+                            <FaTrash />
+                          </IconButton>
+                        </ActionButtons>
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </Tbody>
+            </Table>
+          </TableWrapper>
+        </>
+      )}
+
+      {/* Create Directory Modal */}
+      {showDirectoryModal && (
+        <Modal onClick={() => setShowDirectoryModal(false)}>
+          <ModalBox onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>Create New Directory</ModalTitle>
+              <CloseButton onClick={() => setShowDirectoryModal(false)}>
+                <FaTimes />
+              </CloseButton>
+            </ModalHeader>
+
+            <FormGroup>
+              <Label>Folder Name (Access Code) *</Label>
+              <Input
+                type='text'
+                placeholder='e.g., WEDDING2024'
+                value={directoryFormData.folderName}
+                onChange={(e) =>
+                  setDirectoryFormData({
+                    ...directoryFormData,
+                    folderName: e.target.value.toUpperCase(),
+                  })
+                }
+                style={{ textTransform: 'uppercase' }}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Description</Label>
+              <Input
+                type='text'
+                placeholder='Enter description'
+                value={directoryFormData.description}
+                onChange={(e) =>
+                  setDirectoryFormData({
+                    ...directoryFormData,
+                    description: e.target.value,
+                  })
+                }
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>Price ($)</Label>
+              <Input
+                type='number'
+                placeholder='0.00'
+                min='0'
+                step='0.01'
+                value={directoryFormData.price}
+                onChange={(e) =>
+                  setDirectoryFormData({
+                    ...directoryFormData,
+                    price: e.target.value,
+                  })
+                }
+              />
+            </FormGroup>
+
+            <ModalButtons>
+              <Button onClick={() => setShowDirectoryModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                $primary
+                onClick={handleCreateDirectory}
+                disabled={!directoryFormData.folderName}
+              >
+                Create Directory
+              </Button>
+            </ModalButtons>
+          </ModalBox>
+        </Modal>
+      )}
+
+      {/* Upload Film Modal */}
       {showUploadModal && (
         <Modal onClick={() => !isUploading && setShowUploadModal(false)}>
           <ModalBox onClick={(e) => e.stopPropagation()}>

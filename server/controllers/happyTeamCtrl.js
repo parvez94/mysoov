@@ -1,16 +1,48 @@
 import HappyTeamContent from '../models/HappyTeamContent.js';
-import User from '../models/User.js';
 import Video from '../models/Video.js';
+import User from '../models/User.js';
+import FilmDirectory from '../models/FilmDirectory.js';
+import FilmImage from '../models/FilmImage.js';
 import { createError } from '../utils/error.js';
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
 
-// Get all content (for editors - only their own, for admin - all)
-export const getAllContent = async (req, res, next) => {
+// Editor: Upload content
+export const uploadContent = async (req, res, next) => {
   try {
-    const query = req.user.role === 'admin' ? {} : { userId: req.user.id };
+    const { title, description, type, fileUrl, watermarkedUrl, thumbnailUrl } =
+      req.body;
 
-    const content = await HappyTeamContent.find(query)
+    if (!type || !fileUrl) {
+      return next(createError(400, 'Type and file URL are required'));
+    }
+
+    const content = new HappyTeamContent({
+      userId: req.user.id,
+      type,
+      fileUrl,
+      watermarkedUrl: watermarkedUrl || null,
+      thumbnailUrl: thumbnailUrl || null,
+      title: title || '',
+      description: description || '',
+      code: 'TEMP' + Date.now(),
+      price: 0,
+      status: 'pending',
+    });
+
+    await content.save();
+    await content.populate('userId', 'displayName username email editorRole');
+
+    res.status(201).json(content);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Editor: Get own content
+export const getOwnContent = async (req, res, next) => {
+  try {
+    const content = await HappyTeamContent.find({ userId: req.user.id })
       .populate('userId', 'displayName username email editorRole')
       .sort({ createdAt: -1 });
 
@@ -20,53 +52,56 @@ export const getAllContent = async (req, res, next) => {
   }
 };
 
-// Upload new content
-export const uploadContent = async (req, res, next) => {
+// Admin: Get all content (for admin table)
+export const getAllContent = async (req, res, next) => {
   try {
-    console.log('Upload request body:', req.body);
-    console.log('User:', req.user);
-
-    const { type, fileUrl, thumbnailUrl, title, description, code, price } = req.body;
-
-    if (!type || !fileUrl) {
-      console.log('Validation failed - type:', type, 'fileUrl:', fileUrl);
-      return next(createError(400, 'Type and file URL are required'));
+    if (req.user.role !== 'admin') {
+      return next(createError(403, 'Only admins can view all content'));
     }
 
-    if (!code) {
-      return next(createError(400, 'Code is required'));
-    }
+    const content = await HappyTeamContent.find()
+      .populate('userId', 'displayName username email editorRole')
+      .sort({ createdAt: -1 });
 
-    if (price === undefined || price < 0) {
-      return next(createError(400, 'Valid price is required'));
-    }
-
-    const newContent = new HappyTeamContent({
-      userId: req.user.id,
-      type,
-      fileUrl,
-      thumbnailUrl,
-      title,
-      description,
-      code,
-      price,
-      status: 'pending',
-    });
-
-    await newContent.save();
-
-    const populatedContent = await HappyTeamContent.findById(
-      newContent._id
-    ).populate('userId', 'displayName username email editorRole');
-
-    res.status(201).json(populatedContent);
+    res.status(200).json(content);
   } catch (err) {
-    console.error('Error in uploadContent:', err);
     next(err);
   }
 };
 
-// Delete own content (only pending status)
+// Bulk delete content (Admin or own pending content)
+export const bulkDeleteContent = async (req, res, next) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return next(createError(400, 'IDs array is required'));
+    }
+
+    const contents = await HappyTeamContent.find({ _id: { $in: ids } });
+
+    for (const content of contents) {
+      if (
+        content.userId.toString() !== req.user.id &&
+        req.user.role !== 'admin'
+      ) {
+        return next(createError(403, 'You can only delete your own content'));
+      }
+
+      if (content.status !== 'pending' && req.user.role !== 'admin') {
+        return next(createError(403, 'You can only delete pending content'));
+      }
+    }
+
+    await HappyTeamContent.deleteMany({ _id: { $in: ids } });
+
+    res.status(200).json({ message: 'Content deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Editor/Admin: Delete own content
 export const deleteOwnContent = async (req, res, next) => {
   try {
     const content = await HappyTeamContent.findById(req.params.id);
@@ -105,18 +140,21 @@ export const deleteOwnContent = async (req, res, next) => {
     };
 
     deleteFileFromDisk(content.fileUrl);
+    deleteFileFromDisk(content.watermarkedUrl);
     deleteFileFromDisk(content.thumbnailUrl);
 
-    if (content.status === 'approved') {
+    if (content.status === 'approved' && content.type === 'video') {
       const film = await Video.findOne({
         customerCode: content.code.trim().toUpperCase(),
         isFilm: true,
+        mediaType: 'video'
       });
 
       if (film) {
         const otherContentWithSameCode = await HappyTeamContent.countDocuments({
           code: content.code,
           status: 'approved',
+          type: 'video',
           _id: { $ne: content._id }
         });
 
@@ -176,76 +214,59 @@ export const approveContent = async (req, res, next) => {
     }
 
     const normalizedCode = code.trim().toUpperCase();
-    const currentTempCode = content.code;
 
     content.price = price;
     content.code = normalizedCode;
+    content.status = 'approved';
 
-    let film = await Video.findOne({ 
-      customerCode: normalizedCode
-    });
-    
-    if (content.status === 'approved' && film) {
-      film.purchasePrice = price;
-      await film.save();
-      content.status = 'approved';
+    if (content.type === 'video') {
+      let film = await Video.findOne({ 
+        customerCode: normalizedCode,
+        isFilm: true,
+        mediaType: 'video'
+      });
+      
+      console.log(`[Approve] Video content ${content._id} | Film found: ${!!film}`);
+      
+      if (!film) {
+        const filmData = {
+          caption: content.title || 'Happy Team Content',
+          customerCode: normalizedCode,
+          purchasePrice: price,
+          thumbnailUrl: content.thumbnailUrl || '',
+          userId: content.userId,
+          privacy: 'Private',
+          isFilm: true,
+          mediaType: 'video',
+          storageProvider: 'local',
+          videoUrl: { url: content.fileUrl },
+          images: []
+        };
+
+        film = await Video.create(filmData);
+        console.log(`[Approve] Created new video film ${film._id}`);
+      } else {
+        film.purchasePrice = price;
+        await film.save();
+        console.log(`[Approve] Updated existing video film ${film._id}`);
+      }
+      
       await content.save();
       await content.populate('userId', 'displayName username email editorRole');
+      
       return res.status(200).json({
         ...content.toObject(),
         filmId: film._id,
         customerCode: film.customerCode,
-        message: 'Content is already approved and film exists'
       });
     }
 
-    if (!film) {
-      const filmData = {
-        caption: content.title || 'Happy Team Content',
-        customerCode: normalizedCode,
-        purchasePrice: price,
-        thumbnailUrl: content.thumbnailUrl || '',
-        userId: content.userId,
-        privacy: 'Private',
-        isFilm: true,
-        mediaType: content.type,
-        storageProvider: 'local',
-      };
-
-      if (content.type === 'video') {
-        filmData.videoUrl = { url: content.fileUrl };
-        filmData.images = [];
-      } else {
-        filmData.videoUrl = { url: content.fileUrl };
-        filmData.images = [{ url: content.fileUrl }];
-      }
-
-      film = await Video.create(filmData);
-    } else {
-      film.purchasePrice = price;
-      
-      if (content.type === 'image') {
-        if (!film.images) {
-          film.images = [];
-        }
-        const alreadyExists = film.images.some(img => img.url === content.fileUrl);
-        if (!alreadyExists) {
-          film.images.push({ url: content.fileUrl });
-        }
-      }
-      
-      await film.save();
-    }
-
-    content.status = 'approved';
     await content.save();
-
     await content.populate('userId', 'displayName username email editorRole');
 
     res.status(200).json({
       ...content.toObject(),
-      filmId: film._id,
-      customerCode: film.customerCode,
+      customerCode: normalizedCode,
     });
   } catch (err) {
     next(err);
@@ -284,16 +305,20 @@ export const rejectContent = async (req, res, next) => {
     };
 
     deleteFileFromDisk(content.fileUrl);
+    deleteFileFromDisk(content.watermarkedUrl);
     deleteFileFromDisk(content.thumbnailUrl);
 
-    const film = await Video.findOne({
-      customerCode: content.code.trim().toUpperCase(),
-      isFilm: true,
-    });
+    if (content.type === 'video') {
+      const film = await Video.findOne({
+        customerCode: content.code.trim().toUpperCase(),
+        isFilm: true,
+        mediaType: 'video'
+      });
 
-    if (film) {
-      await Video.deleteMany({ sourceFilmId: film._id });
-      await Video.findByIdAndDelete(film._id);
+      if (film) {
+        await Video.deleteMany({ sourceFilmId: film._id });
+        await Video.findByIdAndDelete(film._id);
+      }
     }
 
     await HappyTeamContent.findByIdAndDelete(req.params.id);
@@ -353,7 +378,109 @@ export const redeemContent = async (req, res, next) => {
     }).populate('userId', 'displayName username editorRole');
 
     if (!contents || contents.length === 0) {
-      return next(createError(404, 'Content not found or not available'));
+      const directFilm = await Video.findOne({
+        customerCode: normalizedCode,
+        isFilm: true,
+        mediaType: 'video'
+      });
+
+      if (!directFilm) {
+        const imageGallery = await FilmDirectory.findOne({
+          folderName: { $regex: new RegExp(`^${normalizedCode}$`, 'i') },
+        });
+
+        if (!imageGallery) {
+          return next(createError(404, 'Content not found or not available'));
+        }
+
+        const galleryImages = await FilmImage.find({ 
+          filmDirectoryId: imageGallery._id 
+        }).sort({ createdAt: -1 });
+
+        if (!galleryImages || galleryImages.length === 0) {
+          return next(createError(404, 'No images found in this gallery'));
+        }
+
+        const imageUrls = galleryImages.map(img => ({
+          url: img.watermarkedUrl,
+          originalUrl: img.imageUrl,
+          imageId: img._id
+        }));
+
+        const userVideo = await Video.create({
+          caption: imageGallery.description || '',
+          videoUrl: { url: imageUrls[0].url },
+          thumbnailUrl: imageUrls[0].url,
+          images: imageUrls,
+          userId: req.user.id,
+          privacy: 'Public',
+          isFilm: false,
+          mediaType: 'image',
+          storageProvider: 'local',
+          filmDirectoryId: imageGallery._id,
+        });
+
+        await userVideo.populate('userId', 'displayName username editorRole');
+        await userVideo.populate('filmDirectoryId', 'price folderName description');
+
+        return res.status(200).json({
+          success: true,
+          message: 'Gallery successfully added to your profile!',
+          alreadyPurchased: false,
+          totalItems: galleryImages.length,
+          film: {
+            ...userVideo.toObject(),
+            originalTitle: imageGallery.folderName,
+            purchasePrice: imageGallery.price ?? 0,
+            customerCode: normalizedCode,
+          }
+        });
+      }
+
+      const userId = req.user.id;
+      const existingCopy = await Video.findOne({
+        userId: userId,
+        sourceFilmId: directFilm._id,
+      });
+
+      if (existingCopy) {
+        await existingCopy.populate('userId', 'displayName username editorRole');
+        return res.status(200).json({
+          success: true,
+          alreadyPurchased: true,
+          totalItems: 1,
+          film: existingCopy.toObject(),
+          message: 'You already own this content'
+        });
+      }
+
+      const userVideo = await Video.create({
+        caption: directFilm.caption,
+        videoUrl: directFilm.videoUrl,
+        thumbnailUrl: directFilm.thumbnailUrl,
+        images: [],
+        userId: userId,
+        privacy: 'Public',
+        isFilm: false,
+        mediaType: 'video',
+        storageProvider: directFilm.storageProvider,
+        sourceFilmId: directFilm._id,
+      });
+
+      await userVideo.populate('userId', 'displayName username editorRole');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Content successfully added to your profile!',
+        alreadyPurchased: false,
+        totalItems: 1,
+        film: {
+          ...userVideo.toObject(),
+          originalTitle: directFilm.caption,
+          purchasePrice: directFilm.purchasePrice ?? 0,
+          customerCode: normalizedCode,
+        }
+      });
     }
 
     const userId = req.user.id;
@@ -363,46 +490,75 @@ export const redeemContent = async (req, res, next) => {
     );
 
     if (alreadyPurchased) {
-      const userFilm = await Video.findOne({
+      const existingVideo = await Video.findOne({
         userId: userId,
-        customerCode: normalizedCode,
-      });
+        $or: [
+          { 'images.contentId': firstContent._id },
+          { sourceFilmId: { $exists: true } }
+        ]
+      }).populate('userId', 'displayName username editorRole');
 
       return res.status(200).json({
-        ...firstContent.toObject(),
+        success: true,
         alreadyPurchased: true,
-        filmId: userFilm?._id,
+        totalItems: contents.length,
+        film: existingVideo ? existingVideo.toObject() : null,
+        message: 'You already own this content'
       });
     }
 
-    const film = await Video.findOne({
-      customerCode: normalizedCode,
-      isFilm: true,
-    });
+    let userVideo;
 
-    if (!film) {
-      return next(createError(404, 'Film not found for this content. Please contact support.'));
-    }
+    if (firstContent.type === 'video') {
+      const film = await Video.findOne({
+        customerCode: normalizedCode,
+        isFilm: true,
+        mediaType: 'video'
+      });
 
-    const userHasFilm = await Video.findOne({
-      userId: userId,
-      sourceFilmId: film._id,
-    });
+      if (!film) {
+        return next(createError(404, 'Film not found for this content. Please contact support.'));
+      }
 
-    if (!userHasFilm) {
-      const filmCopy = new Video({
-        caption: film.caption,
-        videoUrl: film.videoUrl,
-        thumbnailUrl: film.thumbnailUrl,
-        images: film.images || [],
+      const existingCopy = await Video.findOne({
+        userId: userId,
+        sourceFilmId: film._id,
+      });
+
+      if (!existingCopy) {
+        userVideo = await Video.create({
+          caption: film.caption,
+          videoUrl: film.videoUrl,
+          thumbnailUrl: film.thumbnailUrl,
+          images: [],
+          userId: userId,
+          privacy: 'Public',
+          isFilm: false,
+          mediaType: 'video',
+          storageProvider: film.storageProvider,
+          sourceFilmId: film._id,
+        });
+      } else {
+        userVideo = existingCopy;
+      }
+    } else {
+      const imageUrls = contents.map(img => ({
+        url: img.watermarkedUrl || img.fileUrl,
+        originalUrl: img.fileUrl,
+        contentId: img._id
+      }));
+
+      userVideo = await Video.create({
+        caption: firstContent.title || 'Happy Team Album',
+        videoUrl: { url: imageUrls[0].url },
+        thumbnailUrl: firstContent.thumbnailUrl || imageUrls[0].url,
+        images: imageUrls,
         userId: userId,
         privacy: 'Public',
         isFilm: false,
-        mediaType: film.mediaType,
-        storageProvider: film.storageProvider,
-        sourceFilmId: film._id,
+        mediaType: 'image',
+        storageProvider: 'local',
       });
-      await filmCopy.save();
     }
 
     for (const content of contents) {
@@ -412,11 +568,19 @@ export const redeemContent = async (req, res, next) => {
       }
     }
 
+    await userVideo.populate('userId', 'displayName username editorRole');
+
     res.status(200).json({
-      ...firstContent.toObject(),
+      success: true,
+      message: 'Content successfully added to your profile!',
       alreadyPurchased: false,
-      filmId: film._id,
       totalItems: contents.length,
+      film: {
+        ...userVideo.toObject(),
+        originalTitle: firstContent.title,
+        purchasePrice: firstContent.price,
+        customerCode: normalizedCode,
+      }
     });
   } catch (err) {
     next(err);

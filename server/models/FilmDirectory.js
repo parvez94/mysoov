@@ -40,7 +40,7 @@ const filmDirectorySchema = new mongoose.Schema(
     },
     price: {
       type: Number,
-      default: 9.99,
+      default: 0,
       min: 0,
     },
   },

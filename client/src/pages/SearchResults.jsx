@@ -576,7 +576,7 @@ const SearchResults = () => {
       return;
     }
 
-    const price = filmDirectory.price || 9.99;
+    const price = filmDirectory.price ?? 0;
     const firstFilm = directoryFilms[0];
     navigate(
       `/payment?type=film&filmId=${firstFilm._id}&directoryId=${
@@ -847,7 +847,7 @@ const SearchResults = () => {
                       }}
                     >
                       🛒 Purchase All Films - $
-                      {filmDirectory?.price?.toFixed(2) || '9.99'}
+                      {filmDirectory?.price?.toFixed(2) || '0.00'}
                     </OwnButton>
                   </div>
                 )}

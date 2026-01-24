@@ -301,6 +301,47 @@ const EmptyState = styled.div`
   }
 `;
 
+const AlbumNavButton = styled.button`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  ${props => props.$direction === 'left' ? 'left: 20px;' : 'right: 20px;'}
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  z-index: 10;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.9);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+`;
+
+const AlbumCounter = styled.div`
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+`;
+
 const HappyContent = () => {
   const { currentUser } = useSelector((state) => state.user);
   const [content, setContent] = useState([]);
@@ -309,6 +350,8 @@ const HappyContent = () => {
   const [redeemCode, setRedeemCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [selectedAlbum, setSelectedAlbum] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetchContent();
@@ -325,6 +368,29 @@ const HappyContent = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const groupContentByType = () => {
+    const videos = content.filter(item => item.type === 'video');
+    const images = content.filter(item => item.type === 'image');
+    
+    const imageAlbums = images.reduce((acc, image) => {
+      const code = image.code;
+      if (!acc[code]) {
+        acc[code] = {
+          type: 'album',
+          code: code,
+          title: image.title || 'Image Album',
+          price: image.price,
+          images: [],
+          purchasedBy: image.purchasedBy,
+        };
+      }
+      acc[code].images.push(image);
+      return acc;
+    }, {});
+    
+    return [...videos, ...Object.values(imageAlbums)];
   };
 
   const handleRedeemSubmit = async (e) => {
@@ -367,15 +433,44 @@ const HappyContent = () => {
 
   const isUnlocked = (item) => {
     if (!currentUser) return false;
+    if (item.type === 'album') {
+      return item.images.some(img => img.purchasedBy?.some(id => id === currentUser._id));
+    }
     return item.purchasedBy?.some((id) => id === currentUser._id);
   };
 
   const handleMediaClick = (item) => {
-    if (isUnlocked(item)) {
-      setSelectedMedia(item);
+    if (item.type === 'album') {
+      if (isUnlocked(item)) {
+        setSelectedAlbum(item);
+        setCurrentImageIndex(0);
+      } else {
+        setShowRedeemModal(true);
+      }
     } else {
-      setShowRedeemModal(true);
+      if (isUnlocked(item)) {
+        setSelectedMedia(item);
+      } else {
+        setShowRedeemModal(true);
+      }
     }
+  };
+
+  const handleNextImage = () => {
+    if (selectedAlbum && currentImageIndex < selectedAlbum.images.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (selectedAlbum && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
+  const handleCloseAlbum = () => {
+    setSelectedAlbum(null);
+    setCurrentImageIndex(0);
   };
 
   const getMediaUrl = (url) => {
@@ -424,13 +519,35 @@ const HappyContent = () => {
         </EmptyState>
       ) : (
         <ContentGrid>
-          {content.map((item) => {
+          {groupContentByType().map((item) => {
             const unlocked = isUnlocked(item);
+            const isAlbum = item.type === 'album';
+            const firstImage = isAlbum ? item.images[0] : null;
+            
             return (
-              <ContentCard key={item._id} onClick={() => handleMediaClick(item)}>
+              <ContentCard key={isAlbum ? item.code : item._id} onClick={() => handleMediaClick(item)}>
                 <MediaPreview>
-                  {item.type === 'image' ? (
-                    <img src={getMediaUrl(item.fileUrl)} alt={item.title} />
+                  {isAlbum ? (
+                    <>
+                      <img 
+                        src={getMediaUrl(unlocked ? firstImage.fileUrl : (firstImage.watermarkedUrl || firstImage.fileUrl))} 
+                        alt={item.title} 
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '10px',
+                        left: '10px',
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        padding: '5px 10px',
+                        borderRadius: '5px',
+                        color: 'white',
+                        fontSize: '0.9rem'
+                      }}>
+                        📸 {item.images.length} {item.images.length === 1 ? 'image' : 'images'}
+                      </div>
+                    </>
+                  ) : item.type === 'image' ? (
+                    <img src={getMediaUrl(unlocked ? item.fileUrl : (item.watermarkedUrl || item.fileUrl))} alt={item.title} />
                   ) : (
                     <video
                       src={getMediaUrl(item.fileUrl)}
@@ -442,7 +559,6 @@ const HappyContent = () => {
                       }}
                     />
                   )}
-                  {!unlocked && <Watermark>MYSOOV.TV</Watermark>}
                   <LockOverlay>
                     {unlocked ? (
                       <>
@@ -457,8 +573,13 @@ const HappyContent = () => {
                 </MediaPreview>
                 <ContentInfo>
                   <ContentTitle>{item.title || 'Untitled'}</ContentTitle>
-                  {item.description && (
+                  {item.description && !isAlbum && (
                     <ContentDescription>{item.description}</ContentDescription>
+                  )}
+                  {isAlbum && (
+                    <ContentDescription>
+                      {unlocked ? 'Click to view all images' : `Album with ${item.images.length} images`}
+                    </ContentDescription>
                   )}
                   {!unlocked && (
                     <>
@@ -518,6 +639,43 @@ const HappyContent = () => {
             </Form>
           </ModalContent>
         </Modal>
+      )}
+
+      {selectedAlbum && (
+        <MediaModal onClick={handleCloseAlbum}>
+          <MediaModalContent onClick={(e) => e.stopPropagation()}>
+            <CloseButton onClick={handleCloseAlbum}>
+              <MdClose />
+            </CloseButton>
+            <MediaWithWatermark>
+              <img
+                src={getMediaUrl(selectedAlbum.images[currentImageIndex].fileUrl)}
+                alt={selectedAlbum.images[currentImageIndex].title}
+              />
+            </MediaWithWatermark>
+            {selectedAlbum.images.length > 1 && (
+              <>
+                <AlbumNavButton 
+                  $direction="left" 
+                  onClick={handlePrevImage}
+                  disabled={currentImageIndex === 0}
+                >
+                  ←
+                </AlbumNavButton>
+                <AlbumNavButton 
+                  $direction="right" 
+                  onClick={handleNextImage}
+                  disabled={currentImageIndex === selectedAlbum.images.length - 1}
+                >
+                  →
+                </AlbumNavButton>
+                <AlbumCounter>
+                  {currentImageIndex + 1} / {selectedAlbum.images.length}
+                </AlbumCounter>
+              </>
+            )}
+          </MediaModalContent>
+        </MediaModal>
       )}
 
       {selectedMedia && (
