@@ -404,7 +404,8 @@ export const redeemContent = async (req, res, next) => {
         const imageUrls = galleryImages.map(img => ({
           url: img.watermarkedUrl,
           originalUrl: img.imageUrl,
-          imageId: img._id
+          imageId: img._id,
+          title: img.title || ''
         }));
 
         const userVideo = await Video.create({

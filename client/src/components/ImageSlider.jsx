@@ -108,6 +108,24 @@ const ImageCounter = styled.div`
   z-index: 10;
 `;
 
+const ImageTitle = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: var(--primary-fonts);
+  font-weight: 600;
+  z-index: 10;
+  max-width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
 const ImageSlider = ({ images, caption }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [aspectRatios, setAspectRatios] = useState({});
@@ -136,8 +154,15 @@ const ImageSlider = ({ images, caption }) => {
     }
   };
 
+  const currentImage = images[currentIndex];
+  const imageTitle = currentImage?.title || currentImage?.name || '';
+
   return (
     <SliderContainer>
+      {imageTitle && (
+        <ImageTitle>{imageTitle}</ImageTitle>
+      )}
+      
       {images.length > 1 && (
         <ImageCounter>
           {currentIndex + 1} / {images.length}

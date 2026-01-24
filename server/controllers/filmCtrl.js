@@ -706,7 +706,11 @@ export const uploadImagesToDirectory = async (req, res, next) => {
       return next(createError(404, 'Film directory not found'));
     }
 
+    // Get existing image count for numbering
+    const existingImagesCount = await FilmImage.countDocuments({ filmDirectoryId: directoryId });
+    
     const uploadedImages = [];
+    let imageCounter = existingImagesCount + 1;
 
     for (const imageData of images) {
       const { url, publicId, provider, fileSize } = imageData;
@@ -744,6 +748,7 @@ export const uploadImagesToDirectory = async (req, res, next) => {
         filmDirectoryId: directoryId,
         imageUrl: url,
         watermarkedUrl: watermarkedUrl,
+        title: `${directory.folderName}(${imageCounter})`,
         fileSize: fileSize || 0,
         storageProvider: provider || 'local',
         publicId: publicId || '',
@@ -751,6 +756,7 @@ export const uploadImagesToDirectory = async (req, res, next) => {
       });
 
       uploadedImages.push(filmImage);
+      imageCounter++;
     }
 
     res.status(201).json({
