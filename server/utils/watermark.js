@@ -94,8 +94,8 @@ export const createWatermarkedCopy = async (originalPath, originalName) => {
     
     await addWatermark(originalPath, watermarkedPath);
     
-    const baseUrl = process.env.BASE_URL || 'http://localhost:5100';
-    const watermarkedUrl = `${baseUrl}/uploads/images/${watermarkedFileName}`;
+    // Return relative URL - frontend will construct full URL with API base
+    const watermarkedUrl = `/uploads/images/${watermarkedFileName}`;
     
     return {
       path: watermarkedPath,
