@@ -440,6 +440,29 @@ export const purchaseFilm = async (req, res, next) => {
       // Film already in profile, just mark as purchased (remove buy button)
       userFilm.filmDirectoryId = null;
       userFilm.sourceFilmId = null; // Also remove sourceFilmId to indicate fully owned
+      
+      // For image galleries, replace watermarked URLs with original URLs
+      if (userFilm.mediaType === 'image' && userFilm.images && userFilm.images.length > 0) {
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+        
+        const convertToAbsoluteUrl = (url) => {
+          if (!url) return url;
+          if (url.startsWith('http://') || url.startsWith('https://')) return url;
+          return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+        };
+        
+        userFilm.images = userFilm.images.map(img => ({
+          ...img,
+          url: convertToAbsoluteUrl(img.originalUrl || img.url),
+        }));
+        
+        // Update thumbnail and videoUrl to use the first non-watermarked image
+        if (userFilm.images[0]) {
+          userFilm.thumbnailUrl = userFilm.images[0].url;
+          userFilm.videoUrl = { url: userFilm.images[0].url };
+        }
+      }
+      
       await userFilm.save();
     }
 
@@ -799,9 +822,23 @@ export const getDirectoryImages = async (req, res, next) => {
       .populate('uploadedBy', 'username displayName')
       .sort({ createdAt: -1 });
 
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+    
+    const convertToAbsoluteUrl = (url) => {
+      if (!url) return url;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+
+    const imagesWithAbsoluteUrls = images.map(img => ({
+      ...img.toObject(),
+      imageUrl: convertToAbsoluteUrl(img.imageUrl),
+      watermarkedUrl: convertToAbsoluteUrl(img.watermarkedUrl),
+    }));
+
     res.status(200).json({
       success: true,
-      images,
+      images: imagesWithAbsoluteUrls,
       total: images.length,
       directory: {
         _id: directory._id,
@@ -871,11 +908,19 @@ export const getImagesByAccessCode = async (req, res, next) => {
       .select('watermarkedUrl title description createdAt')
       .sort({ createdAt: -1 });
 
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+    
+    const convertToAbsoluteUrl = (url) => {
+      if (!url) return url;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+
     res.status(200).json({
       success: true,
       images: images.map(img => ({
         _id: img._id,
-        imageUrl: img.watermarkedUrl,
+        imageUrl: convertToAbsoluteUrl(img.watermarkedUrl),
         title: img.title,
         description: img.description,
         createdAt: img.createdAt,

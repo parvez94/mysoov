@@ -401,9 +401,17 @@ export const redeemContent = async (req, res, next) => {
           return next(createError(404, 'No images found in this gallery'));
         }
 
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+        
+        const convertToAbsoluteUrl = (url) => {
+          if (!url) return url;
+          if (url.startsWith('http://') || url.startsWith('https://')) return url;
+          return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+        };
+
         const imageUrls = galleryImages.map(img => ({
-          url: img.watermarkedUrl,
-          originalUrl: img.imageUrl,
+          url: convertToAbsoluteUrl(img.watermarkedUrl),
+          originalUrl: convertToAbsoluteUrl(img.imageUrl),
           imageId: img._id,
           title: img.title || ''
         }));
