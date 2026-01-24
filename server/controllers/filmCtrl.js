@@ -191,6 +191,22 @@ export const deleteFilmDirectory = async (req, res, next) => {
       { $set: { filmDirectoryId: null } }
     );
 
+    // Delete all images in the directory and their files
+    const images = await FilmImage.find({ filmDirectoryId: directoryId });
+    for (const image of images) {
+      const deleteFile = (url) => {
+        if (!url) return;
+        const filePath = path.join(process.cwd(), url.replace(/^\//, '').replace(/^uploads\//, 'uploads/'));
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      };
+
+      deleteFile(image.imageUrl);
+      deleteFile(image.watermarkedUrl);
+    }
+    await FilmImage.deleteMany({ filmDirectoryId: directoryId });
+
     // Delete directory
     await FilmDirectory.findByIdAndDelete(directoryId);
 
