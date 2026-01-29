@@ -12,6 +12,10 @@ const videoSchema = new mongoose.Schema(
     videoUrl: {
       type: Object,
     },
+    watermarkedVideoUrl: {
+      type: Object,
+      default: null,
+    },
     thumbnailUrl: {
       type: String,
       default: null,

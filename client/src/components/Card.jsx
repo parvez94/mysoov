@@ -119,39 +119,6 @@ const YouTubeEmbed = styled.iframe`
   background: #000;
 `;
 
-const WatermarkOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  
-  &::before {
-    content: 'MYSOOV.TV';
-    font-size: 42px;
-    font-weight: 900;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 6px;
-    font-family: var(--secondary-fonts);
-    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.6);
-  }
-
-  @media (max-width: 768px) {
-    &::before {
-      font-size: 28px;
-      letter-spacing: 4px;
-    }
-  }
-`;
-
 const VideoStats = styled.div`
   @media (max-width: 768px) {
     display: flex;
@@ -430,7 +397,6 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
               images && images.length > 0 ? (
                 <>
                   <ImageSlider images={images} caption={caption} />
-                  {isUnpurchasedFilm && <WatermarkOverlay />}
                 </>
               ) : (
                 <>
@@ -440,7 +406,6 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                     onLoad={handleImageLoad}
                     data-aspect-ratio={aspectRatio}
                   />
-                  {isUnpurchasedFilm && <WatermarkOverlay />}
                 </>
               )
             ) : isYouTubeVideo ? (
@@ -451,7 +416,6 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                   allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                   allowFullScreen
                 />
-                {isUnpurchasedFilm && <WatermarkOverlay />}
               </>
             ) : (
               <>
@@ -461,7 +425,6 @@ const Card = ({ video, onVideoUpdate, onVideoDelete }) => {
                   onLoadedMetadata={handleVideoLoadedMetadata}
                   data-aspect-ratio={aspectRatio}
                 />
-                {isUnpurchasedFilm && <WatermarkOverlay />}
               </>
             )}
           </VideoContainer>

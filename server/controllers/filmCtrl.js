@@ -6,6 +6,7 @@ import FilmImage from '../models/FilmImage.js';
 import { createError } from '../utils/error.js';
 import { sendPurchaseConfirmationEmail } from '../services/emailService.js';
 import { createWatermarkedCopy } from '../utils/watermark.js';
+import { createWatermarkedVideoCopy } from '../utils/videoProcessor.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -108,6 +109,60 @@ export const uploadFilmToDirectory = async (req, res, next) => {
     const video = await Video.findById(videoId);
     if (!video) {
       return next(createError(404, 'Video not found'));
+    }
+
+    // Create watermarked video copy if video is local and doesn't already have watermark
+    console.log('🎬 Adding film to directory, checking for watermarking...');
+    console.log('  - storageProvider:', video.storageProvider);
+    console.log('  - videoUrl:', JSON.stringify(video.videoUrl));
+    console.log('  - mediaType:', video.mediaType);
+    console.log('  - watermarkedVideoUrl exists:', !!video.watermarkedVideoUrl);
+    
+    if (
+      video.storageProvider === 'local' &&
+      video.videoUrl?.url &&
+      video.mediaType === 'video' &&
+      !video.watermarkedVideoUrl
+    ) {
+      console.log('✅ Starting watermark process...');
+      try {
+        let videoPath = video.videoUrl.url;
+        if (videoPath.startsWith('http')) {
+          const urlObj = new URL(videoPath);
+          videoPath = urlObj.pathname;
+        }
+        videoPath = videoPath.replace(/^\//, '');
+
+        const fullVideoPath = path.join(process.cwd(), videoPath);
+        console.log('  - Video path:', fullVideoPath);
+        console.log('  - File exists:', fs.existsSync(fullVideoPath));
+
+        if (fs.existsSync(fullVideoPath)) {
+          const originalFileName = path.basename(video.videoUrl.url);
+          console.log('  - Starting ffmpeg watermarking for:', originalFileName);
+          
+          const watermarkResult = await createWatermarkedVideoCopy(
+            fullVideoPath,
+            originalFileName
+          );
+
+          console.log('✅ Watermark created:', watermarkResult.url);
+
+          video.watermarkedVideoUrl = {
+            url: watermarkResult.url,
+            public_id: watermarkResult.fileName,
+          };
+          
+          console.log('✅ Video updated with watermarked video');
+        } else {
+          console.error('❌ Video file not found:', fullVideoPath);
+        }
+      } catch (watermarkError) {
+        console.error('❌ Video watermark creation failed:', watermarkError.message);
+        console.error('❌ Stack:', watermarkError.stack);
+      }
+    } else {
+      console.log('⏭️ Skipping watermark (conditions not met)');
     }
 
     // Update video to mark as film
@@ -236,7 +291,7 @@ export const searchFilmDirectory = async (req, res, next) => {
     // Use simple case-insensitive string comparison (more reliable than regex for exact matches)
     const directory = await FilmDirectory.findOne({
       folderName: { $regex: new RegExp(`^${escapeRegex(code)}$`, 'i') },
-    }).populate('films', 'caption videoUrl mediaType createdAt');
+    }).populate('films', 'caption videoUrl watermarkedVideoUrl mediaType createdAt');
 
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
@@ -281,7 +336,7 @@ export const getFilmDirectoryDetails = async (req, res, next) => {
 
     const directory = await FilmDirectory.findById(directoryId).populate({
       path: 'films',
-      select: 'caption videoUrl thumbnail mediaType createdAt userId',
+      select: 'caption videoUrl watermarkedVideoUrl thumbnail mediaType createdAt userId',
       populate: {
         path: 'userId',
         select: 'username displayName displayImage',
@@ -344,10 +399,48 @@ export const addFilmToProfile = async (req, res, next) => {
       return next(createError(400, 'Film does not belong to this directory'));
     }
 
+    // Auto-generate watermark if missing
+    if (!film.watermarkedVideoUrl && film.mediaType === 'video' && film.videoUrl?.url) {
+      console.log('⚠️ Watermark missing for directory film, generating now...');
+      try {
+        let videoPath = film.videoUrl.url;
+        if (videoPath.startsWith('http')) {
+          const urlObj = new URL(videoPath);
+          videoPath = urlObj.pathname;
+        }
+        videoPath = videoPath.replace(/^\//, '');
+
+        const fullVideoPath = path.join(process.cwd(), videoPath);
+        
+        if (fs.existsSync(fullVideoPath) && videoPath.includes('/uploads/')) {
+          const originalFileName = path.basename(film.videoUrl.url);
+          const watermarkResult = await createWatermarkedVideoCopy(
+            fullVideoPath,
+            originalFileName
+          );
+
+          film.watermarkedVideoUrl = {
+            url: watermarkResult.url,
+            public_id: watermarkResult.fileName,
+          };
+          
+          if (!film.storageProvider) {
+            film.storageProvider = 'local';
+          }
+          
+          await film.save();
+          console.log('✅ Watermark generated for directory film');
+        }
+      } catch (watermarkError) {
+        console.error('❌ Auto-watermark failed:', watermarkError.message);
+      }
+    }
+
     // Create a copy of the film for the user (not removing from directory)
+    // Use watermarked video if available (user hasn't purchased yet)
     const filmCopy = new Video({
       caption: film.caption,
-      videoUrl: film.videoUrl,
+      videoUrl: film.watermarkedVideoUrl || film.videoUrl, // Use watermarked version for free copy
       thumbnail: film.thumbnail,
       userId: userId,
       privacy: 'Public',
@@ -440,6 +533,12 @@ export const purchaseFilm = async (req, res, next) => {
       // Film already in profile, just mark as purchased (remove buy button)
       userFilm.filmDirectoryId = null;
       userFilm.sourceFilmId = null; // Also remove sourceFilmId to indicate fully owned
+      
+      // For videos, replace watermarked video with original
+      if (userFilm.mediaType === 'video' && originalFilm.videoUrl) {
+        userFilm.videoUrl = originalFilm.videoUrl; // Replace watermarked with original
+        userFilm.watermarkedVideoUrl = null; // Remove watermarked reference
+      }
       
       // For image galleries, replace watermarked URLs with original URLs
       if (userFilm.mediaType === 'image' && userFilm.images && userFilm.images.length > 0) {
@@ -607,6 +706,8 @@ export const createFilm = async (req, res, next) => {
       return next(createError(400, 'Customer code already exists'));
     }
 
+    const storageProvider = req.body.storageProvider || (videoUrl?.provider) || 'local';
+    
     const film = await Video.create({
       caption,
       customerCode: customerCode.trim().toUpperCase(),
@@ -618,7 +719,60 @@ export const createFilm = async (req, res, next) => {
       isFilm: true,
       mediaType: 'video',
       fileSize: req.body.fileSize || 0,
+      storageProvider: storageProvider,
     });
+
+    console.log('🎬 Film created, checking for watermarking...');
+    console.log('  - storageProvider:', storageProvider);
+    console.log('  - videoUrl:', JSON.stringify(videoUrl));
+    console.log('  - watermarkedVideoUrl exists:', !!film.watermarkedVideoUrl);
+    
+    if (
+      storageProvider === 'local' &&
+      videoUrl?.url &&
+      !film.watermarkedVideoUrl
+    ) {
+      console.log('✅ Starting watermark process...');
+      try {
+        let videoPath = videoUrl.url;
+        if (videoPath.startsWith('http')) {
+          const urlObj = new URL(videoPath);
+          videoPath = urlObj.pathname;
+        }
+        videoPath = videoPath.replace(/^\//, '');
+
+        const fullVideoPath = path.join(process.cwd(), videoPath);
+        console.log('  - Video path:', fullVideoPath);
+        console.log('  - File exists:', fs.existsSync(fullVideoPath));
+
+        if (fs.existsSync(fullVideoPath)) {
+          const originalFileName = path.basename(videoUrl.url);
+          console.log('  - Starting ffmpeg watermarking for:', originalFileName);
+          
+          const watermarkResult = await createWatermarkedVideoCopy(
+            fullVideoPath,
+            originalFileName
+          );
+
+          console.log('✅ Watermark created:', watermarkResult.url);
+
+          film.watermarkedVideoUrl = {
+            url: watermarkResult.url,
+            public_id: watermarkResult.fileName,
+          };
+          await film.save();
+          
+          console.log('✅ Film updated with watermarked video');
+        } else {
+          console.error('❌ Video file not found:', fullVideoPath);
+        }
+      } catch (watermarkError) {
+        console.error('❌ Video watermark creation failed:', watermarkError.message);
+        console.error('❌ Stack:', watermarkError.stack);
+      }
+    } else {
+      console.log('⏭️ Skipping watermark (not local storage or no video URL)');
+    }
 
     await film.populate('userId', 'username displayName displayImage');
 
@@ -626,6 +780,91 @@ export const createFilm = async (req, res, next) => {
       success: true,
       message: 'Film created successfully',
       film,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Admin: Delete film
+// Admin: Regenerate watermarks for all existing films
+export const regenerateAllWatermarks = async (req, res, next) => {
+  try {
+    const filmsToWatermark = await Video.find({
+      isFilm: true,
+      mediaType: 'video',
+      'videoUrl.url': { $exists: true },
+      $or: [
+        { watermarkedVideoUrl: { $exists: false } },
+        { watermarkedVideoUrl: null }
+      ]
+    });
+
+    console.log(`Found ${filmsToWatermark.length} films to watermark`);
+
+    const results = {
+      total: filmsToWatermark.length,
+      success: 0,
+      failed: 0,
+      errors: []
+    };
+
+    for (const film of filmsToWatermark) {
+      try {
+        let videoPath = film.videoUrl.url;
+        if (videoPath.startsWith('http')) {
+          const urlObj = new URL(videoPath);
+          videoPath = urlObj.pathname;
+        }
+        videoPath = videoPath.replace(/^\//, '');
+
+        const fullVideoPath = path.join(process.cwd(), videoPath);
+
+        if (!fs.existsSync(fullVideoPath)) {
+          console.error(`❌ Video file not found: ${fullVideoPath}`);
+          results.failed++;
+          results.errors.push({ filmId: film._id, error: 'Video file not found' });
+          continue;
+        }
+
+        if (!videoPath.includes('/uploads/')) {
+          console.log(`⏭️ Skipping non-local video: ${film.caption}`);
+          continue;
+        }
+
+        const originalFileName = path.basename(film.videoUrl.url);
+        
+        console.log(`Watermarking film: ${film._id} - ${film.caption}`);
+        
+        const watermarkResult = await createWatermarkedVideoCopy(
+          fullVideoPath,
+          originalFileName
+        );
+
+        film.watermarkedVideoUrl = {
+          url: watermarkResult.url,
+          public_id: watermarkResult.fileName,
+        };
+        
+        if (!film.storageProvider) {
+          film.storageProvider = 'local';
+        }
+        
+        await film.save();
+        
+        results.success++;
+        console.log(`✅ Watermarked: ${film.caption}`);
+      } catch (error) {
+        console.error(`❌ Failed to watermark film ${film._id}:`, error);
+        results.failed++;
+        results.errors.push({ filmId: film._id, error: error.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Watermarking completed: ${results.success} successful, ${results.failed} failed`,
+      results
     });
   } catch (error) {
     next(error);
@@ -642,12 +881,23 @@ export const deleteFilm = async (req, res, next) => {
       return next(createError(404, 'Film not found'));
     }
 
-    // Delete video file from local storage if applicable
-    if (film.storageProvider === 'local' && film.videoUrl?.public_id) {
+    // Delete video files from local storage if applicable
+    if (film.storageProvider === 'local') {
       const { deleteFromLocal } = await import('../utils/localStorage.js');
-      await deleteFromLocal(film.videoUrl.public_id).catch((err) => {
-        // Log but don't fail if file deletion fails
-      });
+      
+      // Delete original video
+      if (film.videoUrl?.public_id) {
+        await deleteFromLocal(film.videoUrl.public_id).catch((err) => {
+          console.error('Failed to delete original video:', err);
+        });
+      }
+      
+      // Delete watermarked video
+      if (film.watermarkedVideoUrl?.public_id) {
+        await deleteFromLocal(film.watermarkedVideoUrl.public_id).catch((err) => {
+          console.error('Failed to delete watermarked video:', err);
+        });
+      }
     }
 
     // Delete the film
@@ -684,6 +934,49 @@ export const searchFilmByCode = async (req, res, next) => {
       return next(createError(404, 'Film not found with this code'));
     }
 
+    console.log('🎬 Redeeming film:', code);
+    console.log('  - Original videoUrl:', film.videoUrl?.url);
+    console.log('  - Watermarked videoUrl:', film.watermarkedVideoUrl?.url);
+
+    // Auto-generate watermark if missing
+    if (!film.watermarkedVideoUrl && film.mediaType === 'video' && film.videoUrl?.url) {
+      console.log('⚠️ Watermark missing, generating now...');
+      try {
+        let videoPath = film.videoUrl.url;
+        if (videoPath.startsWith('http')) {
+          const urlObj = new URL(videoPath);
+          videoPath = urlObj.pathname;
+        }
+        videoPath = videoPath.replace(/^\//, '');
+
+        const fullVideoPath = path.join(process.cwd(), videoPath);
+        
+        if (fs.existsSync(fullVideoPath) && videoPath.includes('/uploads/')) {
+          const originalFileName = path.basename(film.videoUrl.url);
+          const watermarkResult = await createWatermarkedVideoCopy(
+            fullVideoPath,
+            originalFileName
+          );
+
+          film.watermarkedVideoUrl = {
+            url: watermarkResult.url,
+            public_id: watermarkResult.fileName,
+          };
+          
+          if (!film.storageProvider) {
+            film.storageProvider = 'local';
+          }
+          
+          await film.save();
+          console.log('✅ Watermark generated:', watermarkResult.url);
+        }
+      } catch (watermarkError) {
+        console.error('❌ Auto-watermark failed:', watermarkError.message);
+      }
+    }
+
+    console.log('  - Will use:', film.watermarkedVideoUrl?.url || film.videoUrl?.url);
+
     // Check if user already has this film
     const userHasFilm = await Video.findOne({
       userId: req.user.id,
@@ -697,9 +990,10 @@ export const searchFilmByCode = async (req, res, next) => {
     }
 
     // Create a copy for the user (add to profile automatically)
+    // Use watermarked video if available (user hasn't purchased yet)
     const filmCopy = new Video({
       caption: film.caption,
-      videoUrl: film.videoUrl,
+      videoUrl: film.watermarkedVideoUrl || film.videoUrl, // Use watermarked version
       thumbnail: film.thumbnail,
       userId: req.user.id,
       privacy: 'Public',

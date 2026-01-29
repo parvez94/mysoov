@@ -87,38 +87,7 @@ const YouTubePlayer = styled.iframe`
   }
 `;
 
-const WatermarkOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  
-  &::before {
-    content: 'MYSOOV.TV';
-    font-size: 48px;
-    font-weight: 900;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 6px;
-    font-family: var(--secondary-fonts);
-    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.6);
-  }
 
-  @media (max-width: 768px) {
-    &::before {
-      font-size: 32px;
-      letter-spacing: 4px;
-    }
-  }
-`;
 
 const ImagePlayer = styled.img`
   width: 100%;
@@ -608,8 +577,6 @@ const Video = () => {
     return urlObj.toString();
   };
 
-  const isUnpurchasedFilm = currentVideo?.sourceFilmId != null;
-
   return (
     <Container>
       <Main>
@@ -642,26 +609,20 @@ const Video = () => {
               />
             )
           ) : isYouTubeVideo ? (
-            <>
-              <YouTubePlayer
-                src={getCleanYouTubeUrl(videoUrl)}
-                title={currentVideo?.caption || 'Video'}
-                allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
-                allowFullScreen
-              />
-              {isUnpurchasedFilm && <WatermarkOverlay />}
-            </>
+            <YouTubePlayer
+              src={getCleanYouTubeUrl(videoUrl)}
+              title={currentVideo?.caption || 'Video'}
+              allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+              allowFullScreen
+            />
           ) : (
-            <>
-              <VideoPlayer 
-                src={videoUrl} 
-                controls 
-                controlsList="nodownload"
-                disablePictureInPicture
-                onContextMenu={(e) => e.preventDefault()}
-              />
-              {isUnpurchasedFilm && <WatermarkOverlay />}
-            </>
+            <VideoPlayer 
+              src={videoUrl} 
+              controls 
+              controlsList="nodownload"
+              disablePictureInPicture
+              onContextMenu={(e) => e.preventDefault()}
+            />
           )}
         </VideoWrapper>
         <ContentWrapper>

@@ -699,24 +699,7 @@ const FolderIconWrapper = styled.div`
   }
 `;
 
-const CopyrightOverlay = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 72px;
-  font-weight: bold;
-  font-family: var(--primary-fonts);
-  pointer-events: none;
-  z-index: 10;
-  text-align: center;
-  user-select: none;
 
-  @media (max-width: 768px) {
-    font-size: 48px;
-  }
-`;
 
 const FilmInfoSection = styled.div`
   padding: 24px;
@@ -1448,18 +1431,15 @@ const Frontpage = () => {
                     <p>Image Gallery</p>
                   </FolderIconWrapper>
                 ) : getVideoUrl(redeemedFilm) ? (
-                  <>
-                    <video
-                      src={getVideoUrl(redeemedFilm)}
-                      controls
-                      controlsList='nodownload'
-                      disablePictureInPicture
-                      autoPlay
-                      style={{ width: '100%', height: '100%' }}
-                      onContextMenu={(e) => e.preventDefault()}
-                    />
-                    <CopyrightOverlay>MYSOOV.TV</CopyrightOverlay>
-                  </>
+                  <video
+                    src={getVideoUrl(redeemedFilm)}
+                    controls
+                    controlsList='nodownload'
+                    disablePictureInPicture
+                    autoPlay
+                    style={{ width: '100%', height: '100%' }}
+                    onContextMenu={(e) => e.preventDefault()}
+                  />
                 ) : null}
               </FilmVideoWrapper>
 

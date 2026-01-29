@@ -64,39 +64,6 @@ const PrivacyBadge = styled.div`
   z-index: 1;
 `;
 
-const WatermarkOverlay = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  
-  &::before {
-    content: 'MYSOOV.TV';
-    font-size: 36px;
-    font-weight: 900;
-    color: rgba(255, 255, 255, 0.4);
-    text-transform: uppercase;
-    letter-spacing: 5px;
-    font-family: var(--secondary-fonts);
-    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.6);
-  }
-
-  @media (max-width: 768px) {
-    &::before {
-      font-size: 24px;
-      letter-spacing: 4px;
-    }
-  }
-`;
-
 const ClickableContent = styled.div`
   cursor: pointer;
 
@@ -184,6 +151,8 @@ const PostCard = ({
     filmDirectoryId: video?.filmDirectoryId,
     sourceFilmId: video?.sourceFilmId,
     isFilm: video?.isFilm,
+    videoUrl: video?.videoUrl,
+    watermarkedVideoUrl: video?.watermarkedVideoUrl,
   });
   
   const showBuyButton = 
@@ -288,12 +257,10 @@ const PostCard = ({
                 allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
                 allowFullScreen
               />
-              {isUnpurchasedFilm && <WatermarkOverlay />}
             </>
           ) : (
             <>
               <Video src={src} controls playsInline />
-              {isUnpurchasedFilm && <WatermarkOverlay />}
             </>
           )}
         </VideoWrapper>

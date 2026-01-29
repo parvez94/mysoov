@@ -17,6 +17,7 @@ import {
   createFilm,
   deleteFilm,
   searchFilmByCode,
+  regenerateAllWatermarks,
   // Film image gallery system
   uploadImagesToDirectory,
   getDirectoryImages,
@@ -36,6 +37,7 @@ const router = express.Router();
 router.get('/admin/films', verifyToken, verifyAdmin, getAllFilms);
 router.post('/admin/films', verifyToken, verifyAdmin, createFilm);
 router.delete('/admin/films/:filmId', verifyToken, verifyAdmin, deleteFilm);
+router.post('/admin/regenerate-watermarks', verifyToken, verifyAdmin, regenerateAllWatermarks);
 
 // User routes for new film system
 router.post('/redeem/:code', verifyToken, searchFilmByCode);
