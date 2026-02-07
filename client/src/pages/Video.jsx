@@ -289,6 +289,13 @@ const Video = () => {
           { withCredentials: true }
         );
 
+        console.log('🎬 RAW API RESPONSE:', {
+          caption: videoRes.data?.caption,
+          sourceFilmId: videoRes.data?.sourceFilmId,
+          watermarkedVideoUrl: videoRes.data?.watermarkedVideoUrl,
+          videoUrl: videoRes.data?.videoUrl
+        });
+
         const { userId } = videoRes.data;
 
         const userRes = await axios.get(
@@ -535,6 +542,13 @@ const Video = () => {
   // Helper function to get video URL (handle both object and string formats)
   const getVideoUrl = () => {
     if (!currentVideo?.videoUrl) return null;
+
+    // Use watermarked video if film hasn't been purchased yet (has sourceFilmId)
+    const isUnpurchasedFilm = currentVideo?.sourceFilmId != null;
+    
+    if (isUnpurchasedFilm && currentVideo?.watermarkedVideoUrl?.url) {
+      return currentVideo.watermarkedVideoUrl.url;
+    }
 
     // If videoUrl is a string, return it directly
     if (typeof currentVideo.videoUrl === 'string') {

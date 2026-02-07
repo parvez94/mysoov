@@ -273,7 +273,6 @@ const DashboardEmailSettings = () => {
       if (res.data.success) {
         setMessage('✅ Email settings saved successfully!');
         setSuccess(true);
-        console.log('Save successful, reloading config...');
         // Reload config to get masked password
         await fetchEmailConfig();
       }

@@ -258,7 +258,7 @@ export const submitHireForm = async (req, res, next) => {
       return next(createError(400, 'Name, email, and role are required'));
     }
 
-    console.log('Hire Form Submission:', {
+    console.log('Hire form submission:', {
       name,
       email,
       role,
@@ -332,9 +332,7 @@ export const submitHireForm = async (req, res, next) => {
           `,
         });
         
-        console.log('Hire form notification email sent to:', adminEmail);
       } else {
-        console.log('Email system not enabled, form data logged only');
       }
     } catch (emailErr) {
       console.error('Failed to send hire form email notification:', emailErr.message);

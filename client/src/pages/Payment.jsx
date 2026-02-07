@@ -291,7 +291,7 @@ const Button = styled.button`
   border: none;
 
   ${(props) =>
-    props.primary
+    props.$primary
       ? `
     background: var(--primary-color);
     color: #fff;
@@ -440,15 +440,8 @@ const CARD_ELEMENT_OPTIONS = {
 };
 
 // Success Modal Component
-const SuccessModal = ({
-  filmName,
-  onClose,
-  onViewProfile,
-  onViewFilm,
-  downloadStatus,
-}) => {
-  const [canClose, setCanClose] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+const SuccessModal = ({ filmName, onClose, onViewProfile }) => {
+  const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
     // Start countdown
@@ -456,7 +449,8 @@ const SuccessModal = ({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
-          setCanClose(true);
+          // Auto-redirect to profile when countdown reaches 0
+          onViewProfile();
           return 0;
         }
         return prev - 1;
@@ -464,73 +458,46 @@ const SuccessModal = ({
     }, 1000);
 
     return () => clearInterval(countdownInterval);
-  }, []);
-
-  const handleClose = () => {
-    if (canClose) {
-      onClose();
-    }
-  };
+  }, [onViewProfile]);
 
   return (
-    <ModalOverlay onClick={handleClose}>
+    <ModalOverlay onClick={onViewProfile}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
-        {canClose && (
-          <CloseButton onClick={onClose}>
-            <MdClose size={24} />
-          </CloseButton>
-        )}
-
         <SuccessIcon>
           <MdCheck size={48} />
         </SuccessIcon>
 
         <ModalTitle>Payment Successful! 🎉</ModalTitle>
         <ModalMessage>
-          Your purchase of <strong>{filmName}</strong> is complete!
-          <br />
-          The film has been added to your profile.
+          {filmName ? (
+            <>
+              Your purchase of <strong>{filmName}</strong> is complete!
+              <br />
+              The content has been added to your profile.
+            </>
+          ) : (
+            <>
+              Your purchase is complete!
+              <br />
+              The content has been added to your profile.
+            </>
+          )}
         </ModalMessage>
 
-        {/* Download Status */}
-        <div
+        <InfoText
           style={{
-            padding: '12px 16px',
-            background: 'rgba(81, 207, 102, 0.1)',
-            border: '1px solid rgba(81, 207, 102, 0.3)',
-            borderRadius: '8px',
-            color: '#51cf66',
-            marginBottom: '20px',
-            fontFamily: 'var(--secondary-fonts)',
             fontSize: '14px',
+            opacity: 0.8,
+            marginBottom: '20px',
             textAlign: 'center',
           }}
         >
-          {downloadStatus === 'downloading' && '📥 Downloading video...'}
-          {downloadStatus === 'complete' && '✅ Download complete!'}
-          {downloadStatus === 'error' &&
-            '⚠️ Download started (check your browser downloads)'}
-        </div>
-
-        {!canClose && (
-          <InfoText
-            style={{ fontSize: '12px', opacity: 0.6, marginBottom: '20px' }}
-          >
-            Closing in {countdown} seconds...
-          </InfoText>
-        )}
+          Redirecting to your profile in {countdown} seconds...
+        </InfoText>
 
         <ModalButtonGroup>
-          <Button type='button' onClick={onViewProfile} disabled={!canClose}>
-            View My Profile
-          </Button>
-          <Button
-            type='button'
-            primary
-            onClick={onViewFilm}
-            disabled={!canClose}
-          >
-            Watch Film Now
+          <Button type='button' $primary onClick={onViewProfile}>
+            Go to Profile Now
           </Button>
         </ModalButtonGroup>
       </ModalContent>
@@ -555,8 +522,6 @@ const CheckoutForm = ({
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [purchasedFilmUrl, setPurchasedFilmUrl] = useState('');
-  const [downloadStatus, setDownloadStatus] = useState('downloading');
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { currentUser } = useSelector((state) => state.user);
@@ -600,7 +565,7 @@ const CheckoutForm = ({
           payment_method: {
             card: cardElement,
           },
-        }
+        },
       );
 
       if (error) {
@@ -614,79 +579,12 @@ const CheckoutForm = ({
           const response = await axios.post(
             `${import.meta.env.VITE_API_URL}/api/v1/films/purchase`,
             { filmId, directoryId },
-            { withCredentials: true }
+            { withCredentials: true },
           );
 
-          // Store the video URL for "Watch Now" button
-          if (response.data.film) {
-            setPurchasedFilmUrl(`/post/${response.data.film._id}`);
-          }
-
-          // Show success modal immediately
-          setDownloadStatus('downloading');
+          // Show success modal
           setShowSuccessModal(true);
           onSuccess(response.data.message || 'Payment successful!');
-
-          // Trigger download as file (force download, not open in browser)
-          if (response.data.downloadUrl) {
-            // Use async download to ensure it downloads as file
-            (async () => {
-              try {
-                // Try to fetch as blob for better download control
-                const videoResponse = await fetch(response.data.downloadUrl);
-
-                if (videoResponse.ok) {
-                  // Download as blob to force file download
-                  const blob = await videoResponse.blob();
-                  const blobUrl = window.URL.createObjectURL(blob);
-
-                  const link = document.createElement('a');
-                  link.href = blobUrl;
-                  link.download = `${filmName || 'film'}.mp4`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-
-                  // Clean up blob URL
-                  setTimeout(() => {
-                    window.URL.revokeObjectURL(blobUrl);
-                    setDownloadStatus('complete');
-                  }, 2000);
-                } else {
-                  // Fallback to direct download if fetch fails (CORS issue)
-                  const link = document.createElement('a');
-                  link.href = response.data.downloadUrl;
-                  link.download = `${filmName || 'film'}.mp4`;
-                  link.target = '_blank';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-
-                  setTimeout(() => {
-                    setDownloadStatus('error'); // Shows "check your browser downloads"
-                  }, 2000);
-                }
-              } catch (downloadError) {
-                console.error('Download error:', downloadError);
-
-                // Fallback to direct link method
-                const link = document.createElement('a');
-                link.href = response.data.downloadUrl;
-                link.download = `${filmName || 'film'}.mp4`;
-                link.target = '_blank';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                // Show error status with instruction
-                setTimeout(() => {
-                  setDownloadStatus('error');
-                }, 2000);
-              }
-            })();
-          } else {
-            setDownloadStatus('error');
-          }
         } else {
           // Subscription activation flow
           const response = await axios.post(
@@ -694,7 +592,7 @@ const CheckoutForm = ({
               import.meta.env.VITE_API_URL
             }/api/v1/payment/activate-subscription`,
             { planId },
-            { withCredentials: true }
+            { withCredentials: true },
           );
 
           // Update user state in Redux
@@ -716,7 +614,7 @@ const CheckoutForm = ({
       onError(
         err.response?.data?.message ||
           err.message ||
-          'Payment failed. Please try again.'
+          'Payment failed. Please try again.',
       );
     } finally {
       setProcessing(false);
@@ -752,7 +650,7 @@ const CheckoutForm = ({
           <Button type='button' onClick={() => window.history.back()}>
             Cancel
           </Button>
-          <Button type='submit' primary disabled={!stripe || processing}>
+          <Button type='submit' $primary disabled={!stripe || processing}>
             {processing
               ? 'Processing...'
               : `Pay $${
@@ -766,12 +664,10 @@ const CheckoutForm = ({
       {showSuccessModal && (
         <SuccessModal
           filmName={filmName}
-          downloadStatus={downloadStatus}
           onClose={() => setShowSuccessModal(false)}
           onViewProfile={() =>
-            navigate(`/${currentUser?.username || 'profile'}`)
+            (window.location.href = `/${currentUser?.username || 'profile'}`)
           }
-          onViewFilm={() => navigate(purchasedFilmUrl)}
         />
       )}
     </>
@@ -786,14 +682,15 @@ const Payment = () => {
   const filmId = searchParams.get('filmId');
   const directoryIdParam = searchParams.get('directoryId');
   // Handle both old system (actual ID) and new system (special 'new-system' value)
-  const directoryId = 
-    directoryIdParam === 'null' || directoryIdParam === 'undefined' 
-      ? null 
+  const directoryId =
+    directoryIdParam === 'null' || directoryIdParam === 'undefined'
+      ? null
       : directoryIdParam;
   const isNewFilmSystem = directoryId === 'new-system';
   const filmName = searchParams.get('filmName');
   const priceParam = searchParams.get('price');
   const filmPrice = isNaN(parseFloat(priceParam)) ? 0 : parseFloat(priceParam);
+  const mediaType = searchParams.get('mediaType') || 'video';
 
   // Use state to hold pricing data so it can be updated
   const [pricingPlans, setPricingPlans] = useState(defaultPricingPlans);
@@ -832,14 +729,14 @@ const Payment = () => {
 
   // Validate film purchase parameters and auto-redirect if invalid
   useEffect(() => {
-    console.log('Payment page params:', {
-      type,
-      filmId,
-      directoryId,
-      isNewFilmSystem,
-      filmName,
-      filmPrice,
-    });
+    // console.log('Payment parameters:', {
+    //   type,
+    //   filmId,
+    //   directoryId,
+    //   isNewFilmSystem,
+    //   filmName,
+    //   filmPrice,
+    // });
 
     if (type === 'film' && (!filmId || !directoryId)) {
       console.error('Invalid payment parameters - redirecting to search');
@@ -859,8 +756,8 @@ const Payment = () => {
         </BackButton>
         <Title>Invalid Payment Request</Title>
         <Subtitle>
-          The payment link is missing required information. Redirecting to search
-          page...
+          The payment link is missing required information. Redirecting to
+          search page...
         </Subtitle>
         <InfoText>
           Please search for your film directory and try again. Make sure to
@@ -877,7 +774,7 @@ const Payment = () => {
         // Fetch Stripe config from backend (public endpoint)
         const { data } = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/public/stripe-settings`,
-          { withCredentials: true }
+          { withCredentials: true },
         );
 
         if (data.stripeConfig && data.stripeConfig.enabled) {
@@ -891,7 +788,7 @@ const Payment = () => {
             setStripePromise(stripe);
             setPaymentEnabled(true);
           }
-          
+
           // Set currency from config
           if (data.stripeConfig.currency) {
             setCurrency(data.stripeConfig.currency);
@@ -948,13 +845,21 @@ const Payment = () => {
 
       <Title>
         {type === 'film'
-          ? `Buy Complete Ownership: ${filmName || 'Film'}`
+          ? filmName
+            ? `Buy Complete Ownership: ${filmName}`
+            : 'Buy Complete Ownership'
           : 'Complete Your Purchase'}
       </Title>
       <Subtitle>
         {type === 'film'
-          ? `Purchase full ownership of this film for ${getCurrencySymbol(currency)}${filmPrice.toFixed(
-              2
+          ? `Purchase full ownership ${
+              filmName
+                ? `of this ${filmName}`
+                : mediaType === 'image'
+                  ? ''
+                  : 'of this film'
+            } for ${getCurrencySymbol(currency)}${filmPrice.toFixed(
+              2,
             )} - Yours permanently!`
           : 'Upgrade your account and unlock premium features'}
       </Subtitle>
@@ -994,9 +899,10 @@ const Payment = () => {
       {type === 'film' ? (
         <PlanCard>
           <PlanHeader>
-            <PlanName>{filmName || 'Film Purchase'}</PlanName>
+            {filmName && <PlanName>{filmName}</PlanName>}
             <PlanPrice>
-              {getCurrencySymbol(currency)}{filmPrice.toFixed(2)}
+              {getCurrencySymbol(currency)}
+              {filmPrice.toFixed(2)}
               <span>/one-time</span>
             </PlanPrice>
           </PlanHeader>
@@ -1004,19 +910,19 @@ const Payment = () => {
           <FeatureList>
             <Feature>
               <MdCheck size={20} />
-              Permanent ownership
+              Permanent Ownership
             </Feature>
             <Feature>
               <MdCheck size={20} />
-              Added to your profile
+              HD Quality
             </Feature>
             <Feature>
               <MdCheck size={20} />
-              HD quality playback
+              Watermark Removed
             </Feature>
             <Feature>
               <MdCheck size={20} />
-              Download anytime
+              Download Anytime
             </Feature>
           </FeatureList>
         </PlanCard>
@@ -1065,7 +971,10 @@ const Payment = () => {
                   <Button
                     primary
                     onClick={() => {
-                      window.location.href = `mailto:${pricingConfig.supportEmail}?subject=Film Purchase Request&body=Film: ${filmName}%0APrice: ${getCurrencySymbol(currency)}${filmPrice}`;
+                      const contentType = mediaType === 'image' ? 'Image' : 'Film';
+                      const subject = `${contentType} Purchase Request`;
+                      const body = `${contentType}${filmName ? `: ${filmName}` : ''}%0APrice: ${getCurrencySymbol(currency)}${filmPrice}`;
+                      window.location.href = `mailto:${pricingConfig.supportEmail}?subject=${subject}&body=${body}`;
                     }}
                   >
                     Contact Support

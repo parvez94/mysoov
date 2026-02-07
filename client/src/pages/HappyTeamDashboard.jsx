@@ -1281,7 +1281,6 @@ const HappyTeamDashboard = () => {
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      console.log('Dropped files count:', e.dataTransfer.files.length);
       handleFiles(e.dataTransfer.files);
     }
   };
@@ -1294,7 +1293,6 @@ const HappyTeamDashboard = () => {
 
   const handleFiles = (fileList) => {
     const filesArray = Array.from(fileList);
-    console.log('Total files received:', filesArray.length);
     
     const validFiles = filesArray.filter(file => {
       const isImage = file.type.startsWith('image/');
@@ -1302,7 +1300,6 @@ const HappyTeamDashboard = () => {
       return formData.type === 'image' ? isImage : isVideo;
     });
 
-    console.log('Valid files after filter:', validFiles.length);
 
     if (validFiles.length === 0) {
       alert(`Please select valid ${formData.type} files`);

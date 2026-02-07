@@ -226,7 +226,6 @@ export const approveContent = async (req, res, next) => {
         mediaType: 'video'
       });
       
-      console.log(`[Approve] Video content ${content._id} | Film found: ${!!film}`);
       
       if (!film) {
         const filmData = {
@@ -244,11 +243,9 @@ export const approveContent = async (req, res, next) => {
         };
 
         film = await Video.create(filmData);
-        console.log(`[Approve] Created new video film ${film._id}`);
       } else {
         film.purchasePrice = price;
         await film.save();
-        console.log(`[Approve] Updated existing video film ${film._id}`);
       }
       
       await content.save();
@@ -463,9 +460,17 @@ export const redeemContent = async (req, res, next) => {
         });
       }
 
+      console.log('📋 Creating film copy in redeem:', {
+        filmId: directFilm._id,
+        caption: directFilm.caption,
+        hasWatermark: !!directFilm.watermarkedVideoUrl,
+        watermarkUrl: directFilm.watermarkedVideoUrl?.url
+      });
+
       const userVideo = await Video.create({
         caption: directFilm.caption,
         videoUrl: directFilm.videoUrl,
+        watermarkedVideoUrl: directFilm.watermarkedVideoUrl,
         thumbnailUrl: directFilm.thumbnailUrl,
         images: [],
         userId: userId,
@@ -474,6 +479,11 @@ export const redeemContent = async (req, res, next) => {
         mediaType: 'video',
         storageProvider: directFilm.storageProvider,
         sourceFilmId: directFilm._id,
+      });
+      
+      console.log('✅ Film copy created:', {
+        copyId: userVideo._id,
+        watermarkedVideoUrl: userVideo.watermarkedVideoUrl
       });
 
       await userVideo.populate('userId', 'displayName username editorRole');

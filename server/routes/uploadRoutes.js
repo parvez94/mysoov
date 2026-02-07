@@ -535,7 +535,6 @@ router.delete('/upload', verifyToken, async (req, res) => {
             resource_type: resourceType,
           });
           deleted = true;
-          console.log(`✅ Deleted from Cloudinary: ${publicId}`);
         } catch (err) {
           console.error('Cloudinary delete error:', err.message);
         }
@@ -544,7 +543,6 @@ router.delete('/upload', verifyToken, async (req, res) => {
       case 'youtube':
         // YouTube videos cannot be deleted via API easily
         // Would require separate implementation
-        console.log('⚠️ YouTube video deletion not implemented');
         return res.status(200).json({
           msg: 'YouTube videos cannot be automatically deleted',
           deleted: false,
@@ -554,7 +552,6 @@ router.delete('/upload', verifyToken, async (req, res) => {
       default:
         deleted = await deleteFromLocal(publicId);
         if (deleted) {
-          console.log(`✅ Deleted from local storage: ${publicId}`);
         }
         break;
     }
@@ -564,7 +561,6 @@ router.delete('/upload', verifyToken, async (req, res) => {
       await User.findByIdAndUpdate(req.user.id, {
         $inc: { storageUsed: -fileSize },
       });
-      console.log(`✅ Decremented storage for user ${req.user.id} by ${fileSize}MB`);
     }
 
     res.json({

@@ -252,7 +252,6 @@ export const cleanupTempFiles = async (maxAgeHours = 24) => {
 
       if (now - stats.mtimeMs > maxAge) {
         await fs.promises.unlink(filePath);
-        console.log(`Cleaned up old temp file: ${file}`);
       }
     }
   } catch (error) {

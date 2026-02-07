@@ -412,7 +412,6 @@ const SearchResults = () => {
               withCredentials: true,
             }
           );
-          console.log('Initial search result:', filmResponse.data.directory);
           setFilmDirectory(filmResponse.data.directory);
         } catch (filmErr) {
           // Only show error if it's not a 404 (not found)
@@ -468,7 +467,6 @@ const SearchResults = () => {
       );
 
       // Update film directory with full data including price
-      console.log('Fetched directory details:', response.data.directory);
       setFilmDirectory(response.data.directory);
       setDirectoryFilms(response.data.directory.films || []);
       setShowFilmsModal(true);
@@ -516,42 +514,36 @@ const SearchResults = () => {
     }
   };
 
-  const handleBuyCompleteFolder = () => {
-    console.log('Buy Complete Folder clicked', {
-      filmDirectory,
-      directoryFilms,
-      filmDirectoryId: filmDirectory?._id,
-    });
-
-    if (!filmDirectory) {
-      setError('Film directory information is missing. Please try again.');
+  const handleBuyCompleteFolder = async () => {
+    if (!filmDirectory?._id || !directoryFilms?.[0]?._id) {
+      setError('Film information is missing. Please try again.');
       return;
     }
 
-    if (!filmDirectory._id) {
-      setError('Film directory ID is missing. Please refresh and try again.');
-      return;
-    }
+    try {
+      setLoadingFilms(true);
+      
+      // Add gallery to user's profile
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/v1/films/add-to-profile`,
+        {
+          filmId: directoryFilms[0]._id,
+          directoryId: filmDirectory._id,
+        },
+        { withCredentials: true }
+      );
 
-    if (!directoryFilms || directoryFilms.length === 0) {
-      setError('No films found in this directory. Please try again.');
-      return;
+      // Redirect to profile where they can purchase using the working buy button
+      navigate(`/${currentUser?.username || 'profile'}`);
+    } catch (err) {
+      console.error('Error adding to profile:', err);
+      setError(
+        err.response?.data?.message ||
+          'Failed to add to profile. Please try again.'
+      );
+    } finally {
+      setLoadingFilms(false);
     }
-
-    if (!directoryFilms[0]._id) {
-      setError('Film information is invalid. Please try again.');
-      return;
-    }
-
-    const price = filmDirectory.price ?? 0;
-    const firstFilm = directoryFilms[0];
-    navigate(
-      `/payment?type=film&filmId=${firstFilm._id}&directoryId=${
-        filmDirectory._id
-      }&filmName=${encodeURIComponent(
-        filmDirectory.folderName || 'Film Collection'
-      )}&price=${price}`
-    );
   };
 
   if (!query) {
@@ -680,7 +672,7 @@ const SearchResults = () => {
                           {film.videoUrl?.url ? (
                             <>
                               <video
-                                src={film.videoUrl.url}
+                                src={film.watermarkedVideoUrl?.url || film.videoUrl.url}
                                 style={{
                                   width: '100%',
                                   height: '100%',
@@ -775,26 +767,10 @@ const SearchResults = () => {
                         fontWeight: '500',
                       }}
                     >
-                      💎 Purchase entire collection ({directoryFilms.length}{' '}
-                      {directoryFilms.length === 1 ? 'film' : 'films'}) for
-                      permanent ownership and download access
+                      💎 Add to profile and proceed to purchase ({directoryFilms.length}{' '}
+                      {directoryFilms.length === 1 ? 'film' : 'films'}) - $
+                      {filmDirectory?.price?.toFixed(2) || '0.00'}
                     </ModalText>
-                    {!filmDirectory?._id && (
-                      <div
-                        style={{
-                          padding: '12px',
-                          background: 'rgba(255, 0, 0, 0.1)',
-                          border: '1px solid rgba(255, 0, 0, 0.3)',
-                          borderRadius: '8px',
-                          color: '#ff6b6b',
-                          marginBottom: '12px',
-                          fontSize: '14px',
-                        }}
-                      >
-                        ⚠️ Directory ID missing. Please close and reopen this
-                        modal.
-                      </div>
-                    )}
                     <OwnButton
                       onClick={handleBuyCompleteFolder}
                       disabled={!filmDirectory?._id}
@@ -812,8 +788,7 @@ const SearchResults = () => {
                         cursor: !filmDirectory?._id ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      🛒 Purchase All Films - $
-                      {filmDirectory?.price?.toFixed(2) || '0.00'}
+                      ➡️ Go to Profile & Purchase
                     </OwnButton>
                   </div>
                 )}
@@ -848,7 +823,7 @@ const SearchResults = () => {
                   }}
                 >
                   <video
-                    src={selectedFilm.videoUrl?.url}
+                    src={selectedFilm.watermarkedVideoUrl?.url || selectedFilm.videoUrl?.url}
                     controls
                     controlsList="nodownload"
                     disablePictureInPicture

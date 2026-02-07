@@ -108,7 +108,14 @@ const PostCard = ({
 }) => {
   const navigate = useNavigate();
   const [currency, setCurrency] = useState('usd');
-  const src = video?.videoUrl?.url;
+
+  // Use watermarked video if film hasn't been purchased yet (has sourceFilmId)
+  const isUnpurchasedFilm = video?.sourceFilmId != null;
+  const src =
+    isUnpurchasedFilm && video?.watermarkedVideoUrl?.url
+      ? video?.watermarkedVideoUrl?.url
+      : video?.videoUrl?.url;
+
   const images = video?.images || [];
   const isPrivate = video?.privacy === 'Private';
   const mediaType = video?.mediaType || 'video';
@@ -133,7 +140,7 @@ const PostCard = ({
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_API_URL}/api/public/stripe-settings`,
-          { withCredentials: true }
+          { withCredentials: true },
         );
         setCurrency(response.data.stripeConfig?.currency || 'usd');
       } catch (err) {
@@ -146,19 +153,22 @@ const PostCard = ({
   // Show buy button for films using TWO different systems:
   // System 1 (OLD): filmDirectoryId exists (folder-based films)
   // System 2 (NEW): sourceFilmId exists with purchasePrice (customerCode films)
-  console.log('Video data:', {
-    caption: video?.caption,
-    filmDirectoryId: video?.filmDirectoryId,
-    sourceFilmId: video?.sourceFilmId,
-    isFilm: video?.isFilm,
-    videoUrl: video?.videoUrl,
-    watermarkedVideoUrl: video?.watermarkedVideoUrl,
-  });
-  
-  const showBuyButton = 
+  // if (video?.mediaType === 'image') {
+  //   console.log('📷 IMAGE GALLERY:', {
+  //     _id: video?._id,
+  //     caption: video?.caption,
+  //     imagesCount: video?.images?.length || 0,
+  //     images: video?.images,
+  //     videoUrl: video?.videoUrl,
+  //     filmDirectoryId: video?.filmDirectoryId,
+  //     sourceFilmId: video?.sourceFilmId,
+  //   });
+  // }
+
+  const showBuyButton =
     !!video?.filmDirectoryId || // Old system: folder-based
     !!(video?.sourceFilmId && video?.sourceFilmId?.purchasePrice); // New system: has price
-    
+
   // Get the purchase price from:
   // 1. sourceFilmId.purchasePrice (new system)
   // 2. filmDirectory.price (old system)
@@ -199,22 +209,25 @@ const PostCard = ({
     e.stopPropagation();
 
     // Determine which film system is being used
-    const isNewSystem = video?.sourceFilmId && video?.sourceFilmId?.purchasePrice;
+    const isNewSystem =
+      video?.sourceFilmId && video?.sourceFilmId?.purchasePrice;
     const isOldSystem = video?.filmDirectoryId;
 
     if (isNewSystem) {
       // NEW SYSTEM: customerCode films
-      const filmId = video?.sourceFilmId?._id || video?.sourceFilmId || video?._id;
+      const filmId =
+        video?.sourceFilmId?._id || video?.sourceFilmId || video?._id;
       navigate(
         `/payment?type=film&filmId=${filmId}&directoryId=new-system&filmName=${encodeURIComponent(
-          video?.caption || 'Film'
-        )}&price=${purchasePrice}`
+          video?.caption || '',
+        )}&price=${purchasePrice}&mediaType=${video?.mediaType || 'video'}`,
       );
     } else if (isOldSystem) {
       // OLD SYSTEM: folder-based films
-      const filmId = video?._id;
+      const filmId =
+        video?.sourceFilmId?._id || video?.sourceFilmId || video?._id;
       const directoryId = video?.filmDirectoryId?._id || video?.filmDirectoryId;
-      
+
       if (!directoryId) {
         console.error('Cannot purchase: Invalid directory ID');
         return;
@@ -222,15 +235,13 @@ const PostCard = ({
 
       navigate(
         `/payment?type=film&filmId=${filmId}&directoryId=${directoryId}&filmName=${encodeURIComponent(
-          video?.caption || 'Film'
-        )}&price=${purchasePrice}`
+          video?.caption || '',
+        )}&price=${purchasePrice}&mediaType=${video?.mediaType || 'video'}`,
       );
     } else {
       console.error('Cannot purchase: Unknown film system');
     }
   };
-
-  const isUnpurchasedFilm = video?.sourceFilmId != null;
 
   const videoContent = (
     <>
@@ -267,7 +278,8 @@ const PostCard = ({
       ) : null}
       {showBuyButton && (
         <BuyButton onClick={handleBuyClick}>
-          Buy Complete Ownership - {getCurrencySymbol(currency)}{purchasePrice.toFixed(2)}
+          Buy Complete Ownership - {getCurrencySymbol(currency)}
+          {purchasePrice.toFixed(2)}
         </BuyButton>
       )}
     </>

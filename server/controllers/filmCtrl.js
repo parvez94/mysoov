@@ -112,11 +112,13 @@ export const uploadFilmToDirectory = async (req, res, next) => {
     }
 
     // Create watermarked video copy if video is local and doesn't already have watermark
-    console.log('🎬 Adding film to directory, checking for watermarking...');
-    console.log('  - storageProvider:', video.storageProvider);
-    console.log('  - videoUrl:', JSON.stringify(video.videoUrl));
-    console.log('  - mediaType:', video.mediaType);
-    console.log('  - watermarkedVideoUrl exists:', !!video.watermarkedVideoUrl);
+    console.log('🔍 Checking watermark conditions for video:', {
+      caption: video.caption,
+      storageProvider: video.storageProvider,
+      hasVideoUrl: !!video.videoUrl?.url,
+      mediaType: video.mediaType,
+      hasWatermark: !!video.watermarkedVideoUrl
+    });
     
     if (
       video.storageProvider === 'local' &&
@@ -124,7 +126,6 @@ export const uploadFilmToDirectory = async (req, res, next) => {
       video.mediaType === 'video' &&
       !video.watermarkedVideoUrl
     ) {
-      console.log('✅ Starting watermark process...');
       try {
         let videoPath = video.videoUrl.url;
         if (videoPath.startsWith('http')) {
@@ -134,26 +135,28 @@ export const uploadFilmToDirectory = async (req, res, next) => {
         videoPath = videoPath.replace(/^\//, '');
 
         const fullVideoPath = path.join(process.cwd(), videoPath);
-        console.log('  - Video path:', fullVideoPath);
-        console.log('  - File exists:', fs.existsSync(fullVideoPath));
 
         if (fs.existsSync(fullVideoPath)) {
+          console.log('🎬 Creating watermarked video copy for:', video.caption);
           const originalFileName = path.basename(video.videoUrl.url);
-          console.log('  - Starting ffmpeg watermarking for:', originalFileName);
           
           const watermarkResult = await createWatermarkedVideoCopy(
             fullVideoPath,
             originalFileName
           );
 
-          console.log('✅ Watermark created:', watermarkResult.url);
+          // Convert to absolute URL
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+          const absoluteUrl = watermarkResult.url.startsWith('http') 
+            ? watermarkResult.url 
+            : `${backendUrl}${watermarkResult.url.startsWith('/') ? '' : '/'}${watermarkResult.url}`;
 
+          console.log('✅ Watermark created:', absoluteUrl);
           video.watermarkedVideoUrl = {
-            url: watermarkResult.url,
+            url: absoluteUrl,
             public_id: watermarkResult.fileName,
           };
-          
-          console.log('✅ Video updated with watermarked video');
+          console.log('✅ Watermarked URL set to:', video.watermarkedVideoUrl);
         } else {
           console.error('❌ Video file not found:', fullVideoPath);
         }
@@ -162,7 +165,6 @@ export const uploadFilmToDirectory = async (req, res, next) => {
         console.error('❌ Stack:', watermarkError.stack);
       }
     } else {
-      console.log('⏭️ Skipping watermark (conditions not met)');
     }
 
     // Update video to mark as film
@@ -170,6 +172,7 @@ export const uploadFilmToDirectory = async (req, res, next) => {
     video.filmDirectoryId = directoryId;
     video.privacy = 'Private'; // Films are private by default
     await video.save();
+    console.log('💾 Video saved with watermark URL:', video.watermarkedVideoUrl?.url);
 
     // Add video to directory
     if (!directory.films.includes(videoId)) {
@@ -234,17 +237,28 @@ export const deleteFilmDirectory = async (req, res, next) => {
     }
 
     // Delete ORIGINAL films in the folder (isFilm: true)
-    // Note: Films don't use profile storage, so no need to update storageUsed
     await Video.deleteMany({
       filmDirectoryId: directoryId,
       isFilm: true,
     });
 
-    // Keep user COPIES but remove filmDirectoryId reference (removes buy button)
-    await Video.updateMany(
-      { filmDirectoryId: directoryId, isFilm: false },
-      { $set: { filmDirectoryId: null } }
-    );
+    // Delete ALL user copies (both purchased and unpurchased)
+    // This includes image galleries in user profiles
+    const userCopies = await Video.find({
+      $or: [
+        { filmDirectoryId: directoryId, isFilm: false }, // Unpurchased copies with filmDirectoryId
+        { sourceFilmId: { $in: await Video.find({ filmDirectoryId: directoryId, isFilm: true }).distinct('_id') } } // Purchased copies
+      ]
+    });
+    
+    console.log(`🗑️ Deleting ${userCopies.length} user copies of gallery ${directoryId}`);
+    
+    await Video.deleteMany({
+      $or: [
+        { filmDirectoryId: directoryId, isFilm: false },
+        { sourceFilmId: { $in: await Video.find({ filmDirectoryId: directoryId, isFilm: true }).distinct('_id') } }
+      ]
+    });
 
     // Delete all images in the directory and their files
     const images = await FilmImage.find({ filmDirectoryId: directoryId });
@@ -291,7 +305,11 @@ export const searchFilmDirectory = async (req, res, next) => {
     // Use simple case-insensitive string comparison (more reliable than regex for exact matches)
     const directory = await FilmDirectory.findOne({
       folderName: { $regex: new RegExp(`^${escapeRegex(code)}$`, 'i') },
-    }).populate('films', 'caption videoUrl watermarkedVideoUrl mediaType createdAt');
+    }).populate({
+      path: 'films',
+      match: { isFilm: true }, // Only return original films, not user copies
+      select: 'caption videoUrl watermarkedVideoUrl mediaType createdAt',
+    });
 
     if (!directory) {
       return next(createError(404, 'Film directory not found'));
@@ -336,6 +354,7 @@ export const getFilmDirectoryDetails = async (req, res, next) => {
 
     const directory = await FilmDirectory.findById(directoryId).populate({
       path: 'films',
+      match: { isFilm: true }, // Only return original films, not user copies
       select: 'caption videoUrl watermarkedVideoUrl thumbnail mediaType createdAt userId',
       populate: {
         path: 'userId',
@@ -399,9 +418,33 @@ export const addFilmToProfile = async (req, res, next) => {
       return next(createError(400, 'Film does not belong to this directory'));
     }
 
+    // Check if user already has this film in their profile
+    let existingCopy = await Video.findOne({
+      userId: userId,
+      sourceFilmId: filmId,
+      isFilm: false,
+    });
+
+    if (existingCopy) {
+      // Already added - just return the existing copy
+      return res.status(200).json({
+        success: true,
+        message: 'Film is already in your profile',
+        film: existingCopy,
+      });
+    }
+
     // Auto-generate watermark if missing
+    console.log('🔍 Checking watermark for film:', {
+      filmId: film._id,
+      caption: film.caption,
+      hasWatermark: !!film.watermarkedVideoUrl,
+      watermarkUrl: film.watermarkedVideoUrl?.url,
+      mediaType: film.mediaType,
+      videoUrl: film.videoUrl?.url
+    });
+    
     if (!film.watermarkedVideoUrl && film.mediaType === 'video' && film.videoUrl?.url) {
-      console.log('⚠️ Watermark missing for directory film, generating now...');
       try {
         let videoPath = film.videoUrl.url;
         if (videoPath.startsWith('http')) {
@@ -412,6 +455,13 @@ export const addFilmToProfile = async (req, res, next) => {
 
         const fullVideoPath = path.join(process.cwd(), videoPath);
         
+        console.log('🎬 Attempting to create watermark:', {
+          videoPath,
+          fullVideoPath,
+          exists: fs.existsSync(fullVideoPath),
+          isUploads: videoPath.includes('/uploads/')
+        });
+        
         if (fs.existsSync(fullVideoPath) && videoPath.includes('/uploads/')) {
           const originalFileName = path.basename(film.videoUrl.url);
           const watermarkResult = await createWatermarkedVideoCopy(
@@ -419,44 +469,123 @@ export const addFilmToProfile = async (req, res, next) => {
             originalFileName
           );
 
+          // Convert to absolute URL
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+          const absoluteUrl = watermarkResult.url.startsWith('http') 
+            ? watermarkResult.url 
+            : `${backendUrl}${watermarkResult.url.startsWith('/') ? '' : '/'}${watermarkResult.url}`;
+
           film.watermarkedVideoUrl = {
-            url: watermarkResult.url,
+            url: absoluteUrl,
             public_id: watermarkResult.fileName,
           };
+          
+          console.log('✅ Watermark created and set:', film.watermarkedVideoUrl);
           
           if (!film.storageProvider) {
             film.storageProvider = 'local';
           }
           
           await film.save();
-          console.log('✅ Watermark generated for directory film');
+        } else {
+          console.log('⚠️ Skipping watermark: file not found or not in uploads/');
         }
       } catch (watermarkError) {
         console.error('❌ Auto-watermark failed:', watermarkError.message);
       }
     }
 
+    // Re-fetch film from DB to ensure we have the latest watermark
+    const freshFilm = await Video.findById(film._id);
+    
     // Create a copy of the film for the user (not removing from directory)
     // Use watermarked video if available (user hasn't purchased yet)
+    
+    // Helper to convert relative URLs to absolute
+    const toAbsoluteUrl = (urlObj) => {
+      if (!urlObj?.url) return urlObj;
+      
+      const url = urlObj.url;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return urlObj;
+      }
+      
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+      return {
+        ...urlObj,
+        url: `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`
+      };
+    };
+    
+    const convertToAbsoluteUrl = (url) => {
+      if (!url) return url;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+      return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
+    
+    // For image galleries, fetch watermarked images from FilmImage collection
+    let images = [];
+    if (freshFilm.mediaType === 'image') {
+      const galleryImages = await FilmImage.find({ 
+        filmDirectoryId: directoryId 
+      }).sort({ createdAt: -1 });
+      
+      images = galleryImages.map(img => ({
+        url: convertToAbsoluteUrl(img.watermarkedUrl), // Use watermarked for unpurchased
+        originalUrl: convertToAbsoluteUrl(img.watermarkedUrl),
+        imageId: img._id,
+        title: img.title || ''
+      }));
+    }
+    
+    // Prepare watermark URL for copy
+    const watermarkedUrlForCopy = freshFilm.watermarkedVideoUrl ? toAbsoluteUrl(freshFilm.watermarkedVideoUrl) : null;
+    
+    console.log('📋 Creating film copy with:', {
+      originalFilmId: freshFilm._id,
+      hasWatermark: !!freshFilm.watermarkedVideoUrl,
+      watermarkUrl: freshFilm.watermarkedVideoUrl?.url,
+      watermarkedUrlForCopy: watermarkedUrlForCopy?.url,
+      mediaType: freshFilm.mediaType
+    });
+    
     const filmCopy = new Video({
-      caption: film.caption,
-      videoUrl: film.watermarkedVideoUrl || film.videoUrl, // Use watermarked version for free copy
-      thumbnail: film.thumbnail,
+      caption: freshFilm.caption,
+      videoUrl: toAbsoluteUrl(freshFilm.videoUrl), // Always use original videoUrl
+      watermarkedVideoUrl: watermarkedUrlForCopy, // Set watermark separately for frontend to detect
+      thumbnail: freshFilm.thumbnail,
+      images: images, // Add watermarked images for galleries
       userId: userId,
       privacy: 'Public',
       isFilm: false,
-      mediaType: film.mediaType,
-      storageProvider: film.storageProvider,
-      sourceFilmId: film._id, // Track the original film
+      mediaType: freshFilm.mediaType,
+      storageProvider: freshFilm.storageProvider,
+      sourceFilmId: freshFilm._id, // Track the original film
       filmDirectoryId: directoryId, // Track the directory for buy button
     });
 
     await filmCopy.save();
+    
+    console.log('✅ Film copy saved:', {
+      copyId: filmCopy._id,
+      videoUrl: filmCopy.videoUrl?.url,
+      watermarkedVideoUrl: filmCopy.watermarkedVideoUrl?.url,
+      sourceFilmId: filmCopy.sourceFilmId
+    });
+    
+    // Re-fetch to verify what was actually saved
+    const savedCopy = await Video.findById(filmCopy._id);
+    console.log('🔍 Verifying saved copy from DB:', {
+      _id: savedCopy._id,
+      watermarkedVideoUrl: savedCopy.watermarkedVideoUrl,
+      hasWatermark: !!savedCopy.watermarkedVideoUrl
+    });
 
     res.status(200).json({
       success: true,
       message: 'Film successfully added to your profile!',
-      film: filmCopy,
+      film: savedCopy,
     });
   } catch (error) {
     next(error);
@@ -496,30 +625,104 @@ export const purchaseFilm = async (req, res, next) => {
       }
     }
 
-    // Verify the original film exists
-    const originalFilm = await Video.findById(filmId);
-    if (!originalFilm) {
+    // Find the film (could be original film OR user's copy)
+    const filmDoc = await Video.findById(filmId);
+    if (!filmDoc) {
       return next(createError(404, 'Film not found'));
     }
 
-    // Old system: verify film belongs to directory
-    if (!isNewSystem && originalFilm.filmDirectoryId?.toString() !== directoryId) {
-      return next(createError(400, 'Film does not belong to this directory'));
-    }
+    let originalFilm;
+    let userFilm;
 
-    // Check if user already has this film in their profile
-    let userFilm = await Video.findOne({
-      userId: userId,
-      sourceFilmId: filmId,
-      isFilm: false,
-    });
+    if (filmDoc.isFilm === true) {
+      // filmId is the ORIGINAL film - find user's copy
+      originalFilm = filmDoc;
+      
+      // Old system: verify film belongs to directory
+      if (!isNewSystem && originalFilm.filmDirectoryId?.toString() !== directoryId) {
+        return next(createError(400, 'Film does not belong to this directory'));
+      }
+
+      // Find user's copy by sourceFilmId
+      userFilm = await Video.findOne({
+        userId: userId,
+        sourceFilmId: filmId,
+        isFilm: false,
+      });
+    } else {
+      // filmId is the USER'S COPY - use it directly
+      userFilm = filmDoc;
+      
+      // Verify this copy belongs to the current user
+      if (userFilm.userId?.toString() !== userId) {
+        return next(createError(403, 'Unauthorized: This film does not belong to you'));
+      }
+      
+      // Try to find the original film
+      const sourceId = userFilm.sourceFilmId;
+      if (sourceId) {
+        originalFilm = await Video.findById(sourceId);
+      }
+      
+      // If originalFilm not found, use userFilm as reference
+      // (original may have been deleted in previous folder cleanup)
+      if (!originalFilm) {
+        console.log('⚠️ Original film not found, using user copy as reference');
+        originalFilm = {
+          _id: sourceId || userFilm._id,
+          caption: userFilm.caption,
+          mediaType: userFilm.mediaType,
+          videoUrl: userFilm.videoUrl,
+          filmDirectoryId: userFilm.filmDirectoryId,
+        };
+      }
+    }
 
     // If film not in user's profile, create a copy (auto-add to profile)
     if (!userFilm) {
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+      
+      const convertToAbsoluteUrl = (url) => {
+        if (!url) return url;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+      };
+
+      let images = [];
+      
+      // For image galleries, fetch original images from FilmImage collection
+      if (originalFilm.mediaType === 'image' && !isNewSystem && directory) {
+        const galleryImages = await FilmImage.find({ 
+          filmDirectoryId: directory._id 
+        }).sort({ createdAt: -1 });
+        
+        if (galleryImages.length === 0) {
+          console.error('⚠️ ERROR: No FilmImage records found for directory', directory._id);
+          return next(createError(500, 'Gallery cannot be purchased: Original images not found. Please contact support.'));
+        }
+        
+        images = galleryImages.map(img => ({
+          url: convertToAbsoluteUrl(img.imageUrl), // Use original, not watermarked
+          originalUrl: convertToAbsoluteUrl(img.imageUrl),
+          imageId: img._id,
+          title: img.title || ''
+        }));
+      }
+      
+      // For galleries, use first original image as videoUrl (not watermarked)
+      let videoUrl = originalFilm.videoUrl;
+      let thumbnailUrl = originalFilm.thumbnail;
+      if (originalFilm.mediaType === 'image' && images.length > 0) {
+        videoUrl = { url: images[0].url };
+        thumbnailUrl = images[0].url;
+        console.log('✅ Setting videoUrl to original image:', videoUrl.url);
+      }
+      
       userFilm = new Video({
         caption: originalFilm.caption,
-        videoUrl: originalFilm.videoUrl,
-        thumbnail: originalFilm.thumbnail,
+        videoUrl: videoUrl,
+        thumbnail: thumbnailUrl,
+        images: images,
         userId: userId,
         privacy: 'Public',
         isFilm: false,
@@ -529,8 +732,29 @@ export const purchaseFilm = async (req, res, next) => {
         filmDirectoryId: null, // Already purchased, no buy button
       });
       await userFilm.save();
+      console.log('✅ Created purchased film with', images.length, 'images');
     } else {
       // Film already in profile, just mark as purchased (remove buy button)
+      console.log('🔄 Updating existing user film:', {
+        filmId: userFilm._id,
+        mediaType: userFilm.mediaType,
+        isNewSystem,
+        hasDirectory: !!directory,
+        directoryId: directory?._id,
+        currentImagesCount: userFilm.images?.length || 0,
+        userFilmDirectoryId: userFilm.filmDirectoryId
+      });
+      
+      // CRITICAL FIX: If directory is null but userFilm has filmDirectoryId, fetch it
+      if (!directory && userFilm.filmDirectoryId && !isNewSystem) {
+        console.log('⚠️ Directory not loaded, fetching from userFilm.filmDirectoryId:', userFilm.filmDirectoryId);
+        directory = await FilmDirectory.findById(userFilm.filmDirectoryId);
+        console.log('✅ Loaded directory:', directory?._id);
+      }
+      
+      // Store directory ID before clearing it (needed for folder deletion later)
+      const directoryIdForCleanup = userFilm.filmDirectoryId || directoryId;
+      
       userFilm.filmDirectoryId = null;
       userFilm.sourceFilmId = null; // Also remove sourceFilmId to indicate fully owned
       
@@ -540,8 +764,17 @@ export const purchaseFilm = async (req, res, next) => {
         userFilm.watermarkedVideoUrl = null; // Remove watermarked reference
       }
       
-      // For image galleries, replace watermarked URLs with original URLs
-      if (userFilm.mediaType === 'image' && userFilm.images && userFilm.images.length > 0) {
+      // For image galleries, fetch and replace with original images from FilmImage collection
+      console.log('🔍 Checking image replacement conditions:', {
+        isImage: userFilm.mediaType === 'image',
+        isOldSystem: !isNewSystem,
+        hasDirectory: !!directory,
+        directoryId: directory?._id
+      });
+      
+      if (userFilm.mediaType === 'image' && !isNewSystem && directory) {
+        console.log('✅ Condition met: Fetching original images from FilmImage collection');
+        console.log('Directory ID for FilmImage query:', directory._id);
         const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
         
         const convertToAbsoluteUrl = (url) => {
@@ -550,45 +783,255 @@ export const purchaseFilm = async (req, res, next) => {
           return `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`;
         };
         
-        userFilm.images = userFilm.images.map(img => ({
-          ...img,
-          url: convertToAbsoluteUrl(img.originalUrl || img.url),
-        }));
+        // Fetch original images from FilmImage collection
+        const galleryImages = await FilmImage.find({ 
+          filmDirectoryId: directory._id 
+        }).sort({ createdAt: -1 });
+        
+        console.log(`📷 Found ${galleryImages.length} FilmImage records for directory ${directory._id}`);
+        if (galleryImages.length === 0) {
+          console.error('⚠️ ERROR: No FilmImage records found for this directory!');
+          console.error('Directory ID:', directory._id);
+          console.error('This gallery may not have been created using the new system');
+          
+          // Return error - cannot purchase without original images
+          return next(createError(500, 'Gallery cannot be purchased: Original images not found. Please contact support.'));
+        }
+        
+        // Replace entire images array with original images
+        const newImages = galleryImages.map(img => {
+          const imageObj = {
+            url: convertToAbsoluteUrl(img.imageUrl), // Use original, not watermarked
+            originalUrl: convertToAbsoluteUrl(img.imageUrl),
+            imageId: img._id,
+            title: img.title || ''
+          };
+          console.log(`  📷 Mapping image: ${img.imageUrl} → ${imageObj.url}`);
+          return imageObj;
+        });
+        
+        userFilm.images = newImages;
+        
+        console.log(`✅ Replaced ${userFilm.images.length} watermarked images with originals`);
+        console.log('First original image URL:', userFilm.images[0]?.url);
         
         // Update thumbnail and videoUrl to use the first non-watermarked image
         if (userFilm.images[0]) {
           userFilm.thumbnailUrl = userFilm.images[0].url;
           userFilm.videoUrl = { url: userFilm.images[0].url };
+          // Mark these as modified so Mongoose saves them
+          userFilm.markModified('videoUrl');
+          userFilm.markModified('thumbnailUrl');
+        }
+        
+        // Mark the document as modified to ensure save works
+        userFilm.markModified('images');
+      } else {
+        console.error('❌ IMAGE REPLACEMENT SKIPPED - Condition not met!');
+        console.error('This will cause purchase to fail because images are still watermarked');
+        if (!directory) {
+          console.error('⚠️ REASON: directory is null or undefined');
+          console.error('Attempting to recover by not failing...');
         }
       }
       
-      await userFilm.save();
+      const saveResult = await userFilm.save();
+      console.log('✅ User film SAVE COMPLETE');
+      console.log('Save result images count:', saveResult.images?.length || 0);
+      console.log('Save result videoUrl:', saveResult.videoUrl?.url);
+      console.log('Save result thumbnailUrl:', saveResult.thumbnailUrl);
+      console.log('Saved images URLs:', userFilm.images?.map(img => img.url));
+      
+      // CRITICAL: Verify save worked by fetching from database
+      const dbCheck = await Video.findById(userFilm._id).lean();
+      console.log('DATABASE CHECK - mediaType:', dbCheck.mediaType);
+      console.log('DATABASE CHECK - images count:', dbCheck.images?.length || 0);
+      console.log('DATABASE CHECK - first image:', dbCheck.images?.[0]);
+      console.log('DATABASE CHECK - videoUrl:', dbCheck.videoUrl?.url);
+      console.log('DATABASE CHECK - thumbnailUrl:', dbCheck.thumbnailUrl);
+      
+      // Validation: For image galleries, check images array; for videos, check videoUrl
+      if (dbCheck.mediaType === 'image') {
+        if (!dbCheck.images || dbCheck.images.length === 0) {
+          console.error('❌ CRITICAL ERROR: Images not saved to database for image gallery!');
+          console.error('Attempted to save:', userFilm.images?.length, 'images');
+          throw new Error('Failed to save images to database');
+        }
+        
+        if (dbCheck.videoUrl?.url && dbCheck.videoUrl.url.includes('watermarked')) {
+          console.error('❌ WARNING: videoUrl still points to watermarked file!');
+          console.error('videoUrl:', dbCheck.videoUrl.url);
+        }
+      } else if (dbCheck.mediaType === 'video') {
+        if (!dbCheck.videoUrl?.url) {
+          console.error('❌ CRITICAL ERROR: videoUrl not saved to database for video!');
+          throw new Error('Failed to save video to database');
+        }
+        
+        if (dbCheck.videoUrl.url.includes('watermarked')) {
+          console.error('❌ WARNING: videoUrl still points to watermarked file after purchase!');
+          console.error('videoUrl:', dbCheck.videoUrl.url);
+        }
+      }
+      
+      // Reload to ensure we have fresh data
+      await userFilm.populate('userId', 'username displayName displayImage');
+      console.log('After populate - images count:', userFilm.images?.length || 0);
+    }
+
+    // ✅ DELETE DUPLICATE USER COPIES (cleanup from old bug)
+    // Remove any other copies for the same user that reference this film
+    try {
+      const originalFilmId = originalFilm._id;
+      
+      // Build query conditions - avoid ObjectId cast error for "new-system"
+      const orConditions = [{ sourceFilmId: originalFilmId }];
+      if (!isNewSystem) {
+        orConditions.push({ filmDirectoryId: directoryId }); // Only for old system
+      }
+      
+      const duplicates = await Video.find({
+        _id: { $ne: userFilm._id }, // Don't delete the purchased copy
+        userId: userId, // Same user
+        $or: orConditions
+      });
+      
+      if (duplicates.length > 0) {
+        console.log(`🗑️ Found ${duplicates.length} duplicate copies for user ${userId}, deleting...`);
+        await Video.deleteMany({
+          _id: { $in: duplicates.map(d => d._id) }
+        });
+        console.log(`✅ Deleted ${duplicates.length} duplicate copies`);
+      }
+    } catch (cleanupError) {
+      console.error('⚠️ Failed to cleanup duplicates:', cleanupError.message);
     }
 
     // ✅ AUTO-DELETE FOLDER AFTER SUCCESSFUL PURCHASE (OLD SYSTEM ONLY)
     if (!isNewSystem) {
       try {
+        console.log('🗑️ Starting folder deletion process for directory:', directoryId);
+        console.log('Directory object exists:', !!directory);
+        console.log('Directory ID:', directory?._id);
+        
+        // Verify the purchaser's images were saved before cleanup
+        const verifyUserFilm = await Video.findById(userFilm._id);
+        console.log('🔍 Verifying saved images before cleanup:', {
+          filmId: verifyUserFilm._id,
+          imageCount: verifyUserFilm.images?.length || 0,
+          firstImageUrl: verifyUserFilm.images?.[0]?.url,
+          allImages: verifyUserFilm.images?.map(img => ({ url: img.url, title: img.title }))
+        });
+        
+        if (!verifyUserFilm.images || verifyUserFilm.images.length === 0) {
+          console.error('⚠️ WARNING: User film has no images saved! Skipping cleanup to prevent data loss.');
+          console.error('This means image replacement did not work properly.');
+          throw new Error('Failed to save images before cleanup');
+        }
+        
+        console.log('✅ Images verified, proceeding with folder deletion');
+        
         // Delete ORIGINAL films in the folder (isFilm: true)
+        const originalFilms = await Video.find({
+          filmDirectoryId: directoryId,
+          isFilm: true,
+        });
+        const originalFilmIds = originalFilms.map(f => f._id);
+        
         await Video.deleteMany({
           filmDirectoryId: directoryId,
           isFilm: true,
         });
 
-        // Keep user COPIES but remove filmDirectoryId reference
-        await Video.updateMany(
-          { filmDirectoryId: directoryId, isFilm: false },
-          { $set: { filmDirectoryId: null } }
-        );
+        // Delete ALL other user copies except the current purchaser's
+        console.log('🗑️ Preparing to delete other users copies...');
+        console.log(`Purchaser user ID: ${userId}`);
+        console.log(`Purchaser film ID: ${userFilm._id}`);
+        
+        // Double-check purchaser's film has no directoryId before cleanup
+        const purchaserCheck = await Video.findById(userFilm._id);
+        console.log('Purchaser film check:', {
+          _id: purchaserCheck._id,
+          userId: purchaserCheck.userId,
+          filmDirectoryId: purchaserCheck.filmDirectoryId,
+          sourceFilmId: purchaserCheck.sourceFilmId,
+          imageCount: purchaserCheck.images?.length || 0
+        });
+        
+        const deletedCount = await Video.deleteMany({
+          _id: { $ne: userFilm._id }, // NEVER delete the purchaser's film
+          $or: [
+            { filmDirectoryId: directoryId, isFilm: false, userId: { $ne: userId } }, // Other unpurchased copies
+            { sourceFilmId: { $in: originalFilmIds }, userId: { $ne: userId } } // Other purchased copies
+          ]
+        });
+        console.log(`🗑️ Deleted ${deletedCount.deletedCount} other user copies`);
 
-        // Delete the directory itself
+        // Delete all image files (watermarked only) and FilmImage records
+        // The purchaser's Video.images already has the original URLs saved
+        const images = await FilmImage.find({ filmDirectoryId: directoryId });
+        console.log(`🗑️ Cleaning up ${images.length} FilmImage records`);
+        
+        for (const image of images) {
+          // Extract file path from URL (remove domain if present)
+          let originalUrlPath = image.imageUrl;
+          if (originalUrlPath.startsWith('http://') || originalUrlPath.startsWith('https://')) {
+            const urlObj = new URL(originalUrlPath);
+            originalUrlPath = urlObj.pathname; // Get just the path part
+          }
+          const originalFilePath = path.join(process.cwd(), originalUrlPath.replace(/^\//, ''));
+          
+          // Verify original file exists
+          if (!fs.existsSync(originalFilePath)) {
+            console.error(`  ❌ WARNING: Original file doesn't exist: ${originalFilePath}`);
+            console.error(`     URL was: ${image.imageUrl}`);
+          } else {
+            console.log(`  ✅ VERIFIED original file exists: ${originalFilePath}`);
+          }
+          
+          // Only delete watermarked files, keep originals for the purchaser
+          if (image.watermarkedUrl) {
+            let watermarkedUrlPath = image.watermarkedUrl;
+            if (watermarkedUrlPath.startsWith('http://') || watermarkedUrlPath.startsWith('https://')) {
+              const urlObj = new URL(watermarkedUrlPath);
+              watermarkedUrlPath = urlObj.pathname;
+            }
+            const watermarkedPath = path.join(process.cwd(), watermarkedUrlPath.replace(/^\//, ''));
+            
+            if (fs.existsSync(watermarkedPath)) {
+              fs.unlinkSync(watermarkedPath);
+              console.log(`  🗑️  Deleted watermarked: ${watermarkedPath}`);
+            }
+          }
+        }
+        
+        // Delete FilmImage records (purchaser's Video.images has the URLs)
+        await FilmImage.deleteMany({ filmDirectoryId: directoryId });
+        console.log(`✅ Deleted FilmImage records`);
+
+        // Delete the directory database record
         await FilmDirectory.findByIdAndDelete(directoryId);
 
         console.log(
           `✅ Folder ${directoryId} automatically deleted after purchase`
         );
+        
+        // FINAL VERIFICATION: Ensure purchaser's film still exists with images
+        const finalCheck = await Video.findById(userFilm._id);
+        if (!finalCheck) {
+          console.error('❌ CRITICAL: Purchaser film was accidentally deleted!');
+          throw new Error('Purchaser film deleted during cleanup');
+        }
+        console.log('✅ FINAL CHECK - Purchaser film still exists:', {
+          _id: finalCheck._id,
+          imageCount: finalCheck.images?.length || 0,
+          hasFilmDirectoryId: !!finalCheck.filmDirectoryId
+        });
+        
       } catch (deleteError) {
         // Log error but don't fail the purchase
         console.error('⚠️ Failed to auto-delete folder:', deleteError);
+        throw deleteError; // Re-throw to prevent completing purchase if cleanup failed
       }
     }
 
@@ -606,12 +1049,23 @@ export const purchaseFilm = async (req, res, next) => {
       console.error('Failed to send purchase confirmation email:', err);
     });
 
+    // Fetch fresh data from database to ensure we return the latest
+    const finalUserFilm = await Video.findById(userFilm._id)
+      .populate('userId', 'username displayName displayImage');
+    
+    console.log('📤 Sending response with film data:', {
+      filmId: finalUserFilm._id,
+      mediaType: finalUserFilm.mediaType,
+      imageCount: finalUserFilm.images?.length || 0,
+      firstImageUrl: finalUserFilm.images?.[0]?.url,
+      allImageUrls: finalUserFilm.images?.map(img => img.url)
+    });
+
     res.status(200).json({
       success: true,
       message:
-        'Film purchased successfully! Download will start automatically.',
-      film: userFilm,
-      downloadUrl: userFilm.videoUrl?.url || userFilm.videoUrl,
+        'Film purchased successfully! Redirecting to your profile...',
+      film: finalUserFilm,
     });
   } catch (error) {
     next(error);
@@ -722,17 +1176,19 @@ export const createFilm = async (req, res, next) => {
       storageProvider: storageProvider,
     });
 
-    console.log('🎬 Film created, checking for watermarking...');
-    console.log('  - storageProvider:', storageProvider);
-    console.log('  - videoUrl:', JSON.stringify(videoUrl));
-    console.log('  - watermarkedVideoUrl exists:', !!film.watermarkedVideoUrl);
+    console.log('🎬 Film created, checking watermark conditions:', {
+      caption,
+      storageProvider,
+      hasVideoUrl: !!videoUrl?.url,
+      videoUrl: videoUrl?.url,
+      hasWatermark: !!film.watermarkedVideoUrl
+    });
     
     if (
       storageProvider === 'local' &&
       videoUrl?.url &&
       !film.watermarkedVideoUrl
     ) {
-      console.log('✅ Starting watermark process...');
       try {
         let videoPath = videoUrl.url;
         if (videoPath.startsWith('http')) {
@@ -742,27 +1198,32 @@ export const createFilm = async (req, res, next) => {
         videoPath = videoPath.replace(/^\//, '');
 
         const fullVideoPath = path.join(process.cwd(), videoPath);
-        console.log('  - Video path:', fullVideoPath);
-        console.log('  - File exists:', fs.existsSync(fullVideoPath));
 
         if (fs.existsSync(fullVideoPath)) {
           const originalFileName = path.basename(videoUrl.url);
-          console.log('  - Starting ffmpeg watermarking for:', originalFileName);
           
           const watermarkResult = await createWatermarkedVideoCopy(
             fullVideoPath,
             originalFileName
           );
 
-          console.log('✅ Watermark created:', watermarkResult.url);
+          // Convert to absolute URL
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+          const absoluteUrl = watermarkResult.url.startsWith('http') 
+            ? watermarkResult.url 
+            : `${backendUrl}${watermarkResult.url.startsWith('/') ? '' : '/'}${watermarkResult.url}`;
 
+          console.log('✅ Film watermark created:', absoluteUrl);
           film.watermarkedVideoUrl = {
-            url: watermarkResult.url,
+            url: absoluteUrl,
             public_id: watermarkResult.fileName,
           };
           await film.save();
+          console.log('💾 Watermark saved to DB:', {
+            filmId: film._id,
+            watermarkedUrl: film.watermarkedVideoUrl?.url
+          });
           
-          console.log('✅ Film updated with watermarked video');
         } else {
           console.error('❌ Video file not found:', fullVideoPath);
         }
@@ -771,10 +1232,16 @@ export const createFilm = async (req, res, next) => {
         console.error('❌ Stack:', watermarkError.stack);
       }
     } else {
-      console.log('⏭️ Skipping watermark (not local storage or no video URL)');
     }
 
     await film.populate('userId', 'username displayName displayImage');
+
+    console.log('📤 Sending response with film:', {
+      filmId: film._id,
+      caption: film.caption,
+      hasWatermark: !!film.watermarkedVideoUrl,
+      watermarkedVideoUrl: film.watermarkedVideoUrl?.url
+    });
 
     res.status(201).json({
       success: true,
@@ -800,7 +1267,6 @@ export const regenerateAllWatermarks = async (req, res, next) => {
       ]
     });
 
-    console.log(`Found ${filmsToWatermark.length} films to watermark`);
 
     const results = {
       total: filmsToWatermark.length,
@@ -828,21 +1294,25 @@ export const regenerateAllWatermarks = async (req, res, next) => {
         }
 
         if (!videoPath.includes('/uploads/')) {
-          console.log(`⏭️ Skipping non-local video: ${film.caption}`);
           continue;
         }
 
         const originalFileName = path.basename(film.videoUrl.url);
         
-        console.log(`Watermarking film: ${film._id} - ${film.caption}`);
         
         const watermarkResult = await createWatermarkedVideoCopy(
           fullVideoPath,
           originalFileName
         );
 
+        // Convert to absolute URL
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+        const absoluteUrl = watermarkResult.url.startsWith('http') 
+          ? watermarkResult.url 
+          : `${backendUrl}${watermarkResult.url.startsWith('/') ? '' : '/'}${watermarkResult.url}`;
+
         film.watermarkedVideoUrl = {
-          url: watermarkResult.url,
+          url: absoluteUrl,
           public_id: watermarkResult.fileName,
         };
         
@@ -853,7 +1323,6 @@ export const regenerateAllWatermarks = async (req, res, next) => {
         await film.save();
         
         results.success++;
-        console.log(`✅ Watermarked: ${film.caption}`);
       } catch (error) {
         console.error(`❌ Failed to watermark film ${film._id}:`, error);
         results.failed++;
@@ -919,6 +1388,8 @@ export const deleteFilm = async (req, res, next) => {
 export const searchFilmByCode = async (req, res, next) => {
   try {
     const { code } = req.params;
+    
+    console.log('🔍 Searching for film with code:', code);
 
     if (!code) {
       return next(createError(400, 'Customer code is required'));
@@ -931,16 +1402,20 @@ export const searchFilmByCode = async (req, res, next) => {
     });
 
     if (!film) {
+      console.log('❌ Film not found with code:', code);
       return next(createError(404, 'Film not found with this code'));
     }
+    
+    console.log('✅ Film found:', {
+      filmId: film._id,
+      caption: film.caption,
+      hasWatermark: !!film.watermarkedVideoUrl,
+      watermarkUrl: film.watermarkedVideoUrl?.url
+    });
 
-    console.log('🎬 Redeeming film:', code);
-    console.log('  - Original videoUrl:', film.videoUrl?.url);
-    console.log('  - Watermarked videoUrl:', film.watermarkedVideoUrl?.url);
 
     // Auto-generate watermark if missing
     if (!film.watermarkedVideoUrl && film.mediaType === 'video' && film.videoUrl?.url) {
-      console.log('⚠️ Watermark missing, generating now...');
       try {
         let videoPath = film.videoUrl.url;
         if (videoPath.startsWith('http')) {
@@ -958,8 +1433,14 @@ export const searchFilmByCode = async (req, res, next) => {
             originalFileName
           );
 
+          // Convert to absolute URL
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+          const absoluteUrl = watermarkResult.url.startsWith('http') 
+            ? watermarkResult.url 
+            : `${backendUrl}${watermarkResult.url.startsWith('/') ? '' : '/'}${watermarkResult.url}`;
+
           film.watermarkedVideoUrl = {
-            url: watermarkResult.url,
+            url: absoluteUrl,
             public_id: watermarkResult.fileName,
           };
           
@@ -968,14 +1449,12 @@ export const searchFilmByCode = async (req, res, next) => {
           }
           
           await film.save();
-          console.log('✅ Watermark generated:', watermarkResult.url);
         }
       } catch (watermarkError) {
         console.error('❌ Auto-watermark failed:', watermarkError.message);
       }
     }
 
-    console.log('  - Will use:', film.watermarkedVideoUrl?.url || film.videoUrl?.url);
 
     // Check if user already has this film
     const userHasFilm = await Video.findOne({
@@ -984,37 +1463,95 @@ export const searchFilmByCode = async (req, res, next) => {
     });
 
     if (userHasFilm) {
+      console.log('⚠️ User already has this film');
       return next(
         createError(400, 'You already have this film in your profile')
       );
     }
+    
+    console.log('✅ User does not have this film yet, creating copy...');
 
     // Create a copy for the user (add to profile automatically)
     // Use watermarked video if available (user hasn't purchased yet)
+    
+    // Helper to convert relative URLs to absolute
+    const toAbsoluteUrl = (urlObj) => {
+      if (!urlObj?.url) return urlObj;
+      
+      const url = urlObj.url;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        return urlObj;
+      }
+      
+      const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+      return {
+        ...urlObj,
+        url: `${backendUrl}${url.startsWith('/') ? '' : '/'}${url}`
+      };
+    };
+    
+    // Re-fetch film from DB to ensure we have the latest watermark
+    const freshFilm = await Video.findById(film._id);
+    
+    console.log('📋 Creating film copy from search:', {
+      originalFilmId: freshFilm._id,
+      hasWatermark: !!freshFilm.watermarkedVideoUrl,
+      watermarkUrl: freshFilm.watermarkedVideoUrl?.url,
+      videoUrl: freshFilm.videoUrl?.url
+    });
+    
+    // Prepare watermarked URL (ensure it's set if exists)
+    const watermarkedUrl = freshFilm.watermarkedVideoUrl ? toAbsoluteUrl(freshFilm.watermarkedVideoUrl) : null;
+    
     const filmCopy = new Video({
-      caption: film.caption,
-      videoUrl: film.watermarkedVideoUrl || film.videoUrl, // Use watermarked version
-      thumbnail: film.thumbnail,
+      caption: freshFilm.caption,
+      videoUrl: toAbsoluteUrl(freshFilm.videoUrl), // Always use original videoUrl
+      watermarkedVideoUrl: watermarkedUrl, // Set watermark separately for frontend
+      thumbnail: freshFilm.thumbnail,
       userId: req.user.id,
       privacy: 'Public',
       isFilm: false,
-      mediaType: film.mediaType,
-      storageProvider: film.storageProvider,
-      sourceFilmId: film._id,
+      mediaType: freshFilm.mediaType,
+      storageProvider: freshFilm.storageProvider,
+      sourceFilmId: freshFilm._id,
     });
 
     await filmCopy.save();
-
-    res.status(200).json({
+    
+    console.log('✅ Film copy saved from search:', {
+      copyId: filmCopy._id,
+      videoUrl: filmCopy.videoUrl?.url,
+      watermarkedVideoUrl: filmCopy.watermarkedVideoUrl?.url,
+      sourceFilmId: filmCopy.sourceFilmId
+    });
+    
+    // Re-fetch to verify what was actually saved
+    const savedCopy = await Video.findById(filmCopy._id);
+    console.log('🔍 Verifying saved copy from DB:', {
+      _id: savedCopy._id,
+      watermarkedVideoUrl: savedCopy.watermarkedVideoUrl,
+      hasWatermark: !!savedCopy.watermarkedVideoUrl
+    });
+    
+    const responseData = {
       success: true,
       message: 'Film successfully added to your profile!',
       film: {
-        ...filmCopy.toObject(),
-        originalTitle: film.caption,
-        purchasePrice: film.purchasePrice,
-        customerCode: film.customerCode,
+        ...savedCopy.toObject(),
+        originalTitle: freshFilm.caption,
+        purchasePrice: freshFilm.purchasePrice,
+        customerCode: freshFilm.customerCode,
       },
+    };
+    
+    console.log('📤 Sending response to frontend:', {
+      filmId: responseData.film._id,
+      caption: responseData.film.caption,
+      watermarkedVideoUrl: responseData.film.watermarkedVideoUrl,
+      hasWatermark: !!responseData.film.watermarkedVideoUrl
     });
+
+    res.status(200).json(responseData);
   } catch (error) {
     next(error);
   }
@@ -1226,6 +1763,104 @@ export const getImagesByAccessCode = async (req, res, next) => {
         price: directory.price,
         imageCount: images.length,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cleanup broken galleries with watermarked videoUrl
+export const cleanupBrokenGalleries = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    let totalDeleted = 0;
+    
+    // 1. Find and delete galleries with watermarked videoUrl
+    const watermarkedVideoUrlGalleries = await Video.find({
+      userId: userId,
+      mediaType: 'image',
+      isFilm: false,
+      'videoUrl.url': { $regex: 'watermarked' }
+    });
+    console.log(`Found ${watermarkedVideoUrlGalleries.length} galleries with watermarked videoUrl for user ${userId}`);
+    watermarkedVideoUrlGalleries.forEach(g => {
+      console.log(`  - ${g._id}: ${g.caption || 'No caption'} - ${g.videoUrl?.url}`);
+    });
+    
+    const result1 = await Video.deleteMany({
+      userId: userId,
+      mediaType: 'image',
+      isFilm: false,
+      'videoUrl.url': { $regex: 'watermarked' }
+    });
+    totalDeleted += result1.deletedCount;
+    console.log(`✅ Deleted ${result1.deletedCount} galleries with watermarked videoUrl`);
+    
+    // 2. Find and delete galleries with watermarked images in images array
+    const watermarkedImagesGalleries = await Video.find({
+      userId: userId,
+      mediaType: 'image',
+      isFilm: false,
+      images: { $exists: true, $ne: [] }
+    });
+    
+    const galleriesToDelete = [];
+    for (const gallery of watermarkedImagesGalleries) {
+      // Check if any image URL contains 'watermarked'
+      const hasWatermarkedImages = gallery.images?.some(img => 
+        img.url && img.url.includes('watermarked')
+      );
+      if (hasWatermarkedImages) {
+        galleriesToDelete.push(gallery._id);
+        console.log(`  - ${gallery._id}: ${gallery.caption || 'No caption'} - has watermarked images`);
+      }
+    }
+    
+    if (galleriesToDelete.length > 0) {
+      const result2 = await Video.deleteMany({
+        _id: { $in: galleriesToDelete }
+      });
+      totalDeleted += result2.deletedCount;
+      console.log(`✅ Deleted ${result2.deletedCount} galleries with watermarked images array`);
+    }
+    
+    // 3. Find and remove duplicate galleries (keep only the newest for each sourceFilmId)
+    const allUserGalleries = await Video.find({
+      userId: userId,
+      mediaType: 'image',
+      isFilm: false,
+      sourceFilmId: { $exists: true, $ne: null }
+    }).sort({ createdAt: -1 });
+    
+    const seenSourceFilmIds = new Set();
+    const duplicatesToDelete = [];
+    
+    for (const gallery of allUserGalleries) {
+      const sourceId = gallery.sourceFilmId?.toString();
+      if (sourceId) {
+        if (seenSourceFilmIds.has(sourceId)) {
+          // This is a duplicate - delete it
+          duplicatesToDelete.push(gallery._id);
+          console.log(`  - ${gallery._id}: ${gallery.caption || 'No caption'} - duplicate of sourceFilmId ${sourceId}`);
+        } else {
+          // First occurrence - keep it
+          seenSourceFilmIds.add(sourceId);
+        }
+      }
+    }
+    
+    if (duplicatesToDelete.length > 0) {
+      const result3 = await Video.deleteMany({
+        _id: { $in: duplicatesToDelete }
+      });
+      totalDeleted += result3.deletedCount;
+      console.log(`✅ Deleted ${result3.deletedCount} duplicate galleries`);
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: `Deleted ${totalDeleted} broken/duplicate galleries`,
+      deletedCount: totalDeleted
     });
   } catch (error) {
     next(error);

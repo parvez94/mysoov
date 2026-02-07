@@ -19,13 +19,13 @@ ffmpeg.setFfprobePath(ffprobeInstaller.path);
  * @returns {Promise<string>} - Path to processed video
  */
 export const processVideo = async (videoPath, metadata, outputPath) => {
-  const { trimStart, trimEnd, backgroundMusic, musicVolume = 0.5, originalVolume = 1 } = metadata || {};
-
-  console.log('🎥 processVideo called with:');
-  console.log('  - videoPath:', videoPath);
-  console.log('  - metadata:', metadata);
-  console.log('  - trimStart:', trimStart, 'trimEnd:', trimEnd);
-  console.log('  - outputPath:', outputPath);
+  const {
+    trimStart,
+    trimEnd,
+    backgroundMusic,
+    musicVolume = 0.5,
+    originalVolume = 1,
+  } = metadata || {};
 
   return new Promise((resolve, reject) => {
     let command = ffmpeg(videoPath);
@@ -33,12 +33,8 @@ export const processVideo = async (videoPath, metadata, outputPath) => {
     // Apply trimming if specified
     if (trimStart !== undefined && trimEnd !== undefined) {
       const duration = trimEnd - trimStart;
-      console.log('✂️ Applying trim: start =', trimStart, 'duration =', duration);
-      command = command
-        .setStartTime(trimStart)
-        .setDuration(duration);
+      command = command.setStartTime(trimStart).setDuration(duration);
     } else {
-      console.log('⚠️ No trimming applied - trimStart or trimEnd is undefined');
     }
 
     // If background music is provided, mix it with the video
@@ -51,7 +47,7 @@ export const processVideo = async (videoPath, metadata, outputPath) => {
           // Adjust background music volume and loop it
           `[1:a]volume=${musicVolume},aloop=loop=-1:size=2e+09[a2]`,
           // Mix both audio streams
-          `[a1][a2]amix=inputs=2:duration=first:dropout_transition=2[aout]`
+          `[a1][a2]amix=inputs=2:duration=first:dropout_transition=2[aout]`,
         ])
         .outputOptions(['-map', '0:v', '-map', '[aout]']);
     } else if (originalVolume !== 1) {
@@ -66,12 +62,14 @@ export const processVideo = async (videoPath, metadata, outputPath) => {
       .audioCodec('aac')
       .audioBitrate('192k')
       .outputOptions([
-        '-preset', 'fast',
-        '-crf', '23',
-        '-movflags', '+faststart'
+        '-preset',
+        'fast',
+        '-crf',
+        '23',
+        '-movflags',
+        '+faststart',
       ])
       .on('end', () => {
-        console.log('✅ Video processing completed:', outputPath);
         resolve(outputPath);
       })
       .on('error', (err, stdout, stderr) => {
@@ -81,7 +79,6 @@ export const processVideo = async (videoPath, metadata, outputPath) => {
       })
       .on('progress', (progress) => {
         if (progress.percent) {
-          console.log(`Processing: ${Math.round(progress.percent)}% done`);
         }
       })
       .run();
@@ -140,7 +137,9 @@ export const addVideoWatermark = (videoPath, outputPath) => {
         return;
       }
 
-      const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+      const videoStream = metadata.streams.find(
+        (s) => s.codec_type === 'video',
+      );
       if (!videoStream) {
         reject(new Error('No video stream found'));
         return;
@@ -148,46 +147,46 @@ export const addVideoWatermark = (videoPath, outputPath) => {
 
       const width = videoStream.width;
       const height = videoStream.height;
-      
-      // Calculate font sizes to match image watermark (8% of min dimension)
-      const mainFontSize = Math.floor(Math.min(width, height) * 0.08);
-      const subFontSize = Math.floor(mainFontSize * 0.3);
+
+      // Calculate font sizes to match image watermark (10% of min dimension)
+      const mainFontSize = Math.floor(Math.min(width, height) * 0.1);
+      const subFontSize = Math.floor(mainFontSize * 0.4);
       const lineSpacing = Math.floor(mainFontSize * 0.5);
-      
+
       // Font file path (try Arial Bold, fallback to default)
       let fontfile = '';
       if (fs.existsSync('/System/Library/Fonts/Supplemental/Arial Bold.ttf')) {
         fontfile = '/System/Library/Fonts/Supplemental/Arial Bold.ttf';
-      } else if (fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')) {
+      } else if (
+        fs.existsSync('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')
+      ) {
         fontfile = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
       }
 
       const filterComplex = [
         `drawtext=text='MYSOOV TV':` +
-        `fontsize=${mainFontSize}:` +
-        (fontfile ? `fontfile=${fontfile}:` : '') +
-        `fontcolor=white@0.5:` +
-        `x=(w-text_w)/2:` +
-        `y=(h-text_h)/2-${lineSpacing / 2}:` +
-        `shadowcolor=black@0.9:` +
-        `shadowx=2:` +
-        `shadowy=2:` +
-        `borderw=2:` +
-        `bordercolor=black@0.5:` +
-        `box=0`,
-        
+          `fontsize=${mainFontSize}:` +
+          (fontfile ? `fontfile=${fontfile}:` : '') +
+          `fontcolor=white@0.6:` +
+          `x=(w-text_w)/2:` +
+          `y=(h-text_h)/2-${lineSpacing / 2}:` +
+          `shadowcolor=black@0.3:` +
+          `shadowx=0:` +
+          `shadowy=0:` +
+          `borderw=2:` +
+          `bordercolor=black@0.6`,
+
         `drawtext=text='ALL RIGHTS RESERVED':` +
-        `fontsize=${subFontSize}:` +
-        (fontfile ? `fontfile=${fontfile}:` : '') +
-        `fontcolor=white@0.5:` +
-        `x=(w-text_w)/2:` +
-        `y=(h-text_h)/2+${lineSpacing}:` +
-        `shadowcolor=black@0.9:` +
-        `shadowx=2:` +
-        `shadowy=2:` +
-        `borderw=1:` +
-        `bordercolor=black@0.5:` +
-        `box=0`
+          `fontsize=${subFontSize}:` +
+          (fontfile ? `fontfile=${fontfile}:` : '') +
+          `fontcolor=white@0.6:` +
+          `x=(w-text_w)/2:` +
+          `y=(h-text_h)/2+${lineSpacing}:` +
+          `shadowcolor=black@0.3:` +
+          `shadowx=0:` +
+          `shadowy=0:` +
+          `borderw=1:` +
+          `bordercolor=black@0.6`,
       ].join(',');
 
       ffmpeg(videoPath)
@@ -197,12 +196,14 @@ export const addVideoWatermark = (videoPath, outputPath) => {
         .audioCodec('aac')
         .audioBitrate('192k')
         .outputOptions([
-          '-preset', 'fast',
-          '-crf', '23',
-          '-movflags', '+faststart'
+          '-preset',
+          'fast',
+          '-crf',
+          '23',
+          '-movflags',
+          '+faststart',
         ])
         .on('end', () => {
-          console.log('✅ Video watermarking completed:', outputPath);
           resolve(outputPath);
         })
         .on('error', (err, stdout, stderr) => {
@@ -212,7 +213,6 @@ export const addVideoWatermark = (videoPath, outputPath) => {
         })
         .on('progress', (progress) => {
           if (progress.percent) {
-            console.log(`Watermarking: ${Math.round(progress.percent)}% done`);
           }
         })
         .run();
@@ -226,7 +226,10 @@ export const addVideoWatermark = (videoPath, outputPath) => {
  * @param {string} originalName - Original filename
  * @returns {Promise<object>} - Object with path, url, and fileName
  */
-export const createWatermarkedVideoCopy = async (originalPath, originalName) => {
+export const createWatermarkedVideoCopy = async (
+  originalPath,
+  originalName,
+) => {
   try {
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 18);
@@ -262,5 +265,5 @@ export default {
   getVideoDuration,
   extractAudio,
   addVideoWatermark,
-  createWatermarkedVideoCopy
+  createWatermarkedVideoCopy,
 };

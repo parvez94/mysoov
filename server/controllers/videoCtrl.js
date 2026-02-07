@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import Comment from '../models/Comment.js';
 import { createError } from '../utils/error.js';
 import { deleteFromLocal } from '../utils/localStorage.js';
-import { processVideo } from '../utils/videoProcessor.js';
+import { processVideo, createWatermarkedVideoCopy } from '../utils/videoProcessor.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -23,6 +23,63 @@ export const addVideo = async (req, res, next) => {
     
     const savedVideo = await newVideo.save();
     
+    console.log('📹 Video saved:', {
+      caption: savedVideo.caption,
+      isFilm: savedVideo.isFilm,
+      storageProvider: savedVideo.storageProvider,
+      hasVideoUrl: !!savedVideo.videoUrl?.url,
+      mediaType: savedVideo.mediaType,
+      hasWatermark: !!savedVideo.watermarkedVideoUrl
+    });
+    
+    // Create watermark for film videos
+    if (
+      savedVideo.isFilm &&
+      savedVideo.storageProvider === 'local' &&
+      savedVideo.videoUrl?.url &&
+      savedVideo.mediaType === 'video' &&
+      !savedVideo.watermarkedVideoUrl
+    ) {
+      try {
+        console.log('🎬 Creating watermark for film:', savedVideo.caption);
+        let videoPath = savedVideo.videoUrl.url;
+        if (videoPath.startsWith('http')) {
+          const urlObj = new URL(videoPath);
+          videoPath = urlObj.pathname;
+        }
+        videoPath = videoPath.replace(/^\//, '');
+
+        const fullVideoPath = path.join(process.cwd(), videoPath);
+
+        if (fs.existsSync(fullVideoPath)) {
+          const originalFileName = path.basename(savedVideo.videoUrl.url);
+          
+          const watermarkResult = await createWatermarkedVideoCopy(
+            fullVideoPath,
+            originalFileName
+          );
+
+          // Convert to absolute URL
+          const backendUrl = process.env.BACKEND_URL || 'http://localhost:5100';
+          const absoluteUrl = watermarkResult.url.startsWith('http') 
+            ? watermarkResult.url 
+            : `${backendUrl}${watermarkResult.url.startsWith('/') ? '' : '/'}${watermarkResult.url}`;
+
+          console.log('✅ Watermark created:', absoluteUrl);
+          savedVideo.watermarkedVideoUrl = {
+            url: absoluteUrl,
+            public_id: watermarkResult.fileName,
+          };
+          await savedVideo.save();
+          console.log('✅ Watermarked video saved to DB');
+        } else {
+          console.error('❌ Video file not found:', fullVideoPath);
+        }
+      } catch (watermarkError) {
+        console.error('❌ Watermark creation failed:', watermarkError.message);
+      }
+    }
+    
     // If video has editing metadata, process it in the background
     if (videoMetadata && videoData.mediaType === 'video' && videoData.videoUrl) {
       processVideoInBackground(savedVideo._id, videoData.videoUrl, videoMetadata);
@@ -37,7 +94,6 @@ export const addVideo = async (req, res, next) => {
 // Process video in background (non-blocking)
 async function processVideoInBackground(videoId, videoUrl, metadata) {
   try {
-    console.log('🎬 Starting video processing for:', videoId);
     
     // Get video file path from URL
     const videoPath = getLocalPathFromUrl(videoUrl.url || videoUrl);
@@ -57,8 +113,6 @@ async function processVideoInBackground(videoId, videoUrl, metadata) {
       musicPath = metadata.backgroundMusic;
     }
     
-    console.log('📝 Video processing metadata:', metadata);
-    console.log('📝 Trim settings - Start:', metadata.trimStart, 'End:', metadata.trimEnd);
     
     // Process video with FFmpeg
     const processedPath = await processVideo(videoPath, {
@@ -80,10 +134,8 @@ async function processVideoInBackground(videoId, videoUrl, metadata) {
     // Delete original video file to save space
     if (fs.existsSync(videoPath)) {
       fs.unlinkSync(videoPath);
-      console.log('🗑️ Deleted original video:', videoPath);
     }
     
-    console.log('✅ Video processing completed:', videoId);
   } catch (err) {
     console.error('❌ Background video processing failed:', err);
     // Video stays with original URL if processing fails
@@ -107,7 +159,8 @@ function getLocalPathFromUrl(url) {
 export const getVideo = async (req, res, next) => {
   try {
     const videoDoc = await Video.findById(req.params.id)
-      .populate('sourceFilmId', 'purchasePrice customerCode caption');
+      .populate('sourceFilmId', 'purchasePrice customerCode caption')
+      .populate('filmDirectoryId', 'price folderName description');
     if (!videoDoc) return next(createError(404, 'Video not found'));
 
     // Convert to plain object for safe spreading

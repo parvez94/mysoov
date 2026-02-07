@@ -23,6 +23,7 @@ import {
   getDirectoryImages,
   deleteImageFromDirectory,
   getImagesByAccessCode,
+  cleanupBrokenGalleries,
 } from '../controllers/filmCtrl.js';
 import { verifyToken } from '../utils/verifyToken.js';
 import { verifyAdmin } from '../middlewares/adminAuth.js';
@@ -101,6 +102,7 @@ router.get('/search/:code', verifyToken, searchFilmDirectory);
 router.get('/details/:directoryId', verifyToken, getFilmDirectoryDetails);
 router.post('/add-to-profile', verifyToken, addFilmToProfile);
 router.post('/purchase', verifyToken, purchaseFilm);
+router.delete('/cleanup-broken', verifyToken, cleanupBrokenGalleries);
 
 // ========================================
 // FILM IMAGE GALLERY SYSTEM

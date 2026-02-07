@@ -194,7 +194,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
   const [cropperReady, setCropperReady] = useState(false);
 
   useEffect(() => {
-    console.log('ImageEditor mounted with URL:', imageUrl);
     setImageLoaded(false);
     setCropperReady(false);
     
@@ -207,12 +206,9 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
   }, [imageUrl]);
 
   useEffect(() => {
-    console.log('croppedAreaPixels state changed to:', croppedAreaPixels);
   }, [croppedAreaPixels]);
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
-    console.log('onCropComplete called with:', croppedArea, croppedAreaPixels);
-    console.log('Setting croppedAreaPixels to:', croppedAreaPixels);
     
     if (croppedAreaPixels && 
         !isNaN(croppedAreaPixels.width) && 
@@ -220,7 +216,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
         !isNaN(croppedAreaPixels.x) &&
         !isNaN(croppedAreaPixels.y)) {
       setCroppedAreaPixels(croppedAreaPixels);
-      console.log('✓ Valid crop area set');
     } else {
       console.warn('⚠️ Invalid crop area received:', croppedAreaPixels);
     }
@@ -242,9 +237,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
   const getCroppedImg = async (imageSrc, pixelCrop, rotation = 0, text = null, textConfig = {}) => {
     const image = await createImage(imageSrc);
     
-    console.log('Image loaded:', image.width, 'x', image.height);
-    console.log('Pixel crop:', pixelCrop);
-    console.log('Rotation:', rotation);
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -264,7 +256,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
 
-    console.log('Temp canvas size:', canvasWidth, 'x', canvasHeight);
 
     ctx.translate(canvasWidth / 2, canvasHeight / 2);
     ctx.rotate(rotRad);
@@ -282,7 +273,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
     const cropWidth = Math.max(1, Math.floor(pixelCrop.width));
     const cropHeight = Math.max(1, Math.floor(pixelCrop.height));
 
-    console.log('Final crop size:', cropWidth, 'x', cropHeight);
 
     if (cropWidth > 10000 || cropHeight > 10000) {
       throw new Error('Crop dimensions too large');
@@ -321,7 +311,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
       try {
         croppedCanvas.toBlob((blob) => {
           if (blob) {
-            console.log('Blob created successfully:', blob.size, 'bytes');
             resolve(blob);
           } else {
             console.error('toBlob returned null');
@@ -337,10 +326,7 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
 
   const handleSave = async () => {
     try {
-      console.log('handleSave called');
-      console.log('Current croppedAreaPixels state:', croppedAreaPixels);
-      console.log('croppedAreaPixels type:', typeof croppedAreaPixels);
-      console.log('croppedAreaPixels values:', {
+      console.log('Cropped area:', {
         width: croppedAreaPixels?.width,
         height: croppedAreaPixels?.height,
         x: croppedAreaPixels?.x,
@@ -357,7 +343,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
         return;
       }
       
-      console.log('✓ Proceeding with save');
 
       const croppedImageBlob = await getCroppedImg(
         imageUrl,
@@ -402,7 +387,6 @@ const ImageEditor = ({ imageUrl, onSave, onCancel }) => {
             restrictPosition={true}
             showGrid={true}
             onMediaLoaded={(mediaSize) => {
-              console.log('Media loaded:', mediaSize);
               setImageLoaded(true);
             }}
             style={{

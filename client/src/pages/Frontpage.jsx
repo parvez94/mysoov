@@ -593,7 +593,7 @@ const FilmModalOverlay = styled.div`
 const FilmModalContent = styled.div`
   background: #1a1a1a;
   border-radius: 12px;
-  max-width: 900px;
+  max-width: 750px;
   width: 100%;
   position: relative;
   animation: slideUp 0.3s ease-out;
@@ -1058,12 +1058,19 @@ const Frontpage = () => {
   const handleBuyFilm = () => {
     if (!redeemedFilm) return;
 
-    const filmId = redeemedFilm.sourceFilmId || redeemedFilm._id;
+    // Use user's copy ID directly (redeemedFilm is already the user's copy after redemption)
+    const filmId = redeemedFilm._id;
     const price = redeemedFilm.purchasePrice ?? 0;
     const filmName = encodeURIComponent(redeemedFilm.caption || 'Film');
+    
+    // Determine directory ID: old system (folder-based) vs new system (customerCode)
+    const directoryId = redeemedFilm.filmDirectoryId 
+      ? (redeemedFilm.filmDirectoryId._id || redeemedFilm.filmDirectoryId) 
+      : 'new-system';
 
+    const mediaType = redeemedFilm.mediaType || 'video';
     navigate(
-      `/payment?type=film&filmId=${filmId}&directoryId=new-system&price=${price}&filmName=${filmName}`
+      `/payment?type=film&filmId=${filmId}&directoryId=${directoryId}&price=${price}&filmName=${filmName}&mediaType=${mediaType}`
     );
   };
 
@@ -1101,6 +1108,13 @@ const Frontpage = () => {
   // Helper function to get video URL
   const getVideoUrl = (video) => {
     if (!video?.videoUrl) return null;
+    
+    // Use watermarked video if film hasn't been purchased yet (has sourceFilmId)
+    const isUnpurchasedFilm = video?.sourceFilmId != null;
+    if (isUnpurchasedFilm && video?.watermarkedVideoUrl?.url) {
+      return video.watermarkedVideoUrl.url;
+    }
+    
     if (typeof video.videoUrl === 'string') return video.videoUrl;
     if (typeof video.videoUrl === 'object' && video.videoUrl.url) {
       return video.videoUrl.url;
@@ -1457,9 +1471,9 @@ const Frontpage = () => {
                     {redeemedFilm.purchasePrice?.toFixed(2) || '0.00'}
                     <span>Purchase Price</span>
                   </FilmPrice>
-                  <FilmBuyButton onClick={handleBuyFilm}>
-                    <FaPlay />
-                    Buy Now
+                  <FilmBuyButton onClick={() => navigate(`/${currentUser?.username || 'profile'}`)}>
+                    <FaUser />
+                    Go to Profile
                   </FilmBuyButton>
                 </FilmPriceRow>
 

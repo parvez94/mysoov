@@ -31,8 +31,6 @@ router.post('/facebook-data-deletion', async (req, res) => {
     const confirmationCode = crypto.randomBytes(16).toString('hex');
     const statusUrl = `${process.env.CLIENT_URL || process.env.FRONTEND_URL || 'https://mysoov.tv'}/data-deletion-status/${confirmationCode}`;
 
-    console.log(`Data deletion request received for Facebook user: ${userId}`);
-    console.log(`Confirmation code: ${confirmationCode}`);
 
     return res.json({
       url: statusUrl,

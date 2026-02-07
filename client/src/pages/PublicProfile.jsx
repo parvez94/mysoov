@@ -512,11 +512,11 @@ const LoadingAvatar = styled.div`
 `;
 
 const LoadingText = styled.div`
-  height: ${(props) => props.height || '20px'};
-  width: ${(props) => props.width || '100%'};
+  height: ${(props) => props.$height || '20px'};
+  width: ${(props) => props.$width || '100%'};
   background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  margin-bottom: ${(props) => props.marginBottom || '8px'};
+  margin-bottom: ${(props) => props.$marginBottom || '8px'};
   animation: pulse 1.5s ease-in-out infinite;
 
   @keyframes pulse {
@@ -1056,14 +1056,14 @@ const PublicProfile = () => {
         <LoadingUserInfo>
           <LoadingAvatar />
           <LoadingUserNames>
-            <LoadingText height='32px' width='200px' marginBottom='8px' />
-            <LoadingText height='20px' width='120px' marginBottom='16px' />
-            <LoadingText height='36px' width='100px' marginBottom='0px' />
+            <LoadingText $height='32px' $width='200px' $marginBottom='8px' />
+            <LoadingText $height='20px' $width='120px' $marginBottom='16px' />
+            <LoadingText $height='36px' $width='100px' $marginBottom='0px' />
           </LoadingUserNames>
         </LoadingUserInfo>
-        <LoadingText height='20px' width='300px' marginBottom='12px' />
-        <LoadingText height='20px' width='250px' marginBottom='40px' />
-        <LoadingText height='40px' width='100%' marginBottom='20px' />
+        <LoadingText $height='20px' $width='300px' $marginBottom='12px' />
+        <LoadingText $height='20px' $width='250px' $marginBottom='40px' />
+        <LoadingText $height='40px' $width='100%' $marginBottom='20px' />
         <div
           style={{
             display: 'grid',
@@ -1073,9 +1073,9 @@ const PublicProfile = () => {
         >
           {[1, 2, 3].map((i) => (
             <div key={i}>
-              <LoadingText height='300px' width='100%' marginBottom='8px' />
-              <LoadingText height='16px' width='80%' marginBottom='4px' />
-              <LoadingText height='16px' width='60%' marginBottom='0px' />
+              <LoadingText $height='300px' $width='100%' $marginBottom='8px' />
+              <LoadingText $height='16px' $width='80%' $marginBottom='4px' />
+              <LoadingText $height='16px' $width='60%' $marginBottom='0px' />
             </div>
           ))}
         </div>
@@ -1244,9 +1244,9 @@ const PublicProfile = () => {
             (activeTab === 'bookmarked' && savedVideosLoading)) &&
             [1, 2, 3].map((i) => (
               <div key={i}>
-                <LoadingText height='200px' width='100%' marginBottom='8px' />
-                <LoadingText height='16px' width='80%' marginBottom='4px' />
-                <LoadingText height='16px' width='60%' marginBottom='0px' />
+                <LoadingText $height='200px' $width='100%' $marginBottom='8px' />
+                <LoadingText $height='16px' $width='80%' $marginBottom='4px' />
+                <LoadingText $height='16px' $width='60%' $marginBottom='0px' />
               </div>
             ))}
 

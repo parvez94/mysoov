@@ -435,7 +435,6 @@ const Upload = () => {
           },
           withCredentials: true,
         });
-        console.log('✅ File deleted from server:', videoFile.public_id);
         
         // Update user's storage usage in Redux after deletion
         if (videoFile.fileSize && currentUser) {
@@ -465,7 +464,6 @@ const Upload = () => {
                 withCredentials: true,
               }
             );
-            console.log('✅ Image deleted from server:', image.public_id);
             if (image.fileSize) {
               totalDeletedSize += image.fileSize;
             }
@@ -505,7 +503,6 @@ const Upload = () => {
           },
           withCredentials: true,
         });
-        console.log('✅ Image deleted from server:', imageToRemove.public_id);
         
         // Update user's storage usage in Redux after deletion
         if (imageToRemove.fileSize && currentUser) {
@@ -783,7 +780,6 @@ const Upload = () => {
           dispatch(updateUser({ storageUsed: newStorageUsed }));
         }
       } else if (mediaType === 'video') {
-        console.log('Video edit data:', editedData);
         
         // Upload background music if provided
         if (editedData.backgroundMusic) {
@@ -1155,7 +1151,6 @@ const Upload = () => {
     return () => {
       // Don't delete if user successfully submitted the form
       if (isSubmittedRef.current) {
-        console.log('✅ Form submitted - keeping uploaded files');
         return;
       }
 

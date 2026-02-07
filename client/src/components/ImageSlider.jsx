@@ -70,31 +70,6 @@ const NavButton = styled.button`
   }
 `;
 
-const Indicators = styled.div`
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 8px;
-  z-index: 10;
-`;
-
-const Indicator = styled.div`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: ${(props) =>
-    props.$active ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.5)'};
-  cursor: pointer;
-  transition: background 0.2s;
-
-  &:hover {
-    background: ${(props) =>
-      props.$active ? 'var(--primary-color)' : 'rgba(255, 255, 255, 0.8)'};
-  }
-`;
-
 const ImageCounter = styled.div`
   position: absolute;
   top: 10px;
@@ -198,16 +173,6 @@ const ImageSlider = ({ images, caption }) => {
           >
             <IoChevronForward />
           </NavButton>
-
-          <Indicators>
-            {images.map((_, index) => (
-              <Indicator
-                key={index}
-                $active={index === currentIndex}
-                onClick={() => setCurrentIndex(index)}
-              />
-            ))}
-          </Indicators>
         </>
       )}
     </SliderContainer>
